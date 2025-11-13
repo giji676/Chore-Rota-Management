@@ -20,6 +20,20 @@ class House(models.Model):
         through="HouseMember",
         related_name="houses"
     )
+    
+    def add_member(self, user, role="member"):
+        if HouseMember.objects.filter(house=self, user=user).exists():
+            raise ValidationError("User already in this house.")
+
+        current_count = HouseMember.objects.filter(house=self).count()
+        if current_count >= self.max_members:
+            raise ValidationError("House is full.")
+
+        return HouseMember.objects.create(
+            house=self,
+            user=user,
+            role=role
+        )
 
     def save(self, *args, **kwargs):
         owner_user = kwargs.pop("user", None)

@@ -1,5 +1,7 @@
 import requests
 from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -10,8 +12,32 @@ GOOGLE_DETAILS_URL = "https://maps.googleapis.com/maps/api/place/details/json"
 
 class JoinHouseView(APIView):
     def post(self, request, join_code):
+        user = request.user
+        data = request.data
+        password = data.get("password")
+
         if not join_code:
             return Response({"error": "Join code required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not password:
+            return Response({"error": "Password required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            house = House.objects.get(join_code=join_code)
+        except House.DoesNotExist:
+            return Response({"error": "Invalid join code"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not house.check_password(password):
+            return Response({"error": "Wrong password"}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            house.add_member(user)
+        except ValidationError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception:
+            return Response({"error": "Something went wrong"}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({"message": "Joined successfully"}, status=status.HTTP_200_OK)
 
 class CreateHouseView(APIView):
     def post(self, request):
