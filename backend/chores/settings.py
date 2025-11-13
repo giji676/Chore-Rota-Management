@@ -94,11 +94,15 @@ WSGI_APPLICATION = 'chores.wsgi.application'
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.getenv("POSTGRES_DB", "django_db"),
-        "USER": os.getenv("POSTGRES_USER", "django_user"),
+        "NAME": os.getenv("POSTGRES_DB", "chores_db"),
+        "USER": os.getenv("POSTGRES_USER", "chores_user"),
         "PASSWORD": os.getenv("POSTGRES_PASSWORD"),
         "HOST": os.getenv("POSTGRES_HOST", "localhost"),
         "PORT": os.getenv("POSTGRES_PORT", "5432"),
+        "TEST": {
+            "NAME": os.environ.get("POSTGRES_DB", "test_chores_db"),
+            "HOST": os.environ.get("POSTGRES_HOST", "localhost"),
+        }
     }
 }
 
