@@ -77,3 +77,8 @@ class HouseFlowTest(APITestCase):
         # Validate owner assigned
         member = HouseMember.objects.get(house=house, user=self.user)
         self.assertEqual(member.role, "owner")
+
+    def test_missing_data(self):
+        response = self.client.post(self.create_house_url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("missing required fields", response.data["error"].lower())
