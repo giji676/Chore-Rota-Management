@@ -23,7 +23,7 @@ class AddressAutocompleteView(APIView):
         r = requests.get(GOOGLE_PLACES_URL, params=params)
         data = r.json()
 
-        return Response(data)
+        return Response(data, status=status.HTTP_200_OK)
 
 class AddressDetailsView(APIView):
     def get(self, request):
@@ -47,22 +47,24 @@ class CreateHouseView(APIView):
         data = request.data
 
         name = data.get("name")
-        address = data.get("address", None)
+        address = data.get("address")
+        place_id = data.get("place_id")
         password = data.get("password")
         max_members = data.get("max_members", 6)
 
-        if not password:
-            return Response({"error": "Password is required"}, status=status.HTTP_400_BAD_REQUEST)
+        if not all([name, address, place_id, password]):
+            return Response({"error": "Missing required fields"}, status=status.HTTP_400_BAD_REQUEST)
 
-        if not name:
-            return Response({"error": "Name is required"}, status=status.HTTP_400_BAD_REQUEST)
+        # Prevent duplicate houses with same Google place
+        if House.objects.filter(place_id=place_id).exists():
+            return Response({"error": "House already exists for this address"}, status=status.HTTP_400_BAD_REQUEST)
 
         house = House(
             name=name,
             address=address,
+            place_id=place_id,
             max_members=max_members,
         )
-
         house.set_password(password)
         house.save(user=user)
 

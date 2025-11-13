@@ -9,8 +9,8 @@ def generate_join_code(length=6):
 
 class House(models.Model):
     name = models.CharField(max_length=100)
-    address = models.CharField(max_length=255, blank=True, null=True)
-    place_id = models.CharField(max_length=255, blank=True, null=True, unique=True)
+    address = models.CharField(max_length=255)
+    place_id = models.CharField(max_length=255, unique=True)
     join_code = models.CharField(max_length=8, unique=True, default=generate_join_code)
     password = models.CharField(max_length=128)
     max_members = models.PositiveIntegerField(default=6)
