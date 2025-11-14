@@ -5,10 +5,39 @@ from django.db import IntegrityError
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from api.models import House, HouseMember
+from api.models import House, HouseMember, Chore
 
 GOOGLE_PLACES_URL = "https://maps.googleapis.com/maps/api/place/autocomplete/json"
 GOOGLE_DETAILS_URL = "https://maps.googleapis.com/maps/api/place/details/json"
+
+class CreateChoreView(APIView):
+    def post(self, request):
+        user = request.user
+        data = request.data
+
+        house = data.get("house")
+        name = data.get("name")
+        description = data.get("description")
+
+        if not all([name, house, description]):
+            return Response({"error": "Missing required fields"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            house_obj = House.objects.get(id=house)
+        except House.DoesNotExist:
+            return Response({"error": "Invalid house"}, status=status.HTTP_400_BAD_REQUEST)
+
+        
+        chore = Chore(
+            house=house_obj,
+            name=name,
+            description=description,
+        ).save()
+
+        return Response({
+            "message": "Successfully create the chore",
+            "chore_id": chore.id
+        }, status=status.HTTP_201_CREATED)
 
 class JoinHouseView(APIView):
     def post(self, request, join_code):
