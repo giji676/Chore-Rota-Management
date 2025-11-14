@@ -10,6 +10,34 @@ from api.models import House, HouseMember, Chore
 GOOGLE_PLACES_URL = "https://maps.googleapis.com/maps/api/place/autocomplete/json"
 GOOGLE_DETAILS_URL = "https://maps.googleapis.com/maps/api/place/details/json"
 
+class UpdateChoreView(APIView):
+    def patch(self, request, chore_id):
+        user = request.user
+        data = request.data
+
+        try:
+            chore = Chore.objects.get(id=chore_id)
+        except Chore.DoesNotExist:
+            return Response({"error": "Chore not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        allowed_fields = ["name", "description"]
+
+        for field, value in data.items():
+            if field in allowed_fields:
+                setattr(chore, field, value)
+
+        chore.save()
+
+        return Response({
+            "message": "Chore updated successfully",
+            "chore": {
+                "id": chore.id,
+                "name": chore.name,
+                "description": chore.description,
+                "house": chore.house_id if hasattr(chore, "house_id") else chore.house,
+            }
+        }, status=status.HTTP_200_OK)
+
 class DeleteChoreView(APIView):
     def delete(self, request, chore_id):
         user = request.user
