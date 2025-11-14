@@ -5,10 +5,63 @@ from django.db import IntegrityError
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from api.models import House, HouseMember, Chore
+from api.models import House, HouseMember, Chore, ChoreAssignment
 
 GOOGLE_PLACES_URL = "https://maps.googleapis.com/maps/api/place/autocomplete/json"
 GOOGLE_DETAILS_URL = "https://maps.googleapis.com/maps/api/place/details/json"
+
+class AssignChoreView(APIView):
+    def post(self, request):
+        user = request.user
+        data = request.data
+
+        rota_id = data.get("rota")
+        chore_id = data.get("chore")
+        person_id = data.get("person")
+        day = data.get("day")
+
+        if not all([rota_id, chore_id, day]):
+            return Response(
+                {"error": "Missing required fields: rota, chore, day"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            rota = Rota.objects.get(id=rota_id)
+        except Rota.DoesNotExist:
+            return Response({"error": "Rota not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            chore = Chore.objects.get(id=chore_id, house=rota.house)
+        except Chore.DoesNotExist:
+            return Response({"error": "Chore not found in this house"}, status=status.HTTP_404_NOT_FOUND)
+
+        person = None
+        if person_id:
+            if not HouseMember.objects.filter(house=rota.house, user__id=person_id).exists():
+                return Response({"error": "Person not part of this house"}, status=status.HTTP_400_BAD_REQUEST)
+            person = HouseMember.objects.get(house=rota.house, user__id=person_id).user
+
+        try:
+            assignment, created = ChoreAssignment.objects.update_or_create(
+                rota=rota,
+                chore=chore,
+                day=day,
+                defaults={"person": person}
+            )
+        except ValidationError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({
+            "message": "Chore assigned successfully",
+            "assignment": {
+                "id": assignment.id,
+                "chore": chore.name,
+                "person": person.username if person else None,
+                "day": day,
+                "created": created
+            }
+        }, status=status.HTTP_200_OK)
 
 class UpdateChoreView(APIView):
     def patch(self, request, chore_id):
