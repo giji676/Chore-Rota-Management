@@ -10,6 +10,23 @@ from api.models import House, HouseMember, Chore
 GOOGLE_PLACES_URL = "https://maps.googleapis.com/maps/api/place/autocomplete/json"
 GOOGLE_DETAILS_URL = "https://maps.googleapis.com/maps/api/place/details/json"
 
+class DeleteChoreView(APIView):
+    def delete(self, request, chore_id):
+        user = request.user
+
+        try:
+            chore = Chore.objects.get(id=chore_id)
+        except Chore.DoesNotExist:
+            return Response({"error": "Chore not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        if not HouseMember.objects.filter(house=chore.house, user=user).exists():
+            return Response({"error": "You do not belong to this house"},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        chore.delete()
+
+        return Response({"message": "Chore deleted"}, status=status.HTTP_200_OK)
+
 class CreateChoreView(APIView):
     def post(self, request):
         user = request.user
@@ -26,7 +43,6 @@ class CreateChoreView(APIView):
             house_obj = House.objects.get(id=house)
         except House.DoesNotExist:
             return Response({"error": "Invalid house"}, status=status.HTTP_400_BAD_REQUEST)
-
         
         chore = Chore(
             house=house_obj,
