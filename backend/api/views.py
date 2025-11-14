@@ -10,6 +10,52 @@ from api.models import House, HouseMember, Chore, ChoreAssignment
 GOOGLE_PLACES_URL = "https://maps.googleapis.com/maps/api/place/autocomplete/json"
 GOOGLE_DETAILS_URL = "https://maps.googleapis.com/maps/api/place/details/json"
 
+# TODO: add role checks for everything
+
+class DeleteChoreAssignmentView(APIView):
+    def delete(self, request, assignment_id):
+        try:
+            assignment = ChoreAssignment.objects.get(id=assignment_id)
+        except ChoreAssignment.DoesNotExist:
+            return Response({"error": "Assignment not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        assignment.delete()
+        return Response({"message": "Assignment deleted successfully"}, status=status.HTTP_200_OK)
+
+class UpdateChoreAssignmentView(APIView):
+    def patch(self, request, assignment_id):
+        data = request.data
+
+        try:
+            assignment = ChoreAssignment.objects.get(id=assignment_id)
+        except ChoreAssignment.DoesNotExist:
+            return Response({"error": "Assignment not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        person_id = data.get("person")
+        if person_id:
+            if not HouseMember.objects.filter(house=assignment.rota.house, user__id=person_id).exists():
+                return Response({"error": "Person not part of this house"}, status=status.HTTP_400_BAD_REQUEST)
+            assignment.person = HouseMember.objects.get(house=assignment.rota.house, user__id=person_id).user
+
+        day = data.get("day")
+        if day:
+            assignment.day = day
+
+        try:
+            assignment.save()
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({
+            "message": "Assignment updated successfully",
+            "assignment": {
+                "id": assignment.id,
+                "chore": assignment.chore.name,
+                "person": assignment.person.username if assignment.person else None,
+                "day": assignment.day
+            }
+        }, status=status.HTTP_200_OK)
+
 class AssignChoreView(APIView):
     def post(self, request):
         user = request.user
@@ -124,7 +170,7 @@ class CreateChoreView(APIView):
             house_obj = House.objects.get(id=house)
         except House.DoesNotExist:
             return Response({"error": "Invalid house"}, status=status.HTTP_400_BAD_REQUEST)
-        
+
         chore = Chore(
             house=house_obj,
             name=name,
