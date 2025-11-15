@@ -1,17 +1,54 @@
-import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
+import React, { useState, useEffect } from "react";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, FlatList, ActivityIndicator } from "react-native";
 import api from "../utils/api";
 
 export default function CreateHouseScreen({ navigation }) {
     const [name, setName] = useState("");
-    const [address, setAddress] = useState("");
-    const [placeId, setPlaceId] = useState("");
     const [password, setPassword] = useState("");
+    const [address, setAddress] = useState("");
     const [maxMembers, setMaxMembers] = useState("6");
     const [result, setResult] = useState("");
+    const [placeId, setPlaceId] = useState(""); // internal, not user-editable
+    const [suggestions, setSuggestions] = useState([]);
+    const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+    const [selectedPlace, setSelectedPlace] = useState(null);
+
+    useEffect(() => {
+        if (address.length < 2) {
+            setSuggestions([]);
+            return;
+        }
+
+        if (selectedPlace && address === selectedPlace.description) {
+            return;
+        }
+
+        const fetchSuggestions = async () => {
+            setLoadingSuggestions(true);
+            try {
+                const res = await api.get(`/address-autocomplete/?q=${encodeURIComponent(address)}`);
+                setSuggestions(res.data.predictions);
+            } catch (err) {
+                console.log(err.response?.data || err.message);
+            } finally {
+                setLoadingSuggestions(false);
+            }
+        };
+
+        const delayDebounce = setTimeout(fetchSuggestions, 300); // debounce
+        return () => clearTimeout(delayDebounce);
+    }, [address]);
+
+    const handleSelectSuggestion = (item) => {
+        console.log("selecting:", item.description);
+        setAddress(item.description);
+        setPlaceId(item.place_id);
+        setSelectedPlace(item);
+        setSuggestions([]);
+    };
 
     const handleCreate = async () => {
-        if (!name || !address || !password) {
+        if (!name || !address) {
             setResult("Please fill all required fields.");
             return;
         }
@@ -19,9 +56,9 @@ export default function CreateHouseScreen({ navigation }) {
         try {
             const payload = {
                 name,
+                password,
                 address,
                 place_id: placeId,
-                password,
                 max_members: parseInt(maxMembers) || 6,
             };
 
@@ -29,8 +66,7 @@ export default function CreateHouseScreen({ navigation }) {
 
             setResult(JSON.stringify(response.data, null, 2));
 
-            // Navigate to house/dashboard (optional)
-            // navigation.navigate("HouseDashboard", { house: response.data });
+            navigation.navigate("HouseDashboard", { house: response.data });
 
         } catch (err) {
             console.log(err.response?.data || err.message);
@@ -53,15 +89,26 @@ export default function CreateHouseScreen({ navigation }) {
                 style={styles.input}
                 placeholder="Address"
                 value={address}
-                onChangeText={setAddress}
+                onChangeText={text => {
+                    setAddress(text);
+                    setPlaceId(""); // clear previous selection
+                }}
             />
 
-            <TextInput
-                style={styles.input}
-                placeholder="Place ID (optional)"
-                value={placeId}
-                onChangeText={setPlaceId}
-            />
+            {loadingSuggestions && <ActivityIndicator size="small" />}
+            {suggestions.length > 0 && (
+                <ScrollView style={styles.suggestionsList}>
+                    {suggestions.map((item) => (
+                        <TouchableOpacity
+                            key={item.place_id}
+                            style={styles.suggestionItem}
+                            onPress={() => handleSelectSuggestion(item)}
+                        >
+                            <Text>{item.description}</Text>
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
+            )}
 
             <TextInput
                 style={styles.input}
@@ -99,7 +146,19 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderRadius: 8,
         padding: 12,
-        marginBottom: 14,
+        marginBottom: 10,
+    },
+    suggestionsList: {
+        borderWidth: 1,
+        borderColor: "#ccc",
+        maxHeight: 150,
+        marginBottom: 10,
+        borderRadius: 8,
+    },
+    suggestionItem: {
+        padding: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: "#eee",
     },
     button: {
         backgroundColor: "#27ae60",

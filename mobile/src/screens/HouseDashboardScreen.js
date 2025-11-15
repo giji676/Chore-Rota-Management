@@ -32,7 +32,6 @@ export default function HouseDashboardScreen({ navigation, route }) {
     if (!house) return <Text style={styles.error}>House not found</Text>;
 
     const handleDelete = async () => {
-        console.log("alert");
         Alert.alert(
             "Confirm Delete",
             "Are you sure you want to delete this house? This action cannot be undone.",

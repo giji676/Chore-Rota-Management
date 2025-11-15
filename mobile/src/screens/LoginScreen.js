@@ -32,7 +32,6 @@ export default function LoginScreen({ navigation }) {
     };
 
     const handleGuest = async () => {
-        console.log("guest login");
         let device_id = await AsyncStorage.getItem("device_id");
         if (!device_id) {
             device_id = uuidv4();

@@ -16,7 +16,6 @@ export default function MainStack() {
     useEffect(() => {
         const checkLogin = async () => {
             const access = await AsyncStorage.getItem('access_token');
-            console.log("MainStack access:", access);
             if (access) {
                 setInitialRoute('HouseAccess');
             } else {
