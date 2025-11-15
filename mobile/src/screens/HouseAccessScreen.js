@@ -1,11 +1,28 @@
-import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
+import React, { useState, useEffect } from "react";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, ActivityIndicator } from "react-native";
 import api from "../utils/api";
 
 export default function HouseAccessScreen({ navigation }) {
     const [joinCode, setJoinCode] = useState("");
     const [password, setPassword] = useState("");
     const [result, setResult] = useState("");
+    const [houses, setHouses] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchUserHouses = async () => {
+            try {
+                const res = await api.get("houses/user/");
+                setHouses(res.data);
+            } catch (err) {
+                console.log("Failed to fetch user houses:", err.response?.data || err.message);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchUserHouses();
+    }, []);
 
     const handleJoinHouse = async () => {
         if (!joinCode.trim()) {
@@ -14,13 +31,9 @@ export default function HouseAccessScreen({ navigation }) {
         }
 
         try {
-            const response = await api.post(`house/join/${joinCode}/`, {"password": password});
-
+            const response = await api.post(`house/join/${joinCode}/`, { password });
             setResult(JSON.stringify(response.data, null, 2));
-
-            // Navigate to house dashboard screen or whatever:
-            // navigation.navigate("HouseDashboard", { house: response.data });
-
+            navigation.navigate("HouseDashboard", { house: response.data });
         } catch (error) {
             console.log(error.response?.data || error.message);
             setResult("Error: " + (error.response?.data?.error || error.message));
@@ -31,8 +44,32 @@ export default function HouseAccessScreen({ navigation }) {
         navigation.navigate("CreateHouse");
     };
 
+    const renderHouseItem = ({ item }) => (
+        <TouchableOpacity
+            style={styles.houseItem}
+            onPress={() => navigation.navigate("HouseDashboard", { house: item })}
+        >
+            <Text style={styles.houseName}>{item.name}</Text>
+        </TouchableOpacity>
+    );
+
     return (
         <View style={styles.container}>
+            <Text style={styles.title}>Your Houses</Text>
+
+            {loading ? (
+                <ActivityIndicator size="large" style={{ marginVertical: 20 }} />
+            ) : houses.length > 0 ? (
+                    <FlatList
+                        data={houses}
+                        keyExtractor={(item) => item.id.toString()}
+                        renderItem={renderHouseItem}
+                        style={{ marginBottom: 20 }}
+                    />
+                ) : (
+                        <Text style={{ textAlign: "center", marginBottom: 20 }}>No houses yet</Text>
+                    )}
+
             <Text style={styles.title}>Join or Create a House</Text>
 
             <TextInput
@@ -68,7 +105,7 @@ export default function HouseAccessScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, padding: 20, justifyContent: "center" },
+    container: { flex: 1, padding: 20 },
     title: { fontSize: 24, fontWeight: "bold", marginBottom: 20, textAlign: "center" },
     input: {
         borderWidth: 1,
@@ -97,4 +134,11 @@ const styles = StyleSheet.create({
         borderRadius: 6,
     },
     resultText: { fontFamily: "monospace" },
+    houseItem: {
+        padding: 12,
+        backgroundColor: "#f0f0f0",
+        borderRadius: 6,
+        marginBottom: 8,
+    },
+    houseName: { fontSize: 16 },
 });

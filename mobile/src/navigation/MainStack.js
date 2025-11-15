@@ -6,6 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import LoginScreen from '../screens/LoginScreen';
 import HouseAccessScreen from '../screens/HouseAccessScreen';
 import CreateHouseScreen from '../screens/CreateHouseScreen';
+import HouseDashboardScreen from '../screens/HouseDashboardScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -39,6 +40,7 @@ export default function MainStack() {
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="HouseAccess" component={HouseAccessScreen} />
             <Stack.Screen name="CreateHouse" component={CreateHouseScreen} />
+            <Stack.Screen name="HouseDashboard" component={HouseDashboardScreen} />
         </Stack.Navigator>
     );
 }

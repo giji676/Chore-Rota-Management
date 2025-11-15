@@ -17,6 +17,74 @@ GOOGLE_DETAILS_URL = "https://maps.googleapis.com/maps/api/place/details/json"
 
 # TODO: add role checks for everything
 
+class HouseView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, house_id):
+        if not house_id:
+            return Response({"error": "House id required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            house = House.objects.get(id=house_id)
+        except House.DoesNotExist:
+            return Response({"error": "No house found with this ID"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Get members through HouseMember
+        members_qs = HouseMember.objects.filter(house=house).select_related('user')
+        members = [
+            {
+                "id": member.user.id,
+                "username": member.user.username,
+                "is_guest": member.user.is_guest,
+                "role": member.role
+            }
+            for member in members_qs
+        ]
+
+        return Response({
+            "id": house.id,
+            "name": house.name,
+            "address": house.address,
+            "join_code": house.join_code,
+            "max_members": house.max_members,
+            "members": members
+        }, status=status.HTTP_200_OK)
+
+
+class UserHousesView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+
+        # Get HouseMember entries for this user
+        house_memberships = HouseMember.objects.filter(user=user).select_related('house')
+
+        houses = []
+        for membership in house_memberships:
+            house = membership.house
+            members_qs = HouseMember.objects.filter(house=house).select_related('user')
+            members = [
+                {
+                    "id": m.user.id,
+                    "username": m.user.username,
+                    "is_guest": m.user.is_guest,
+                    "role": m.role
+                }
+                for m in members_qs
+            ]
+
+            houses.append({
+                "id": house.id,
+                "name": house.name,
+                "address": house.address,
+                "join_code": house.join_code,
+                "max_members": house.max_members,
+                "members": members
+            })
+
+        return Response(houses, status=status.HTTP_200_OK)
+
 class DeleteChoreAssignmentView(APIView):
     def delete(self, request, assignment_id):
         try:

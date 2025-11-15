@@ -1,0 +1,68 @@
+import React, { useEffect, useState } from 'react';
+import { View, Text, Button, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
+import api from '../utils/api';
+
+export default function HouseDashboardScreen({ navigation, route }) {
+    // Accept either a full house object or just houseId
+    const { houseId, house: initialHouse } = route.params || {};
+    const [house, setHouse] = useState(initialHouse || null);
+    const [loading, setLoading] = useState(!initialHouse);
+    const [error, setError] = useState('');
+
+    useEffect(() => {
+        if (!house && houseId) {
+            const fetchHouse = async () => {
+                try {
+                    const res = await api.get(`house/${houseId}/`);
+                    setHouse(res.data);
+                } catch (err) {
+                    setError(err.response?.data?.error || err.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            fetchHouse();
+        }
+    }, [house, houseId]);
+
+    if (loading) return <ActivityIndicator size="large" style={styles.loader} />;
+    if (error) return <Text style={styles.error}>{error}</Text>;
+    if (!house) return <Text style={styles.error}>House not found</Text>;
+
+    return (
+        <View style={styles.container}>
+            <Text style={styles.title}>{house.name}</Text>
+            <Text style={styles.joinCode}>Join Code: {house.join_code}</Text>
+
+            <Text style={styles.subTitle}>Members:</Text>
+            <FlatList
+                data={house.members}
+                keyExtractor={(item) => item.id.toString()}
+                renderItem={({ item }) => (
+                    <Text style={styles.member}>
+                        {item.username}{item.is_guest ? ' (Guest)' : ''}
+                    </Text>
+                )}
+            />
+
+            <View style={styles.buttonContainer}>
+                <Button
+                    title="Manage Rota"
+                    onPress={() => navigation.navigate('ManageRota', { houseId: house.id })}
+                />
+            </View>
+        </View>
+    );
+}
+
+const styles = StyleSheet.create({
+    container: { flex: 1, padding: 20 },
+    loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    title: { fontSize: 24, fontWeight: 'bold', marginBottom: 10 },
+    joinCode: { fontSize: 16, marginBottom: 20 },
+    subTitle: { fontSize: 18, marginBottom: 10 },
+    member: { fontSize: 16, marginBottom: 5 },
+    buttonContainer: { marginTop: 20 },
+    error: { color: 'red', textAlign: 'center', marginTop: 20 },
+});

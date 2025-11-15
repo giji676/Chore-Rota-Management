@@ -4,7 +4,9 @@ from . import views
 urlpatterns = [
     # House endpoints
     path("house/create/", views.CreateHouseView.as_view(), name="create-house"),
-    path("house/join/<join_code>/", views.JoinHouseView.as_view(), name="join-house"),
+    path("house/join/<str:join_code>/", views.JoinHouseView.as_view(), name="join-house"),
+    path("house/<int:house_id>/", views.HouseView.as_view(), name="get-house"),
+    path("houses/user/", views.UserHousesView.as_view(), name="get-houses"),
 
     # Address endpoints
     path("address-autocomplete/", views.AddressAutocompleteView.as_view(), name="address-autocomplete"),
