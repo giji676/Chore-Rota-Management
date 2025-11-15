@@ -3,6 +3,7 @@ import random
 from django.db import models, transaction
 from django.conf import settings
 from django.contrib.auth.hashers import make_password, check_password
+from django.core.exceptions import ValidationError
 
 def generate_join_code(length=6):
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))

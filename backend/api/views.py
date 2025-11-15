@@ -6,6 +6,11 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from api.models import House, HouseMember, Chore, ChoreAssignment
+from django.contrib.auth import get_user_model
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework_simplejwt.authentication import JWTAuthentication
+
+User = get_user_model()
 
 GOOGLE_PLACES_URL = "https://maps.googleapis.com/maps/api/place/autocomplete/json"
 GOOGLE_DETAILS_URL = "https://maps.googleapis.com/maps/api/place/details/json"
@@ -183,6 +188,8 @@ class CreateChoreView(APIView):
         }, status=status.HTTP_201_CREATED)
 
 class JoinHouseView(APIView):
+    permission_classes  = [IsAuthenticated]
+
     def post(self, request, join_code):
         user = request.user
         data = request.data
@@ -212,9 +219,14 @@ class JoinHouseView(APIView):
         return Response({"message": "Joined successfully"}, status=status.HTTP_200_OK)
 
 class CreateHouseView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def post(self, request):
         user = request.user
         data = request.data
+
+        if (user.is_anonymous):
+            return Response(status=status.HTTP_401_UNAUTHORIZED)
 
         name = data.get("name")
         address = data.get("address")

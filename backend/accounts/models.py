@@ -3,6 +3,7 @@ from django.db import models
 
 class User(AbstractUser):
     device_id = models.CharField(max_length=255, null=True, blank=True, unique=True)
+    is_guest = models.BooleanField(default=False)
 
     groups = models.ManyToManyField(
         Group,
