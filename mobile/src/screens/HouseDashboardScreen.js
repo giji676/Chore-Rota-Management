@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Button, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
+
+import { Alert, View, Text, Button, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
 import api from '../utils/api';
 
 export default function HouseDashboardScreen({ navigation, route }) {
@@ -30,6 +31,38 @@ export default function HouseDashboardScreen({ navigation, route }) {
     if (error) return <Text style={styles.error}>{error}</Text>;
     if (!house) return <Text style={styles.error}>House not found</Text>;
 
+    const handleDelete = async () => {
+        console.log("alert");
+        Alert.alert(
+            "Confirm Delete",
+            "Are you sure you want to delete this house? This action cannot be undone.",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Delete",
+                    style: "destructive",
+                    onPress: async () => {
+                        try {
+                            const res = await api.delete(`house/${house.id}/`);
+                            Alert.alert("House deleted successfully");
+                            navigation.goBack();
+                        } catch (err) {
+                            if (err.response && err.response.status !== 204) {
+                                Alert.alert(
+                                    "Error",
+                                    err.response?.data?.error || err.message
+                                );
+                            } else {
+                                Alert.alert("House deleted successfully");
+                                navigation.goBack();
+                            }
+                        }
+                    }
+                }
+            ]
+        );
+    }
+
     return (
         <View style={styles.container}>
             <Text style={styles.title}>{house.name}</Text>
@@ -50,6 +83,13 @@ export default function HouseDashboardScreen({ navigation, route }) {
                 <Button
                     title="Manage Rota"
                     onPress={() => navigation.navigate('ManageRota', { houseId: house.id })}
+                />
+            </View>
+            <View style={styles.buttonContainer}>
+                <Button
+                    title="Delete House"
+                    color="red"
+                    onPress={handleDelete}
                 />
             </View>
         </View>

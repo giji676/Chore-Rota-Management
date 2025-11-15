@@ -29,7 +29,6 @@ class HouseView(APIView):
         except House.DoesNotExist:
             return Response({"error": "No house found with this ID"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Get members through HouseMember
         members_qs = HouseMember.objects.filter(house=house).select_related('user')
         members = [
             {
@@ -49,7 +48,26 @@ class HouseView(APIView):
             "max_members": house.max_members,
             "members": members
         }, status=status.HTTP_200_OK)
+    
+    def delete(self, request, house_id):
+        if not house_id:
+            return Response({"error": "House id required"}, status=status.HTTP_400_BAD_REQUEST)
 
+        try:
+            house = House.objects.get(id=house_id)
+        except House.DoesNotExist:
+            return Response({"error": "No house found with this ID"}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            house_member = HouseMember.objects.get(house=house, user=request.user)
+        except HouseMember.DoesNotExist:
+            return Response({"error": "You are not a member of this house"}, status=status.HTTP_403_FORBIDDEN)
+
+        if house_member.role != "owner":
+            return Response({"error": "Only the owner can delete this house"}, status=status.HTTP_403_FORBIDDEN)
+
+        house.delete()
+        return Response({"success": "House deleted"}, status=status.HTTP_204_NO_CONTENT)
 
 class UserHousesView(APIView):
     permission_classes = [IsAuthenticated]
@@ -57,7 +75,6 @@ class UserHousesView(APIView):
     def get(self, request):
         user = request.user
 
-        # Get HouseMember entries for this user
         house_memberships = HouseMember.objects.filter(user=user).select_related('house')
 
         houses = []
