@@ -43,7 +43,13 @@ GOOGLE_PLACES_KEY = os.environ.get("GOOGLE_PLACES_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-DJANGO_ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOST", "localhost").split(",")
+ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost").split(",")
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    )
+}
 
 # Application definition
 
@@ -56,6 +62,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     "rest_framework",
     "api",
+    "accounts",
 ]
 
 MIDDLEWARE = [
@@ -108,6 +115,8 @@ DATABASES = {
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
+
+AUTH_USER_MODEL = 'accounts.User'
 
 AUTH_PASSWORD_VALIDATORS = [
     {
