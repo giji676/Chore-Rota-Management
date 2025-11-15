@@ -43,8 +43,7 @@ GOOGLE_PLACES_KEY = os.environ.get("GOOGLE_PLACES_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
-
+DJANGO_ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOST", "localhost").split(",")
 
 # Application definition
 
