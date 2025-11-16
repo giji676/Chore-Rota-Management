@@ -228,6 +228,8 @@ class UpdateChoreView(APIView):
         }, status=status.HTTP_200_OK)
 
 class DeleteChoreView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def delete(self, request, chore_id):
         user = request.user
 
@@ -240,9 +242,14 @@ class DeleteChoreView(APIView):
             return Response({"error": "You do not belong to this house"},
                             status=status.HTTP_403_FORBIDDEN)
 
+        house_member = HouseMember.objects.get(house=chore.house, user=user)
+        if house_member.role != "owner":
+            return Response({"error": "Only the owner can perform this action"},
+                            status=status.HTTP_403_FORBIDDEN)
+
         chore.delete()
 
-        return Response({"message": "Chore deleted"}, status=status.HTTP_200_OK)
+        return Response({"message": "Chore deleted"}, status=status.HTTP_204_NO_CONTENT)
 
 class CreateChoreView(APIView):
     permission_classes = [IsAuthenticated]

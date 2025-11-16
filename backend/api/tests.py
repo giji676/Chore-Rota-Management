@@ -3,9 +3,57 @@ from rest_framework import status
 from rest_framework.test import APITestCase, APIClient
 from django.urls import reverse
 from django.contrib.auth import get_user_model
-from api.models import House, HouseMember
+from api.models import House, HouseMember, Chore, ChoreAssignment
 
 User = get_user_model()
+
+class DeleteChoreTest(APITestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(username="owner", password="password123")
+        self.guest = User.objects.create_user(username="guest", password="password123")
+
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.owner)
+
+        self.house = House.objects.create(
+            name="Crescent",
+            address= "10A the crescent",
+            place_id= "TEST_PLACE_ID",
+            max_members=6
+        )
+        self.house.set_password("housepassword")
+        self.house.save()
+        self.house.add_member(user=self.owner, role="owner")
+
+        self.chore = Chore.objects.create(
+            house=self.house,
+            name="dishes",
+            description="wash and dry dishes",
+        )
+        self.url = reverse("delete-chore", kwargs={"chore_id": self.chore.id})
+
+    def test_delete_chore(self):
+        response = self.client.delete(self.url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+    def test_not_authorised(self):
+        client = APIClient()
+        client.force_authenticate(user=self.guest)
+        response = client.delete(self.url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_not_owner(self):
+        self.house.add_member(user=self.guest, role="member")
+        client = APIClient()
+        client.force_authenticate(user=self.guest)
+        response = client.delete(self.url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn("only the owner", response.data["error"].lower())
+
+    def test_invalid_chore(self):
+        url = reverse("delete-chore", kwargs={"chore_id": 999})
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
 class CreateChoreTest(APITestCase):
     def setUp(self):
