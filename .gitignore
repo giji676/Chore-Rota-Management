@@ -4,5 +4,6 @@ migrations/
 
 .env
 .env.*
+.coverage
 
 db.sqlite3

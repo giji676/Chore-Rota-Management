@@ -280,9 +280,6 @@ class JoinHouseView(APIView):
         data = request.data
         password = data.get("password")
 
-        if not join_code:
-            return Response({"error": "Join code required"}, status=status.HTTP_400_BAD_REQUEST)
-
         if not password:
             return Response({"error": "Password required"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -298,8 +295,6 @@ class JoinHouseView(APIView):
             house.add_member(user)
         except ValidationError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception:
-            return Response({"error": "Something went wrong"}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response({"message": "Joined successfully"}, status=status.HTTP_200_OK)
 
@@ -310,30 +305,24 @@ class CreateHouseView(APIView):
         user = request.user
         data = request.data
 
-        if (user.is_anonymous):
-            return Response(status=status.HTTP_401_UNAUTHORIZED)
-
         name = data.get("name")
         address = data.get("address")
         place_id = data.get("place_id")
         password = data.get("password")
-        max_members = data.get("max_members", 6)
+        max_members = data.get("max_members")
 
         if not all([name, address, place_id, password]):
             return Response({"error": "Missing required fields"}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Prevent duplicate houses with same Google place
-        if House.objects.filter(place_id=place_id).exists():
-            return Response({"error": "House already exists for this address"}, status=status.HTTP_400_BAD_REQUEST)
 
         house = House(
             name=name,
             address=address,
             place_id=place_id,
-            max_members=max_members,
+            max_members=int(max_members),
         )
         house.set_password(password)
-        house.save(user=user)
+        house.save()
+        house.add_member(user=user, role="owner")
 
         return Response({
             "message": "House created successfully",

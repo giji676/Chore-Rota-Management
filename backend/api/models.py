@@ -27,7 +27,7 @@ class House(models.Model):
             raise ValidationError("User already in this house.")
 
         current_count = HouseMember.objects.filter(house=self).count()
-        if current_count >= self.max_members:
+        if current_count >= int(self.max_members):
             raise ValidationError("House is full.")
 
         return HouseMember.objects.create(
@@ -37,25 +37,10 @@ class House(models.Model):
         )
 
     def save(self, *args, **kwargs):
-        owner_user = kwargs.pop("user", None)
-        is_new = self.pk is None
-
         if not self.join_code:
             self.join_code = generate_join_code()
 
         super().save(*args, **kwargs)
-
-        # On first save, assign the creator as an owner
-        with transaction.atomic():
-            super().save(*args, **kwargs)
-
-            if is_new and owner_user is not None:
-                # Only create if not already present
-                HouseMember.objects.get_or_create(
-                    house=self,
-                    user=owner_user,
-                    defaults={"role": "owner"}
-                )
 
     def generate_place_id(self):
         if not self.address or self.place_id:
