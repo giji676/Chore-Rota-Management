@@ -15,9 +15,7 @@ User = get_user_model()
 GOOGLE_PLACES_URL = "https://maps.googleapis.com/maps/api/place/autocomplete/json"
 GOOGLE_DETAILS_URL = "https://maps.googleapis.com/maps/api/place/details/json"
 
-# TODO: add role checks for everything
-
-class UserHousesView(APIView):
+class UsersHousesView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -51,6 +49,8 @@ class UserHousesView(APIView):
         return Response(houses, status=status.HTTP_200_OK)
 
 class DeleteChoreAssignmentView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def delete(self, request, assignment_id):
         user = request.user
 
@@ -72,6 +72,8 @@ class DeleteChoreAssignmentView(APIView):
         return Response({"message": "Assignment deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
 
 class UpdateChoreAssignmentView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def patch(self, request, assignment_id):
         data = request.data
 

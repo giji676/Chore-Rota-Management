@@ -9,7 +9,7 @@ urlpatterns = [
     path("house/update/<int:house_id>/", views.HouseManagementView.as_view(), name="update-house"),
 
     path("house/join/<str:join_code>/", views.JoinHouseView.as_view(), name="join-house"),
-    path("houses/user/", views.UserHousesView.as_view(), name="get-houses"),
+    path("houses/user/", views.UsersHousesView.as_view(), name="get-houses"),
 
     # Address endpoints
     path("address-autocomplete/", views.AddressAutocompleteView.as_view(), name="address-autocomplete"),

@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+from http import client
 from unittest.mock import patch, MagicMock
 from django.http import response
 from rest_framework import status
@@ -8,6 +9,64 @@ from django.contrib.auth import get_user_model
 from api.models import House, HouseMember, Chore, ChoreAssignment, Rota
 
 User = get_user_model()
+
+class UsersHouses(APITestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(username="owner", password="password123")
+        self.guest = User.objects.create_user(username="guest", password="password123")
+
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.owner)
+
+        self.house = House.objects.create(
+            name="Crescent",
+            address= "10A the crescent",
+            place_id= "TEST_PLACE_ID",
+            max_members=6
+        )
+        self.house.set_password("housepassword")
+        self.house.save()
+        self.house.add_member(user=self.owner, role="owner")
+
+        self.url = reverse("get-houses")
+
+    def test_get_houses(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertGreaterEqual(len(response.data), 1)
+
+    def test_dont_return_wrong_house_data(self):
+        other_house = House.objects.create(
+            name="Other",
+            address="Other St",
+            place_id="PID2",
+            max_members=4
+        )
+        other_house.set_password("abc")
+        other_house.save()
+
+        response = self.client.get(self.url)
+
+        ids = [h["id"] for h in response.data]
+        self.assertIn(self.house.id, ids)
+        self.assertNotIn(other_house.id, ids)
+
+    def test_members_structure(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+
+        house = response.data[0]
+        members = house["members"]
+
+        self.assertEqual(len(members), 1)
+
+        member = members[0]
+        self.assertEqual(
+            set(member.keys()),
+            {"id", "username", "is_guest", "role"}
+        )
+        self.assertEqual(member["id"], self.owner.id)
+        self.assertEqual(member["role"], "owner")
 
 class DeleteChoreAssignmentTest(APITestCase):
     def setUp(self):
