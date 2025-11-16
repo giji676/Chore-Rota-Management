@@ -1,3 +1,4 @@
+from datetime import date
 from unittest.mock import patch, MagicMock
 from rest_framework import status
 from rest_framework.test import APITestCase, APIClient
@@ -6,6 +7,53 @@ from django.contrib.auth import get_user_model
 from api.models import House, HouseMember, Chore, ChoreAssignment
 
 User = get_user_model()
+
+class RotaManagementTest(APITestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(username="owner", password="password123")
+        self.guest = User.objects.create_user(username="guest", password="password123")
+
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.owner)
+
+        self.house = House.objects.create(
+            name="Crescent",
+            address="address",
+            place_id="TEST_PLACE_ID",
+            max_members=6
+        )
+        self.house.set_password("housepassword")
+        self.house.save()
+        self.house.add_member(user=self.owner, role="owner")
+
+        self.rota_data = {
+            "house": self.house.id,
+            "start_date": date.today(),
+        }
+
+        self.url = reverse("create-rota")
+
+    def test_create_rota(self):
+        response = self.client.post(self.url, self.rota_data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_create_as_member(self):
+        client = APIClient()
+        client.force_authenticate(user=self.guest)
+        self.house.add_member(user=self.guest, role="member")
+        response = client.post(self.url, self.rota_data)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn("only the owner can perform", response.data["error"].lower())
+
+    def test_create_missing_data(self):
+        response = self.client.post(self.url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("missing house id", response.data["error"].lower())
+
+    def test_create_invalid_house_id(self):
+        response = self.client.post(self.url, {"house": "invalid_id"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("", response.data["error"].lower())
 
 class UpdateChoreTest(APITestCase):
     def setUp(self):
@@ -17,8 +65,8 @@ class UpdateChoreTest(APITestCase):
 
         self.house = House.objects.create(
             name="Crescent",
-            address= "10A the crescent",
-            place_id= "TEST_PLACE_ID",
+            address="10A the crescent",
+            place_id="TEST_PLACE_ID",
             max_members=6
         )
         self.house.set_password("housepassword")

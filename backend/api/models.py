@@ -84,7 +84,7 @@ class Chore(models.Model):
 class Rota(models.Model):
     house = models.ForeignKey(House, on_delete=models.CASCADE, related_name="rotas")
     start_date = models.DateField(default=date.today)  
-    end_date = models.DateField(blank=True)
+    end_date = models.DateField(null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
 

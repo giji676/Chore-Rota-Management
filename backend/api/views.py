@@ -5,7 +5,7 @@ from django.db import IntegrityError
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from api.models import House, HouseMember, Chore, ChoreAssignment
+from api.models import House, HouseMember, Chore, ChoreAssignment, Rota
 from django.contrib.auth import get_user_model
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.authentication import JWTAuthentication
@@ -147,9 +147,20 @@ class UpdateChoreAssignmentView(APIView):
         }, status=status.HTTP_200_OK)
 
 class AssignChoreView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def post(self, request):
         user = request.user
         data = request.data
+
+        if not HouseMember.objects.filter(house=chore.house, user=user).exists():
+            return Response({"error": "You do not belong to this house"},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        house_member = HouseMember.objects.get(house=chore.house, user=user)
+        if house_member.role != "owner":
+            return Response({"error": "Only the owner can perform this action"},
+                            status=status.HTTP_403_FORBIDDEN)
 
         rota_id = data.get("rota")
         chore_id = data.get("chore")
@@ -198,6 +209,49 @@ class AssignChoreView(APIView):
                 "created": created
             }
         }, status=status.HTTP_200_OK)
+
+class RotaManagementView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        data = request.data
+
+        house_id = data.get("house")
+        start_date = data.get("start_date")
+        end_date = data.get("end_date")
+
+        if not house_id:
+            return Response({"error": "Missing house id"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            try:
+                house_id = int(house_id)
+            except:
+                return Response({"error": "House id must be an int"}, status=status.HTTP_400_BAD_REQUEST)
+            house = House.objects.get(id=house_id)
+        except House.DoesNotExist:
+            return Response({"error": "Invalid house"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not HouseMember.objects.filter(house=house_id, user=user).exists():
+            return Response({"error": "You do not belong to this house"},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        house_member = HouseMember.objects.get(house=house_id, user=user)
+        if house_member.role != "owner":
+            return Response({"error": "Only the owner can perform this action"},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        rota = Rota.objects.create(
+            house=house,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        return Response({
+            "message": "Successfully created the rota",
+            "rota_id": rota.id
+        }, status=status.HTTP_201_CREATED)
 
 class UpdateChoreView(APIView):
     permission_classes = [IsAuthenticated]
