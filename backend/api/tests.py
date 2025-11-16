@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from rest_framework import status
 from rest_framework.test import APITestCase, APIClient
 from django.urls import reverse
@@ -6,6 +6,61 @@ from django.contrib.auth import get_user_model
 from api.models import House, HouseMember
 
 User = get_user_model()
+
+class AddressDetailsTest(APITestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.url = reverse("address-details")
+
+    def test_missing_place_id(self):
+        response = self.client.get(f"{self.url}?place_id=")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("error", response.data)
+
+    @patch("api.views.requests.get")
+    def test_normal_request(self, mock_get):
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "result": {
+                "formatted_address": "10A The Crescent, Example City",
+                "geometry": {
+                    "location": {"lat": 51.123, "lng": -0.456}
+                },
+                "place_id": "TEST_PLACE_ID"
+            },
+            "status": "OK"
+        }
+        mock_get.return_value = mock_response
+
+        response = self.client.get(f"{self.url}?place_id=TEST_PLACE_ID")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("result", response.data)
+        mock_get.assert_called_once()
+
+class AddressAutocompleteTest(APITestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.url = reverse("address-autocomplete")
+
+    def test_missing_query(self):
+        response = self.client.get(f"{self.url}?q=")
+        self.assertTrue(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @patch("api.views.requests.get")
+    def test_normal_request(self, mock_get):
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "predictions": [
+                {"description": "10A The Crescent, Test City", "place_id": "PLACE123"}
+            ],
+            "status": "OK"
+        }
+        mock_get.return_value = mock_response
+
+        response = self.client.get(f"{self.url}?q=10A the crescent")
+        self.assertTrue(response.status_code, status.HTTP_200_OK)
+        self.assertIn("predictions", response.data)
+        mock_get.assert_called_once()
 
 class JoinHouseTest(APITestCase):
     def setUp(self):

@@ -331,6 +331,8 @@ class CreateHouseView(APIView):
         }, status=status.HTTP_201_CREATED)
 
 class AddressAutocompleteView(APIView):
+    permission_classes = [AllowAny]
+
     def get(self, request):
         input_text = request.query_params.get("q")
         if not input_text:
@@ -362,4 +364,3 @@ class AddressDetailsView(APIView):
         data = r.json()
 
         return Response(data)
-
