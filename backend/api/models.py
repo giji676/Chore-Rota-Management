@@ -1,5 +1,6 @@
 import string
 import random
+from datetime import date
 from django.db import models, transaction
 from django.conf import settings
 from django.contrib.auth.hashers import make_password, check_password
@@ -82,8 +83,8 @@ class Chore(models.Model):
 
 class Rota(models.Model):
     house = models.ForeignKey(House, on_delete=models.CASCADE, related_name="rotas")
-    start_date = models.DateField()
-    end_date = models.DateField()
+    start_date = models.DateField(default=date.today)  
+    end_date = models.DateField(blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
 
