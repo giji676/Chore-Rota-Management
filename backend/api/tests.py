@@ -9,6 +9,68 @@ from api.models import House, HouseMember, Chore, ChoreAssignment, Rota
 
 User = get_user_model()
 
+class DeleteChoreAssignmentTest(APITestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(username="owner", password="password123")
+        self.guest = User.objects.create_user(username="guest", password="password123")
+
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.owner)
+
+        self.house = House.objects.create(
+            name="Crescent",
+            address= "10A the crescent",
+            place_id= "TEST_PLACE_ID",
+            max_members=6
+        )
+        self.house.set_password("housepassword")
+        self.house.save()
+        self.house.add_member(user=self.owner, role="owner")
+
+        self.rota = Rota.objects.create(
+            house=self.house,
+        )
+
+        self.chore = Chore.objects.create(
+            house=self.house,
+            name="dishes",
+            description="wash and dry dishes",
+        )
+
+        self.chore_assignment = ChoreAssignment.objects.create(
+            rota=self.rota,
+            chore=self.chore,
+            day="mon",
+        )
+
+        self.url = reverse("delete-chore-assignment", kwargs={"assignment_id": self.chore_assignment.id})
+
+    def test_delete_assignment(self):
+        response = self.client.delete(self.url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(ChoreAssignment.objects.filter(rota=self.rota, chore=self.chore).exists())
+
+    def test_invalid_assignment(self):
+        url = reverse("delete-chore-assignment", kwargs={"assignment_id": 999})
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertIn("not found", response.data["error"].lower())
+
+    def test_unauthorised(self):
+        client = APIClient()
+        client.force_authenticate(user=self.guest)
+        response = client.delete(self.url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn("do not belong", response.data["error"].lower())
+
+    def test_as_a_member(self):
+        client = APIClient()
+        client.force_authenticate(user=self.guest)
+        self.house.add_member(self.guest)
+        response = client.delete(self.url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn("only the owner", response.data["error"].lower())
+
 class UpdateChoreAssignmentTest(APITestCase):
     def setUp(self):
         self.owner = User.objects.create_user(username="owner", password="password123")

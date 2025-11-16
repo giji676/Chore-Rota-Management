@@ -52,13 +52,24 @@ class UserHousesView(APIView):
 
 class DeleteChoreAssignmentView(APIView):
     def delete(self, request, assignment_id):
+        user = request.user
+
         try:
             assignment = ChoreAssignment.objects.get(id=assignment_id)
         except ChoreAssignment.DoesNotExist:
             return Response({"error": "Assignment not found"}, status=status.HTTP_404_NOT_FOUND)
 
+        if not HouseMember.objects.filter(house=assignment.rota.house, user=user).exists():
+            return Response({"error": "You do not belong to this house"},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        house_member = HouseMember.objects.get(house=assignment.rota.house, user=user)
+        if house_member.role != "owner":
+            return Response({"error": "Only the owner can perform this action"},
+                            status=status.HTTP_403_FORBIDDEN)
+
         assignment.delete()
-        return Response({"message": "Assignment deleted successfully"}, status=status.HTTP_200_OK)
+        return Response({"message": "Assignment deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
 
 class UpdateChoreAssignmentView(APIView):
     def patch(self, request, assignment_id):
