@@ -245,30 +245,40 @@ class DeleteChoreView(APIView):
         return Response({"message": "Chore deleted"}, status=status.HTTP_200_OK)
 
 class CreateChoreView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def post(self, request):
         user = request.user
         data = request.data
 
-        house = data.get("house")
+        house_id = data.get("house_id")
         name = data.get("name")
         description = data.get("description")
 
-        if not all([name, house, description]):
+        if not all([name, house_id, description]):
             return Response({"error": "Missing required fields"}, status=status.HTTP_400_BAD_REQUEST)
-
+        
         try:
-            house_obj = House.objects.get(id=house)
+            try:
+                house_id = int(house_id)
+            except:
+                return Response({"error": "House id must be an int"}, status=status.HTTP_400_BAD_REQUEST)
+            house = House.objects.get(id=house_id)
         except House.DoesNotExist:
             return Response({"error": "Invalid house"}, status=status.HTTP_400_BAD_REQUEST)
 
-        chore = Chore(
-            house=house_obj,
+        if not HouseMember.objects.filter(house=house, user=user).exists():
+            return Response({"error": "You do not belong to this house"},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        chore = Chore.objects.create(
+            house=house,
             name=name,
             description=description,
-        ).save()
+        )
 
         return Response({
-            "message": "Successfully create the chore",
+            "message": "Successfully created the chore",
             "chore_id": chore.id
         }, status=status.HTTP_201_CREATED)
 
@@ -350,6 +360,8 @@ class AddressAutocompleteView(APIView):
         return Response(data, status=status.HTTP_200_OK)
 
 class AddressDetailsView(APIView):
+    permission_classes = [AllowAny]
+
     def get(self, request):
         place_id = request.query_params.get("place_id")
         if not place_id:

@@ -7,6 +7,61 @@ from api.models import House, HouseMember
 
 User = get_user_model()
 
+class CreateChoreTest(APITestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(username="owner", password="password123")
+        self.guest = User.objects.create_user(username="guest", password="password123")
+
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.owner)
+
+        self.house = House.objects.create(
+            name="Crescent",
+            address= "10A the crescent",
+            place_id= "TEST_PLACE_ID",
+            max_members=6
+        )
+        self.house.set_password("housepassword")
+        self.house.save()
+        self.house.add_member(user=self.owner, role="owner")
+        self.url = reverse("create-chore")
+
+        self.chore_data = {
+            "house_id": self.house.id,
+            "name": "dishes",
+            "description": "wash and dry dishes",
+        }
+
+    def test_create_chore(self):
+        response = self.client.post(self.url, self.chore_data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_missing_data(self):
+        response = self.client.post(self.url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("missing required fields", response.data["error"].lower())
+
+    def test_non_int_house_id(self):
+        chore_data = self.chore_data
+        chore_data["house_id"] = "str_ID"
+        response = self.client.post(self.url, chore_data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("must be an int", response.data["error"].lower())
+
+    def test_non_existant_house_id(self):
+        chore_data = self.chore_data
+        chore_data["house_id"] = -999
+        response = self.client.post(self.url, chore_data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("invalid house", response.data["error"].lower())
+
+    def test_unauthorised(self):
+        client = APIClient()
+        client.force_authenticate(self.guest)
+        response = client.post(self.url, self.chore_data)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn("do not belong", response.data["error"].lower())
+
 class AddressDetailsTest(APITestCase):
     def setUp(self):
         self.client = APIClient()
@@ -44,7 +99,7 @@ class AddressAutocompleteTest(APITestCase):
 
     def test_missing_query(self):
         response = self.client.get(f"{self.url}?q=")
-        self.assertTrue(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     @patch("api.views.requests.get")
     def test_normal_request(self, mock_get):
@@ -58,7 +113,7 @@ class AddressAutocompleteTest(APITestCase):
         mock_get.return_value = mock_response
 
         response = self.client.get(f"{self.url}?q=10A the crescent")
-        self.assertTrue(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("predictions", response.data)
         mock_get.assert_called_once()
 
