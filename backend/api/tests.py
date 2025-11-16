@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 from unittest.mock import patch, MagicMock
 from rest_framework import status
 from rest_framework.test import APITestCase, APIClient
@@ -7,6 +7,69 @@ from django.contrib.auth import get_user_model
 from api.models import House, HouseMember, Chore, ChoreAssignment, Rota
 
 User = get_user_model()
+
+class UpdateRotaTest(APITestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(username="owner", password="password123")
+        self.guest = User.objects.create_user(username="guest", password="password123")
+
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.owner)
+
+        self.house = House.objects.create(
+            name="Crescent",
+            address="10A the crescent",
+            place_id="TEST_PLACE_ID",
+            max_members=6
+        )
+        self.house.set_password("housepassword")
+        self.house.save()
+        self.house.add_member(user=self.owner, role="owner")
+
+        self.rota = Rota.objects.create(
+            house=self.house,
+        )
+
+        self.url = reverse("update-rota", kwargs={"rota_id": self.rota.id})
+
+    def test_update_rota(self):
+        start = date.today() + timedelta(days=2)
+        end = date.today() + timedelta(days=3)
+        response = self.client.patch(self.url, {
+            "start_date": start,
+            "end_date": end, 
+        })
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["rota"]["start_date"], start.isoformat())
+        self.assertEqual(response.data["rota"]["end_date"], end.isoformat())
+
+    def test_not_authorised(self):
+        client = APIClient()
+        client.force_authenticate(user=self.guest)
+        response = client.patch(self.url, {
+            "start_date": date.today() + timedelta(days=2),
+            "end_date": date.today() + timedelta(days=3)
+        })
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_not_owner(self):
+        self.house.add_member(user=self.guest, role="member")
+        client = APIClient()
+        client.force_authenticate(user=self.guest)
+        response = client.patch(self.url, {
+            "start_date": date.today() + timedelta(days=2),
+            "end_date": date.today() + timedelta(days=3)
+        })
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn("only the owner", response.data["error"].lower())
+
+    def test_invalid_rota(self):
+        url = reverse("update-rota", kwargs={"rota_id": 999})
+        response = self.client.patch(url, {
+            "start_date": date.today() + timedelta(days=2),
+            "end_date": date.today() + timedelta(days=3)
+        })
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
 class RotaDeleteTest(APITestCase):
     def setUp(self):

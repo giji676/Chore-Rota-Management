@@ -15,6 +15,7 @@ urlpatterns = [
     # Rota endpoints
     path("rota/create/", views.RotaManagementView.as_view(), name="create-rota"),
     path("rota/delete/<int:rota_id>/", views.RotaManagementView.as_view(), name="delete-rota"),
+    path("rota/update/<int:rota_id>/", views.RotaManagementView.as_view(), name="update-rota"),
 
     # Chore endpoints
     path("chores/create/", views.CreateChoreView.as_view(), name="create-chore"),

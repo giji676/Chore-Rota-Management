@@ -273,6 +273,42 @@ class RotaManagementView(APIView):
         rota.delete()
 
         return Response({"message": "Rota deleted"}, status=status.HTTP_204_NO_CONTENT)
+    
+    def patch(self, request, rota_id):
+        user = request.user
+        data = request.data
+
+        try:
+            rota = Rota.objects.get(id=rota_id)
+        except Rota.DoesNotExist:
+            return Response({"error": "Rota not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        if not HouseMember.objects.filter(house=rota.house, user=user).exists():
+            return Response({"error": "You do not belong to this house"},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        house_member = HouseMember.objects.get(house=rota.house, user=user)
+        if house_member.role != "owner":
+            return Response({"error": "Only the owner can perform this action"},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        allowed_fields = ["start_date", "end_date"]
+
+        for field, value in data.items():
+            if field in allowed_fields:
+                setattr(rota, field, value)
+
+        rota.save()
+
+        return Response({
+            "message": "Rota updated successfully",
+            "rota": {
+                "id": rota.id,
+                "start_date": rota.start_date,
+                "end_date": rota.end_date,
+                "house_id": rota.house.id,
+            }
+        }, status=status.HTTP_200_OK)
 
 class UpdateChoreView(APIView):
     permission_classes = [IsAuthenticated]
@@ -309,7 +345,7 @@ class UpdateChoreView(APIView):
                 "id": chore.id,
                 "name": chore.name,
                 "description": chore.description,
-                "house": chore.house_id if hasattr(chore, "house_id") else chore.house,
+                "house_id": chore.house_id,
             }
         }, status=status.HTTP_200_OK)
 
