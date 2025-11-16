@@ -1,5 +1,6 @@
 from datetime import date, timedelta
 from unittest.mock import patch, MagicMock
+from django.http import response
 from rest_framework import status
 from rest_framework.test import APITestCase, APIClient
 from django.urls import reverse
@@ -7,6 +8,175 @@ from django.contrib.auth import get_user_model
 from api.models import House, HouseMember, Chore, ChoreAssignment, Rota
 
 User = get_user_model()
+
+class UpdateChoreAssignmentTest(APITestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(username="owner", password="password123")
+        self.guest = User.objects.create_user(username="guest", password="password123")
+
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.owner)
+
+        self.house = House.objects.create(
+            name="Crescent",
+            address= "10A the crescent",
+            place_id= "TEST_PLACE_ID",
+            max_members=6
+        )
+        self.house.set_password("housepassword")
+        self.house.save()
+        self.house.add_member(user=self.owner, role="owner")
+
+        self.rota = Rota.objects.create(
+            house=self.house,
+        )
+
+        self.chore = Chore.objects.create(
+            house=self.house,
+            name="dishes",
+            description="wash and dry dishes",
+        )
+
+        self.chore_assignment = ChoreAssignment.objects.create(
+            rota=self.rota,
+            chore=self.chore,
+            day="mon",
+        )
+
+        self.url = reverse("update-chore-assignment", kwargs={"assignment_id": self.chore_assignment.id})
+
+    def test_update_assignment(self):
+        self.house.add_member(user=self.guest, role="member")
+        response = self.client.patch(self.url, {"day": "tue", "person": self.guest.id})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual("tue", response.data["assignment"]["day"])
+        ca = ChoreAssignment.objects.get(rota=self.rota, chore=self.chore)
+        self.assertEqual("tue", ca.day)
+
+    def test_invalid_assigment(self):
+        url = reverse("update-chore-assignment", kwargs={"assignment_id": 999})
+        response = self.client.patch(url, {"day": "tue"})
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertIn("not found", response.data["error"].lower())
+
+    def test_person_not_a_member(self):
+        response = self.client.patch(self.url, {"person": 999})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("not a member", response.data["error"].lower())
+
+class ChoreAssignTest(APITestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(username="owner", password="password123")
+        self.guest = User.objects.create_user(username="guest", password="password123")
+
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.owner)
+
+        self.house = House.objects.create(
+            name="Crescent",
+            address= "10A the crescent",
+            place_id= "TEST_PLACE_ID",
+            max_members=6
+        )
+        self.house.set_password("housepassword")
+        self.house.save()
+        self.house.add_member(user=self.owner, role="owner")
+
+        self.rota = Rota.objects.create(
+            house=self.house,
+        )
+
+        self.chore = Chore.objects.create(
+            house=self.house,
+            name="dishes",
+            description="wash and dry dishes",
+        )
+
+        self.url = reverse("assign-chore")
+
+    def test_assign_chore(self):
+        self.house.add_member(user=self.guest, role="guest")
+        response = self.client.post(self.url, {
+            "rota_id": self.rota.id,
+            "chore_id": self.chore.id,
+            "person_id": self.guest.id,
+            "day": "mon",
+        })
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_missing_data(self):
+        self.house.add_member(user=self.guest, role="guest")
+        response = self.client.post(self.url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("missing required fields", response.data["error"].lower())
+
+    def test_str_rota_id(self):
+        self.house.add_member(user=self.guest, role="guest")
+        response = self.client.post(self.url, {
+            "rota_id": "str_id",
+            "chore_id": self.chore.id,
+            "person_id": self.guest.id,
+            "day": "mon",
+        })
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("must be an int", response.data["error"].lower())
+
+    def test_invalid_rota_id(self):
+        self.house.add_member(user=self.guest, role="guest")
+        response = self.client.post(self.url, {
+            "rota_id": 999,
+            "chore_id": self.chore.id,
+            "person_id": self.guest.id,
+            "day": "mon",
+        })
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertIn("invalid rota", response.data["error"].lower())
+
+    def test_unauthorised(self):
+        client = APIClient()
+        client.force_authenticate(user=self.guest)
+        response = client.post(self.url, {
+            "rota_id": self.rota.id,
+            "chore_id": self.chore.id,
+            "person_id": self.guest.id,
+            "day": "mon",
+        })
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn("you do not belong", response.data["error"].lower())
+
+    def test_as_a_member(self):
+        client = APIClient()
+        client.force_authenticate(user=self.guest)
+        self.house.add_member(user=self.guest, role="guest")
+        response = client.post(self.url, {
+            "rota_id": self.rota.id,
+            "chore_id": self.chore.id,
+            "person_id": self.guest.id,
+            "day": "mon",
+        })
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn("only the owner", response.data["error"].lower())
+
+    def test_invalid_chore_id(self):
+        self.house.add_member(user=self.guest, role="guest")
+        response = self.client.post(self.url, {
+            "rota_id": self.rota.id,
+            "chore_id": 999,
+            "person_id": self.guest.id,
+            "day": "mon",
+        })
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertIn("chore not found", response.data["error"].lower())
+
+    def test_invalid_person_id(self):
+        response = self.client.post(self.url, {
+            "rota_id": self.rota.id,
+            "chore_id": self.chore.id,
+            "person_id": self.guest.id,
+            "day": "mon",
+        })
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("not part of this house", response.data["error"].lower())
 
 class HouseGetTest(APITestCase):
     def setUp(self):

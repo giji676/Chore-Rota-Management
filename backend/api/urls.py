@@ -24,6 +24,8 @@ urlpatterns = [
     path("chores/create/", views.ChoreManagementView.as_view(), name="create-chore"),
     path("chores/delete/<int:chore_id>/", views.ChoreManagementView.as_view(), name="delete-chore"),
     path("chores/update/<int:chore_id>/", views.ChoreManagementView.as_view(), name="update-chore"),
+
+    # Chore Assignment endpoints
     path("chores/assign/", views.AssignChoreView.as_view(), name="assign-chore"),
     path("chores/assignment/<int:assignment_id>/", views.UpdateChoreAssignmentView.as_view(), name="update-chore-assignment"),
     path("chores/assignment/<int:assignment_id>/delete/", views.DeleteChoreAssignmentView.as_view(), name="delete-chore-assignment"),

@@ -72,17 +72,14 @@ class UpdateChoreAssignmentView(APIView):
         person_id = data.get("person")
         if person_id:
             if not HouseMember.objects.filter(house=assignment.rota.house, user__id=person_id).exists():
-                return Response({"error": "Person not part of this house"}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"error": "Person not a member of this house"}, status=status.HTTP_400_BAD_REQUEST)
             assignment.person = HouseMember.objects.get(house=assignment.rota.house, user__id=person_id).user
 
         day = data.get("day")
         if day:
             assignment.day = day
 
-        try:
-            assignment.save()
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        assignment.save()
 
         return Response({
             "message": "Assignment updated successfully",
@@ -101,18 +98,9 @@ class AssignChoreView(APIView):
         user = request.user
         data = request.data
 
-        if not HouseMember.objects.filter(house=chore.house, user=user).exists():
-            return Response({"error": "You do not belong to this house"},
-                            status=status.HTTP_403_FORBIDDEN)
-
-        house_member = HouseMember.objects.get(house=chore.house, user=user)
-        if house_member.role != "owner":
-            return Response({"error": "Only the owner can perform this action"},
-                            status=status.HTTP_403_FORBIDDEN)
-
-        rota_id = data.get("rota")
-        chore_id = data.get("chore")
-        person_id = data.get("person")
+        rota_id = data.get("rota_id")
+        chore_id = data.get("chore_id")
+        person_id = data.get("person_id")
         day = data.get("day")
 
         if not all([rota_id, chore_id, day]):
@@ -122,14 +110,27 @@ class AssignChoreView(APIView):
             )
 
         try:
+            try:
+                rota_id = int(rota_id)
+            except:
+                return Response({"error": "Rota id must be an int"}, status=status.HTTP_400_BAD_REQUEST)
             rota = Rota.objects.get(id=rota_id)
         except Rota.DoesNotExist:
-            return Response({"error": "Rota not found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Invalid rota"}, status=status.HTTP_404_NOT_FOUND)
+
+        if not HouseMember.objects.filter(house=rota.house, user=user).exists():
+            return Response({"error": "You do not belong to this house"},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        house_member = HouseMember.objects.get(house=rota.house, user=user)
+        if house_member.role != "owner":
+            return Response({"error": "Only the owner can perform this action"},
+                            status=status.HTTP_403_FORBIDDEN)
 
         try:
             chore = Chore.objects.get(id=chore_id, house=rota.house)
         except Chore.DoesNotExist:
-            return Response({"error": "Chore not found in this house"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Chore not found"}, status=status.HTTP_404_NOT_FOUND)
 
         person = None
         if person_id:
@@ -137,15 +138,12 @@ class AssignChoreView(APIView):
                 return Response({"error": "Person not part of this house"}, status=status.HTTP_400_BAD_REQUEST)
             person = HouseMember.objects.get(house=rota.house, user__id=person_id).user
 
-        try:
-            assignment, created = ChoreAssignment.objects.update_or_create(
-                rota=rota,
-                chore=chore,
-                day=day,
-                defaults={"person": person}
-            )
-        except ValidationError as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        assignment, created = ChoreAssignment.objects.update_or_create(
+            rota=rota,
+            chore=chore,
+            day=day,
+            defaults={"person": person}
+        )
 
         return Response({
             "message": "Chore assigned successfully",
@@ -156,7 +154,7 @@ class AssignChoreView(APIView):
                 "day": day,
                 "created": created
             }
-        }, status=status.HTTP_200_OK)
+        }, status=status.HTTP_201_CREATED)
 
 class RotaManagementView(APIView):
     permission_classes = [IsAuthenticated]
