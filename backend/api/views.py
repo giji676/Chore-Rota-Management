@@ -441,13 +441,10 @@ class HouseManagementView(APIView):
         }, status=status.HTTP_200_OK)
     
     def delete(self, request, house_id):
-        if not house_id:
-            return Response({"error": "House id required"}, status=status.HTTP_400_BAD_REQUEST)
-
         try:
             house = House.objects.get(id=house_id)
         except House.DoesNotExist:
-            return Response({"error": "No house found with this ID"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Invalid house"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             house_member = HouseMember.objects.get(house=house, user=request.user)

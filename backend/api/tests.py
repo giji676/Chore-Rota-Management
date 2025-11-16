@@ -8,6 +8,50 @@ from api.models import House, HouseMember, Chore, ChoreAssignment, Rota
 
 User = get_user_model()
 
+class HouseDeleteTest(APITestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(username="owner", password="password123")
+        self.guest = User.objects.create_user(username="guest", password="password123")
+
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.owner)
+
+        self.house = House.objects.create(
+            name="Crescent",
+            address= "10A the crescent",
+            place_id= "TEST_PLACE_ID",
+            max_members=6
+        )
+        self.house.set_password("housepassword")
+        self.house.save()
+        self.house.add_member(user=self.owner, role="owner")
+
+        self.url = reverse("delete-house", kwargs={"house_id": self.house.id})
+
+    def test_delete_house(self):
+        response = self.client.delete(self.url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(House.objects.filter(id=self.house.id).exists())
+
+    def test_not_authorised(self):
+        client = APIClient()
+        client.force_authenticate(user=self.guest)
+        response = client.delete(self.url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_not_owner(self):
+        self.house.add_member(user=self.guest, role="member")
+        client = APIClient()
+        client.force_authenticate(user=self.guest)
+        response = client.delete(self.url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn("only the owner", response.data["error"].lower())
+
+    def test_invalid_house(self):
+        url = reverse("delete-house", kwargs={"house_id": 999})
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
 class UpdateRotaTest(APITestCase):
     def setUp(self):
         self.owner = User.objects.create_user(username="owner", password="password123")
