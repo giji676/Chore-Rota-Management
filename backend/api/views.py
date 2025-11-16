@@ -17,58 +17,6 @@ GOOGLE_DETAILS_URL = "https://maps.googleapis.com/maps/api/place/details/json"
 
 # TODO: add role checks for everything
 
-class HouseView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request, house_id):
-        if not house_id:
-            return Response({"error": "House id required"}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            house = House.objects.get(id=house_id)
-        except House.DoesNotExist:
-            return Response({"error": "No house found with this ID"}, status=status.HTTP_400_BAD_REQUEST)
-
-        members_qs = HouseMember.objects.filter(house=house).select_related('user')
-        members = [
-            {
-                "id": member.user.id,
-                "username": member.user.username,
-                "is_guest": member.user.is_guest,
-                "role": member.role
-            }
-            for member in members_qs
-        ]
-
-        return Response({
-            "id": house.id,
-            "name": house.name,
-            "address": house.address,
-            "join_code": house.join_code,
-            "max_members": house.max_members,
-            "members": members
-        }, status=status.HTTP_200_OK)
-    
-    def delete(self, request, house_id):
-        if not house_id:
-            return Response({"error": "House id required"}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            house = House.objects.get(id=house_id)
-        except House.DoesNotExist:
-            return Response({"error": "No house found with this ID"}, status=status.HTTP_404_NOT_FOUND)
-
-        try:
-            house_member = HouseMember.objects.get(house=house, user=request.user)
-        except HouseMember.DoesNotExist:
-            return Response({"error": "You are not a member of this house"}, status=status.HTTP_403_FORBIDDEN)
-
-        if house_member.role != "owner":
-            return Response({"error": "Only the owner can delete this house"}, status=status.HTTP_403_FORBIDDEN)
-
-        house.delete()
-        return Response({"success": "House deleted"}, status=status.HTTP_204_NO_CONTENT)
-
 class UserHousesView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -310,7 +258,7 @@ class RotaManagementView(APIView):
             }
         }, status=status.HTTP_200_OK)
 
-class UpdateChoreView(APIView):
+class ChoreManagementView(APIView):
     permission_classes = [IsAuthenticated]
 
     def patch(self, request, chore_id):
@@ -349,9 +297,6 @@ class UpdateChoreView(APIView):
             }
         }, status=status.HTTP_200_OK)
 
-class DeleteChoreView(APIView):
-    permission_classes = [IsAuthenticated]
-
     def delete(self, request, chore_id):
         user = request.user
 
@@ -372,9 +317,6 @@ class DeleteChoreView(APIView):
         chore.delete()
 
         return Response({"message": "Chore deleted"}, status=status.HTTP_204_NO_CONTENT)
-
-class CreateChoreView(APIView):
-    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         user = request.user
@@ -437,7 +379,7 @@ class JoinHouseView(APIView):
 
         return Response({"message": "Joined successfully"}, status=status.HTTP_200_OK)
 
-class CreateHouseView(APIView):
+class HouseManagementView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -468,6 +410,55 @@ class CreateHouseView(APIView):
             "house_id": house.id,
             "join_code": house.join_code,
         }, status=status.HTTP_201_CREATED)
+
+    def get(self, request, house_id):
+        if not house_id:
+            return Response({"error": "House id required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            house = House.objects.get(id=house_id)
+        except House.DoesNotExist:
+            return Response({"error": "No house found with this ID"}, status=status.HTTP_400_BAD_REQUEST)
+
+        members_qs = HouseMember.objects.filter(house=house).select_related('user')
+        members = [
+            {
+                "id": member.user.id,
+                "username": member.user.username,
+                "is_guest": member.user.is_guest,
+                "role": member.role
+            }
+            for member in members_qs
+        ]
+
+        return Response({
+            "id": house.id,
+            "name": house.name,
+            "address": house.address,
+            "join_code": house.join_code,
+            "max_members": house.max_members,
+            "members": members
+        }, status=status.HTTP_200_OK)
+    
+    def delete(self, request, house_id):
+        if not house_id:
+            return Response({"error": "House id required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            house = House.objects.get(id=house_id)
+        except House.DoesNotExist:
+            return Response({"error": "No house found with this ID"}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            house_member = HouseMember.objects.get(house=house, user=request.user)
+        except HouseMember.DoesNotExist:
+            return Response({"error": "You are not a member of this house"}, status=status.HTTP_403_FORBIDDEN)
+
+        if house_member.role != "owner":
+            return Response({"error": "Only the owner can delete this house"}, status=status.HTTP_403_FORBIDDEN)
+
+        house.delete()
+        return Response({"success": "House deleted"}, status=status.HTTP_204_NO_CONTENT)
 
 class AddressAutocompleteView(APIView):
     permission_classes = [AllowAny]
