@@ -200,6 +200,8 @@ class AssignChoreView(APIView):
         }, status=status.HTTP_200_OK)
 
 class UpdateChoreView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def patch(self, request, chore_id):
         user = request.user
         data = request.data
@@ -208,6 +210,15 @@ class UpdateChoreView(APIView):
             chore = Chore.objects.get(id=chore_id)
         except Chore.DoesNotExist:
             return Response({"error": "Chore not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        if not HouseMember.objects.filter(house=chore.house, user=user).exists():
+            return Response({"error": "You do not belong to this house"},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        house_member = HouseMember.objects.get(house=chore.house, user=user)
+        if house_member.role != "owner":
+            return Response({"error": "Only the owner can perform this action"},
+                            status=status.HTTP_403_FORBIDDEN)
 
         allowed_fields = ["name", "description"]
 
