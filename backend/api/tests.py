@@ -8,6 +8,37 @@ from api.models import House, HouseMember, Chore, ChoreAssignment, Rota
 
 User = get_user_model()
 
+class HouseGetTest(APITestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(username="owner", password="password123")
+        self.guest = User.objects.create_user(username="guest", password="password123")
+
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.owner)
+
+        self.house = House.objects.create(
+            name="Crescent",
+            address= "10A the crescent",
+            place_id= "TEST_PLACE_ID",
+            max_members=6
+        )
+        self.house.set_password("housepassword")
+        self.house.save()
+        self.house.add_member(user=self.owner, role="owner")
+
+        self.url = reverse("get-house", kwargs={"house_id": self.house.id})
+
+    def test_get_house(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["name"], self.house.name);
+
+    def test_invalid_house(self):
+        url = reverse("get-house", kwargs={"house_id": 999})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertIn("no house found", response.data["error"].lower())
+
 class HouseDeleteTest(APITestCase):
     def setUp(self):
         self.owner = User.objects.create_user(username="owner", password="password123")
@@ -199,6 +230,13 @@ class RotaCreateTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertIn("only the owner can perform", response.data["error"].lower())
 
+    def test_create_as_not_a_member(self):
+        client = APIClient()
+        client.force_authenticate(user=self.guest)
+        response = client.post(self.url, self.rota_data)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn("you do not belong", response.data["error"].lower())
+
     def test_create_missing_data(self):
         response = self.client.post(self.url)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -207,7 +245,12 @@ class RotaCreateTest(APITestCase):
     def test_create_invalid_house_id(self):
         response = self.client.post(self.url, {"house": "invalid_id"})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("", response.data["error"].lower())
+        self.assertIn("must be an int", response.data["error"].lower())
+
+    def test_create_invalid_house_id_2(self):
+        response = self.client.post(self.url, {"house": 999})
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertIn("invalid house", response.data["error"].lower())
 
 class UpdateChoreTest(APITestCase):
     def setUp(self):

@@ -179,7 +179,7 @@ class RotaManagementView(APIView):
                 return Response({"error": "House id must be an int"}, status=status.HTTP_400_BAD_REQUEST)
             house = House.objects.get(id=house_id)
         except House.DoesNotExist:
-            return Response({"error": "Invalid house"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Invalid house"}, status=status.HTTP_404_NOT_FOUND)
 
         if not HouseMember.objects.filter(house=house_id, user=user).exists():
             return Response({"error": "You do not belong to this house"},
@@ -412,13 +412,10 @@ class HouseManagementView(APIView):
         }, status=status.HTTP_201_CREATED)
 
     def get(self, request, house_id):
-        if not house_id:
-            return Response({"error": "House id required"}, status=status.HTTP_400_BAD_REQUEST)
-
         try:
             house = House.objects.get(id=house_id)
         except House.DoesNotExist:
-            return Response({"error": "No house found with this ID"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "No house found with this ID"}, status=status.HTTP_404_NOT_FOUND)
 
         members_qs = HouseMember.objects.filter(house=house).select_related('user')
         members = [
