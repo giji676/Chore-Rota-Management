@@ -253,6 +253,27 @@ class RotaManagementView(APIView):
             "rota_id": rota.id
         }, status=status.HTTP_201_CREATED)
 
+    def delete(self, request, rota_id):
+        user = request.user
+
+        try:
+            rota = Rota.objects.get(id=rota_id)
+        except Rota.DoesNotExist:
+            return Response({"error": "Rota not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        if not HouseMember.objects.filter(house=rota.house, user=user).exists():
+            return Response({"error": "You do not belong to this house"},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        house_member = HouseMember.objects.get(house=rota.house, user=user)
+        if house_member.role != "owner":
+            return Response({"error": "Only the owner can perform this action"},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        rota.delete()
+
+        return Response({"message": "Rota deleted"}, status=status.HTTP_204_NO_CONTENT)
+
 class UpdateChoreView(APIView):
     permission_classes = [IsAuthenticated]
 
