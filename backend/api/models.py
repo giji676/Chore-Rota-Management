@@ -37,16 +37,6 @@ class House(models.Model):
             role=role
         )
 
-    def save(self, *args, **kwargs):
-        if not self.join_code:
-            self.join_code = generate_join_code()
-
-        super().save(*args, **kwargs)
-
-    def generate_place_id(self):
-        if not self.address or self.place_id:
-            return
-
     def set_password(self, raw_password):
             self.password= make_password(raw_password)
 
