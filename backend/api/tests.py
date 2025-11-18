@@ -9,7 +9,7 @@ from api.models import House, HouseMember, Chore, ChoreAssignment, Rota
 
 User = get_user_model()
 
-class UsersHouses(APITestCase):
+class UsersHousesTest(APITestCase):
     def setUp(self):
         self.owner = User.objects.create_user(username="owner", password="password123")
         self.guest = User.objects.create_user(username="guest", password="password123")
@@ -62,7 +62,7 @@ class UsersHouses(APITestCase):
         member = members[0]
         self.assertEqual(
             set(member.keys()),
-            {"id", "username", "is_guest", "role"}
+            {"id", "username", "is_guest", "role", "joined_at", "device_id"}
         )
         self.assertEqual(member["id"], self.owner.id)
         self.assertEqual(member["role"], "owner")
@@ -242,8 +242,8 @@ class ChoreAssignTest(APITestCase):
             "person_id": self.guest.id,
             "day": "mon",
         })
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("must be an int", response.data["error"].lower())
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertIn("invalid rota", response.data["error"].lower())
 
     def test_invalid_rota_id(self):
         self.house.add_member(user=self.guest, role="guest")
@@ -538,8 +538,8 @@ class RotaCreateTest(APITestCase):
 
     def test_create_invalid_house_id(self):
         response = self.client.post(self.url, {"house": "invalid_id"})
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("must be an int", response.data["error"].lower())
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertIn("invalid house", response.data["error"].lower())
 
     def test_create_invalid_house_id_2(self):
         response = self.client.post(self.url, {"house": 999})

@@ -7,6 +7,13 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.contrib.auth import get_user_model
 from .models import House, HouseMember, Chore, ChoreAssignment, Rota
+from .serializers import (
+    SimpleHouseSerializer,
+    ChoreAssignmentSerializer,
+    RotaSerializer,
+    ChoreSerializer,
+    HouseMemberSerializer,
+)
 
 User = get_user_model()
 
@@ -18,33 +25,11 @@ class UsersHousesView(APIView):
 
     def get(self, request):
         user = request.user
+        memberships = HouseMember.objects.filter(user=user).select_related("house")
+        houses = [m.house for m in memberships]
 
-        house_memberships = HouseMember.objects.filter(user=user).select_related('house')
-
-        houses = []
-        for membership in house_memberships:
-            house = membership.house
-            members_qs = HouseMember.objects.filter(house=house).select_related('user')
-            members = [
-                {
-                    "id": m.user.id,
-                    "username": m.user.username,
-                    "is_guest": m.user.is_guest,
-                    "role": m.role
-                }
-                for m in members_qs
-            ]
-
-            houses.append({
-                "id": house.id,
-                "name": house.name,
-                "address": house.address,
-                "join_code": house.join_code,
-                "max_members": house.max_members,
-                "members": members
-            })
-
-        return Response(houses, status=status.HTTP_200_OK)
+        serializer = SimpleHouseSerializer(houses, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 class DeleteChoreAssignmentView(APIView):
     permission_classes = [IsAuthenticated]
@@ -73,36 +58,36 @@ class UpdateChoreAssignmentView(APIView):
     permission_classes = [IsAuthenticated]
 
     def patch(self, request, assignment_id):
-        data = request.data
-
         try:
             assignment = ChoreAssignment.objects.get(id=assignment_id)
         except ChoreAssignment.DoesNotExist:
             return Response({"error": "Assignment not found"}, status=status.HTTP_404_NOT_FOUND)
 
+        user = request.user
+        if not HouseMember.objects.filter(house=assignment.rota.house, user=user).exists():
+            return Response({"error": "You do not belong to this house"},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        data = request.data.copy()
+
         person_id = data.get("person")
         if person_id:
-            if not HouseMember.objects.filter(house=assignment.rota.house, user__id=person_id).exists():
-                return Response({"error": "Person not a member of this house"}, status=status.HTTP_400_BAD_REQUEST)
-            assignment.person = HouseMember.objects.get(house=assignment.rota.house, user__id=person_id).user
+            try:
+                house_member = HouseMember.objects.get(house=assignment.rota.house, user__id=person_id)
+            except HouseMember.DoesNotExist:
+                return Response({"error": "Person is not a member of this house"},
+                                status=status.HTTP_400_BAD_REQUEST)
+            data["person"] = house_member.user.id
+        else:
+            data["person"] = None
 
-        day = data.get("day")
-        if day:
-            assignment.day = day
-        assignment.completed = data.get("completed")
-
-        assignment.save()
+        serializer = ChoreAssignmentSerializer(assignment, data=data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
 
         return Response({
             "message": "Assignment updated successfully",
-            "assignment": {
-                "id": assignment.id,
-                "chore": assignment.chore.name,
-                "person": assignment.person.username if assignment.person else None,
-                "day": assignment.day,
-                "completed": assignment.completed,
-                "completed_at": assignment.completed_at,
-            }
+            "assignment": serializer.data
         }, status=status.HTTP_200_OK)
 
 class AssignChoreView(APIView):
@@ -119,27 +104,22 @@ class AssignChoreView(APIView):
 
         if not all([rota_id, chore_id, day]):
             return Response(
-                {"error": "Missing required fields: rota, chore, day"},
+                {"error": "Missing required fields: rota_id, chore_id, day"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         try:
-            try:
-                rota_id = int(rota_id)
-            except:
-                return Response({"error": "Rota id must be an int"}, status=status.HTTP_400_BAD_REQUEST)
-            rota = Rota.objects.get(id=rota_id)
-        except Rota.DoesNotExist:
+            rota = Rota.objects.get(id=int(rota_id))
+        except (ValueError, Rota.DoesNotExist):
             return Response({"error": "Invalid rota"}, status=status.HTTP_404_NOT_FOUND)
 
-        if not HouseMember.objects.filter(house=rota.house, user=user).exists():
-            return Response({"error": "You do not belong to this house"},
-                            status=status.HTTP_403_FORBIDDEN)
+        try:
+            house_member = HouseMember.objects.get(house=rota.house, user=user)
+        except HouseMember.DoesNotExist:
+            return Response({"error": "You do not belong to this house"}, status=status.HTTP_403_FORBIDDEN)
 
-        house_member = HouseMember.objects.get(house=rota.house, user=user)
         if house_member.role != "owner":
-            return Response({"error": "Only the owner can perform this action"},
-                            status=status.HTTP_403_FORBIDDEN)
+            return Response({"error": "Only the owner can perform this action"}, status=status.HTTP_403_FORBIDDEN)
 
         try:
             chore = Chore.objects.get(id=chore_id, house=rota.house)
@@ -148,9 +128,11 @@ class AssignChoreView(APIView):
 
         person = None
         if person_id:
-            if not HouseMember.objects.filter(house=rota.house, user__id=person_id).exists():
+            try:
+                member = HouseMember.objects.get(house=rota.house, user__id=person_id)
+                person = member.user
+            except HouseMember.DoesNotExist:
                 return Response({"error": "Person not part of this house"}, status=status.HTTP_400_BAD_REQUEST)
-            person = HouseMember.objects.get(house=rota.house, user__id=person_id).user
 
         assignment, created = ChoreAssignment.objects.update_or_create(
             rota=rota,
@@ -159,15 +141,12 @@ class AssignChoreView(APIView):
             defaults={"person": person}
         )
 
+        serializer = ChoreAssignmentSerializer(assignment)
+
         return Response({
             "message": "Chore assigned successfully",
-            "assignment": {
-                "id": assignment.id,
-                "chore": chore.name,
-                "person": person.username if person else None,
-                "day": day,
-                "created": created
-            }
+            "created": created,
+            "assignment": serializer.data
         }, status=status.HTTP_201_CREATED)
 
 class RotaManagementView(APIView):
@@ -178,96 +157,91 @@ class RotaManagementView(APIView):
         data = request.data
 
         house_id = data.get("house")
-        start_date = data.get("start_date")
-        end_date = data.get("end_date")
-
         if not house_id:
             return Response({"error": "Missing house id"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            try:
-                house_id = int(house_id)
-            except:
-                return Response({"error": "House id must be an int"}, status=status.HTTP_400_BAD_REQUEST)
-            house = House.objects.get(id=house_id)
-        except House.DoesNotExist:
+            house = House.objects.get(id=int(house_id))
+        except (ValueError, House.DoesNotExist):
             return Response({"error": "Invalid house"}, status=status.HTTP_404_NOT_FOUND)
 
-        if not HouseMember.objects.filter(house=house_id, user=user).exists():
+        try:
+            member = HouseMember.objects.get(house=house, user=user)
+        except HouseMember.DoesNotExist:
             return Response({"error": "You do not belong to this house"},
                             status=status.HTTP_403_FORBIDDEN)
 
-        house_member = HouseMember.objects.get(house=house_id, user=user)
-        if house_member.role != "owner":
+        if member.role != "owner":
             return Response({"error": "Only the owner can perform this action"},
                             status=status.HTTP_403_FORBIDDEN)
 
-        rota = Rota.objects.create(
-            house=house,
-            start_date=start_date,
-            end_date=end_date,
-        )
+        serializer_data = {
+            "house": house.id,
+            "start_date": data.get("start_date"),
+            "end_date": data.get("end_date"),
+        }
+
+        serializer = RotaSerializer(data=serializer_data)
+        serializer.is_valid(raise_exception=True)
+
+        rota = serializer.save()
 
         return Response({
             "message": "Successfully created the rota",
-            "rota_id": rota.id
+            "rota": serializer.data
         }, status=status.HTTP_201_CREATED)
 
-    def delete(self, request, rota_id):
-        user = request.user
-
+    def _get_rota_and_check_permissions(self, rota_id, user):
+        """
+        Shared helper: 
+        - fetch rota
+        - ensure user belongs to house
+        - ensure user is owner
+        """
         try:
             rota = Rota.objects.get(id=rota_id)
         except Rota.DoesNotExist:
-            return Response({"error": "Rota not found"}, status=status.HTTP_404_NOT_FOUND)
+            return None, Response({"error": "Rota not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        if not HouseMember.objects.filter(house=rota.house, user=user).exists():
-            return Response({"error": "You do not belong to this house"},
-                            status=status.HTTP_403_FORBIDDEN)
+        try:
+            member = HouseMember.objects.get(house=rota.house, user=user)
+        except HouseMember.DoesNotExist:
+            return None, Response({"error": "You do not belong to this house"},
+                                  status=status.HTTP_403_FORBIDDEN)
 
-        house_member = HouseMember.objects.get(house=rota.house, user=user)
-        if house_member.role != "owner":
-            return Response({"error": "Only the owner can perform this action"},
-                            status=status.HTTP_403_FORBIDDEN)
+        if member.role != "owner":
+            return None, Response({"error": "Only the owner can perform this action"},
+                                  status=status.HTTP_403_FORBIDDEN)
+
+        return rota, None
+
+    def delete(self, request, rota_id):
+        rota, error = self._get_rota_and_check_permissions(rota_id, request.user)
+        if error:
+            return error
 
         rota.delete()
-
         return Response({"message": "Rota deleted"}, status=status.HTTP_204_NO_CONTENT)
-    
+
     def patch(self, request, rota_id):
-        user = request.user
-        data = request.data
+        rota, error = self._get_rota_and_check_permissions(rota_id, request.user)
+        if error:
+            return error
 
-        try:
-            rota = Rota.objects.get(id=rota_id)
-        except Rota.DoesNotExist:
-            return Response({"error": "Rota not found"}, status=status.HTTP_404_NOT_FOUND)
+        allowed_fields = {"start_date", "end_date"}
 
-        if not HouseMember.objects.filter(house=rota.house, user=user).exists():
-            return Response({"error": "You do not belong to this house"},
-                            status=status.HTTP_403_FORBIDDEN)
-
-        house_member = HouseMember.objects.get(house=rota.house, user=user)
-        if house_member.role != "owner":
-            return Response({"error": "Only the owner can perform this action"},
-                            status=status.HTTP_403_FORBIDDEN)
-
-        allowed_fields = ["start_date", "end_date"]
-
-        for field, value in data.items():
+        update_data = {}
+        for field, value in request.data.items():
             if field in allowed_fields:
-                setattr(rota, field, value)
+                update_data[field] = value
 
-        rota.save()
+        serializer = RotaSerializer(rota, data=update_data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
 
         return Response({
             "message": "Rota updated successfully",
-            "rota": {
-                "id": rota.id,
-                "start_date": rota.start_date,
-                "end_date": rota.end_date,
-                "house_id": rota.house.id,
-            }
+            "rota": serializer.data
         }, status=status.HTTP_200_OK)
 
 class ChoreManagementView(APIView):
@@ -301,12 +275,7 @@ class ChoreManagementView(APIView):
 
         return Response({
             "message": "Chore updated successfully",
-            "chore": {
-                "id": chore.id,
-                "name": chore.name,
-                "description": chore.description,
-                "house_id": chore.house_id,
-            }
+            "chore": ChoreSerializer(chore).data
         }, status=status.HTTP_200_OK)
 
     def delete(self, request, chore_id):
@@ -340,7 +309,7 @@ class ChoreManagementView(APIView):
 
         if not all([name, house_id, description]):
             return Response({"error": "Missing required fields"}, status=status.HTTP_400_BAD_REQUEST)
-        
+
         try:
             try:
                 house_id = int(house_id)
@@ -362,7 +331,7 @@ class ChoreManagementView(APIView):
 
         return Response({
             "message": "Successfully created the chore",
-            "chore_id": chore.id
+            "chore": ChoreSerializer(chore).data
         }, status=status.HTTP_201_CREATED)
 
 class JoinHouseView(APIView):
@@ -385,11 +354,12 @@ class JoinHouseView(APIView):
             return Response({"error": "Wrong password"}, status=status.HTTP_403_FORBIDDEN)
 
         try:
-            house.add_member(user)
+            member = house.add_member(user)
         except ValidationError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response({"message": "Joined successfully"}, status=status.HTTP_200_OK)
+        member_data = HouseMemberSerializer(member).data
+        return Response({"message": "Joined successfully", "member": member_data}, status=status.HTTP_200_OK)
 
 class HouseManagementView(APIView):
     permission_classes = [IsAuthenticated]
@@ -417,10 +387,11 @@ class HouseManagementView(APIView):
         house.save()
         house.add_member(user=user, role="owner")
 
+        house_data = SimpleHouseSerializer(house).data
+
         return Response({
             "message": "House created successfully",
-            "house_id": house.id,
-            "join_code": house.join_code,
+            "house": house_data
         }, status=status.HTTP_201_CREATED)
 
     def get(self, request, house_id):
@@ -429,25 +400,9 @@ class HouseManagementView(APIView):
         except House.DoesNotExist:
             return Response({"error": "No house found with this ID"}, status=status.HTTP_404_NOT_FOUND)
 
-        members_qs = HouseMember.objects.filter(house=house).select_related('user')
-        members = [
-            {
-                "id": member.user.id,
-                "username": member.user.username,
-                "is_guest": member.user.is_guest,
-                "role": member.role
-            }
-            for member in members_qs
-        ]
+        house_data = SimpleHouseSerializer(house).data
 
-        return Response({
-            "id": house.id,
-            "name": house.name,
-            "address": house.address,
-            "join_code": house.join_code,
-            "max_members": house.max_members,
-            "members": members
-        }, status=status.HTTP_200_OK)
+        return Response(house_data, status=status.HTTP_200_OK)
     
     def delete(self, request, house_id):
         try:
