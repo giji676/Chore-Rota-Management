@@ -4,9 +4,9 @@ from django.core.exceptions import ValidationError
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from api.models import House, HouseMember, Chore, ChoreAssignment, Rota
-from django.contrib.auth import get_user_model
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from django.contrib.auth import get_user_model
+from .models import House, HouseMember, Chore, ChoreAssignment, Rota
 
 User = get_user_model()
 
