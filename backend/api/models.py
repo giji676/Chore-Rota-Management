@@ -2,6 +2,7 @@ import string
 import random
 from datetime import date
 from django.db import models
+from django.utils import timezone
 from django.conf import settings
 from django.contrib.auth.hashers import make_password, check_password
 from django.core.exceptions import ValidationError
@@ -100,6 +101,15 @@ class ChoreAssignment(models.Model):
 
     class Meta:
         unique_together = ("rota", "chore", "day")
+
+    def save(self, *args, **kwargs):
+        if self.completed and self.completed_at is None:
+            self.completed_at = timezone.now()
+
+        if not self.completed and self.completed_at is not None:
+            self.completed_at = None
+
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.chore.name} - {self.person} on {self.day}"

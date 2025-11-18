@@ -3,6 +3,7 @@ from unittest.mock import patch, MagicMock
 from rest_framework import status
 from rest_framework.test import APITestCase, APIClient
 from django.urls import reverse
+from django.utils import timezone
 from django.contrib.auth import get_user_model
 from api.models import House, HouseMember, Chore, ChoreAssignment, Rota
 
@@ -166,11 +167,15 @@ class UpdateChoreAssignmentTest(APITestCase):
 
     def test_update_assignment(self):
         self.house.add_member(user=self.guest, role="member")
-        response = self.client.patch(self.url, {"day": "tue", "person": self.guest.id})
+        response = self.client.patch(self.url, {"day": "tue", "person": self.guest.id, "completed": True})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual("tue", response.data["assignment"]["day"])
         ca = ChoreAssignment.objects.get(rota=self.rota, chore=self.chore)
         self.assertEqual("tue", ca.day)
+        self.assertEqual(True, ca.completed)
+        self.assertIsNotNone(ca.completed_at)
+        now = timezone.now()
+        self.assertTrue((now - ca.completed_at).total_seconds() < 2)  # allow 2-second tolerance
 
     def test_invalid_assigment(self):
         url = reverse("update-chore-assignment", kwargs={"assignment_id": 999})

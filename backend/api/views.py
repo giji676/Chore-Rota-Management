@@ -89,6 +89,7 @@ class UpdateChoreAssignmentView(APIView):
         day = data.get("day")
         if day:
             assignment.day = day
+        assignment.completed = data.get("completed")
 
         assignment.save()
 
@@ -98,7 +99,9 @@ class UpdateChoreAssignmentView(APIView):
                 "id": assignment.id,
                 "chore": assignment.chore.name,
                 "person": assignment.person.username if assignment.person else None,
-                "day": assignment.day
+                "day": assignment.day,
+                "completed": assignment.completed,
+                "completed_at": assignment.completed_at,
             }
         }, status=status.HTTP_200_OK)
 
