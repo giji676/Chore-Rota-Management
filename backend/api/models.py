@@ -1,7 +1,7 @@
 import string
 import random
 from datetime import date
-from django.db import models, transaction
+from django.db import models
 from django.conf import settings
 from django.contrib.auth.hashers import make_password, check_password
 from django.core.exceptions import ValidationError

@@ -1,7 +1,5 @@
 from datetime import date, timedelta
-from http import client
 from unittest.mock import patch, MagicMock
-from django.http import response
 from rest_framework import status
 from rest_framework.test import APITestCase, APIClient
 from django.urls import reverse
