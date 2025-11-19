@@ -62,7 +62,7 @@ class UsersHousesTest(APITestCase):
         member = members[0]
         self.assertEqual(
             set(member.keys()),
-            {"id", "username", "is_guest", "role", "joined_at", "device_id"}
+            {"id", "username", "is_guest", "role", "joined_at"}
         )
         self.assertEqual(member["id"], self.owner.id)
         self.assertEqual(member["role"], "owner")

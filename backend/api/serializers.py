@@ -8,11 +8,10 @@ class HouseMemberSerializer(serializers.ModelSerializer):
     id = serializers.ReadOnlyField(source="user.id")
     username = serializers.ReadOnlyField(source="user.username")
     is_guest = serializers.ReadOnlyField(source="user.is_guest")
-    device_id = serializers.ReadOnlyField(source="user.device_id")
 
     class Meta:
         model = HouseMember
-        fields = ["id", "username", "is_guest", "device_id", "role", "joined_at"]
+        fields = ["id", "username", "is_guest", "role", "joined_at"]
 
 class ChoreSerializer(serializers.ModelSerializer):
     class Meta:

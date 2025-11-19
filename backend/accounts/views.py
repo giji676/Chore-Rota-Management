@@ -51,6 +51,10 @@ class GuestView(APIView):
                 "is_guest": True,
             }
         )
+
+        if not created and not user.is_guest:
+            user.is_guest = True
+            user.save()
         refresh = RefreshToken.for_user(user)
 
         return Response({

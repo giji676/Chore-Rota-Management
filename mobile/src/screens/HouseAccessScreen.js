@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, ActivityIndicator } from "react-native";
 import api from "../utils/api";
+import logout from "../utils/logout";
 
 export default function HouseAccessScreen({ navigation }) {
     const [joinCode, setJoinCode] = useState("");
@@ -53,6 +54,11 @@ export default function HouseAccessScreen({ navigation }) {
         </TouchableOpacity>
     );
 
+    const temp_logout = () => {
+        logout();
+        navigation.navigate("Login");
+    };
+
     return (
         <View style={styles.container}>
             <Text style={styles.title}>Your Houses</Text>
@@ -100,6 +106,10 @@ export default function HouseAccessScreen({ navigation }) {
                     <Text style={styles.resultText}>{result}</Text>
                 </View>
             )}
+
+            <TouchableOpacity style={styles.button} onPress={temp_logout}>
+                <Text style={styles.buttonText}>Logout</Text>
+            </TouchableOpacity>
         </View>
     );
 }
