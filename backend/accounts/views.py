@@ -44,7 +44,7 @@ class GuestView(APIView):
 
         device_id = serializer.validated_data["device_id"]
 
-        user = User.objects.get_or_create(
+        user, created = User.objects.get_or_create(
             device_id=device_id,
             defaults={
                 "username": f"guest_{device_id[:6]}",
