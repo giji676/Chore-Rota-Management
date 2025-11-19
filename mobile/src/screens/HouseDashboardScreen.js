@@ -5,29 +5,27 @@ import api from '../utils/api';
 
 export default function HouseDashboardScreen({ navigation, route }) {
     // Accept either a full house object or just houseId
-    const { houseId, house: initialHouse } = route.params || {};
-    const [house, setHouse] = useState(initialHouse || null);
-    const [loading, setLoading] = useState(!initialHouse);
+    const [house, setHouse] = useState(route.params.house);
     const [error, setError] = useState('');
 
     useEffect(() => {
-        if (!house && houseId) {
-            const fetchHouse = async () => {
-                try {
-                    const res = await api.get(`house/${houseId}/`);
-                    setHouse(res.data);
-                } catch (err) {
-                    setError(err.response?.data?.error || err.message);
-                } finally {
-                    setLoading(false);
-                }
-            };
+        // if (!house && houseId) {
+        //     const fetchHouse = async () => {
+        //         try {
+        //             const res = await api.get(`house/${houseId}/`);
+        //             setHouse(res.data);
+        //         } catch (err) {
+        //             setError(err.response?.data?.error || err.message);
+        //         } finally {
+        //             setLoading(false);
+        //         }
+        //     };
+        //
+        //     fetchHouse();
+        // }
+    }, [house]);
 
-            fetchHouse();
-        }
-    }, [house, houseId]);
-
-    if (loading) return <ActivityIndicator size="large" style={styles.loader} />;
+    // if (loading) return <ActivityIndicator size="large" style={styles.loader} />;
     if (error) return <Text style={styles.error}>{error}</Text>;
     if (!house) return <Text style={styles.error}>House not found</Text>;
 

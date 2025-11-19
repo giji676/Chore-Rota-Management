@@ -40,7 +40,6 @@ export default function CreateHouseScreen({ navigation }) {
     }, [address]);
 
     const handleSelectSuggestion = (item) => {
-        console.log("selecting:", item.description);
         setAddress(item.description);
         setPlaceId(item.place_id);
         setSelectedPlace(item);

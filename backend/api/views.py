@@ -1,3 +1,4 @@
+import json
 import requests
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -389,10 +390,7 @@ class HouseManagementView(APIView):
 
         house_data = SimpleHouseSerializer(house).data
 
-        return Response({
-            "message": "House created successfully",
-            "house": house_data
-        }, status=status.HTTP_201_CREATED)
+        return Response(house_data, status=status.HTTP_201_CREATED)
 
     def get(self, request, house_id):
         try:
