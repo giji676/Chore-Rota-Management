@@ -90,7 +90,7 @@ export default function CreateHouseScreen({ navigation }) {
                 value={address}
                 onChangeText={text => {
                     setAddress(text);
-                    setPlaceId(""); // clear previous selection
+                    setPlaceId("");
                 }}
             />
 
