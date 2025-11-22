@@ -2,11 +2,12 @@ import json
 import requests
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.shortcuts import get_object_or_404
+from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from django.contrib.auth import get_user_model
 from .models import House, HouseMember, Chore, ChoreAssignment, Rota
 from .serializers import (
     SimpleHouseSerializer,
@@ -53,7 +54,7 @@ class DeleteChoreAssignmentView(APIView):
                             status=status.HTTP_403_FORBIDDEN)
 
         assignment.delete()
-        return Response({"message": "Assignment deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 class UpdateChoreAssignmentView(APIView):
     permission_classes = [IsAuthenticated]
@@ -86,10 +87,7 @@ class UpdateChoreAssignmentView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
-        return Response({
-            "message": "Assignment updated successfully",
-            "assignment": serializer.data
-        }, status=status.HTTP_200_OK)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 class AssignChoreView(APIView):
     permission_classes = [IsAuthenticated]
@@ -144,14 +142,42 @@ class AssignChoreView(APIView):
 
         serializer = ChoreAssignmentSerializer(assignment)
 
-        return Response({
-            "message": "Chore assigned successfully",
-            "created": created,
-            "assignment": serializer.data
-        }, status=status.HTTP_201_CREATED)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+class HouseRotaListView(APIView):
+    def get(self, request, house_id):
+        user = request.user
+
+        try:
+            rota = Rota.objects.get(id=rota_id)
+        except Rota.DoesNotExist:
+            return None, Response({"error": "Rota not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            member = HouseMember.objects.get(house=rota.house, user=user)
+        except HouseMember.DoesNotExist:
+            return None, Response({"error": "You do not belong to this house"},
+                                  status=status.HTTP_403_FORBIDDEN)
+        rotas = Rota.objects.filter(house_id=house_id)
+        serializer = RotaSerializer(rotas, many=True)
+        return Response(serializer.data, status=200)
 
 class RotaManagementView(APIView):
     permission_classes = [IsAuthenticated]
+
+    def get(self, request, rota_id):
+        user = request.user
+
+        rota = get_object_or_404(Rota, id=rota_id)
+
+        try:
+            member = HouseMember.objects.get(house=rota.house, user=user)
+        except HouseMember.DoesNotExist:
+            return None, Response({"error": "You do not belong to this house"},
+                                  status=status.HTTP_403_FORBIDDEN)
+
+        serializer = RotaSerializer(rota)
+        return Response(serializer.data, status=200)
 
     def post(self, request):
         user = request.user
@@ -178,19 +204,19 @@ class RotaManagementView(APIView):
 
         serializer_data = {
             "house": house.id,
-            "start_date": data.get("start_date"),
-            "end_date": data.get("end_date"),
         }
+
+        if data.get("start_date"):
+            serializer_data["start_date"] = data.get("start_date")
+
+        if data.get("end_date"):
+            serializer_data["end_date"] = data.get("end_date")
 
         serializer = RotaSerializer(data=serializer_data)
         serializer.is_valid(raise_exception=True)
+        serializer.save()
 
-        rota = serializer.save()
-
-        return Response({
-            "message": "Successfully created the rota",
-            "rota": serializer.data
-        }, status=status.HTTP_201_CREATED)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def _get_rota_and_check_permissions(self, rota_id, user):
         """
@@ -222,7 +248,7 @@ class RotaManagementView(APIView):
             return error
 
         rota.delete()
-        return Response({"message": "Rota deleted"}, status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def patch(self, request, rota_id):
         rota, error = self._get_rota_and_check_permissions(rota_id, request.user)
@@ -240,10 +266,7 @@ class RotaManagementView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
-        return Response({
-            "message": "Rota updated successfully",
-            "rota": serializer.data
-        }, status=status.HTTP_200_OK)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 class ChoreManagementView(APIView):
     permission_classes = [IsAuthenticated]
@@ -274,10 +297,7 @@ class ChoreManagementView(APIView):
 
         chore.save()
 
-        return Response({
-            "message": "Chore updated successfully",
-            "chore": ChoreSerializer(chore).data
-        }, status=status.HTTP_200_OK)
+        return Response(ChoreSerializer(chore).data, status=status.HTTP_200_OK)
 
     def delete(self, request, chore_id):
         user = request.user
@@ -298,7 +318,7 @@ class ChoreManagementView(APIView):
 
         chore.delete()
 
-        return Response({"message": "Chore deleted"}, status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def post(self, request):
         user = request.user
@@ -330,10 +350,7 @@ class ChoreManagementView(APIView):
             description=description,
         )
 
-        return Response({
-            "message": "Successfully created the chore",
-            "chore": ChoreSerializer(chore).data
-        }, status=status.HTTP_201_CREATED)
+        return Response(ChoreSerializer(chore).data, status=status.HTTP_201_CREATED)
 
 class JoinHouseView(APIView):
     permission_classes  = [IsAuthenticated]
@@ -360,7 +377,7 @@ class JoinHouseView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         member_data = HouseMemberSerializer(member).data
-        return Response({"message": "Joined successfully", "member": member_data}, status=status.HTTP_200_OK)
+        return Response(member_data, status=status.HTTP_200_OK)
 
 class HouseManagementView(APIView):
     permission_classes = [IsAuthenticated]
@@ -417,7 +434,7 @@ class HouseManagementView(APIView):
             return Response({"error": "Only the owner can delete this house"}, status=status.HTTP_403_FORBIDDEN)
 
         house.delete()
-        return Response({"success": "House deleted"}, status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 class AddressAutocompleteView(APIView):
     permission_classes = [AllowAny]

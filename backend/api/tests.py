@@ -169,7 +169,7 @@ class UpdateChoreAssignmentTest(APITestCase):
         self.house.add_member(user=self.guest, role="member")
         response = self.client.patch(self.url, {"day": "tue", "person": self.guest.id, "completed": True})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual("tue", response.data["assignment"]["day"])
+        self.assertEqual("tue", response.data["day"])
         ca = ChoreAssignment.objects.get(rota=self.rota, chore=self.chore)
         self.assertEqual("tue", ca.day)
         self.assertEqual(True, ca.completed)
@@ -409,8 +409,8 @@ class UpdateRotaTest(APITestCase):
             "end_date": end, 
         })
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["rota"]["start_date"], start.isoformat())
-        self.assertEqual(response.data["rota"]["end_date"], end.isoformat())
+        self.assertEqual(response.data["start_date"], start.isoformat())
+        self.assertEqual(response.data["end_date"], end.isoformat())
 
     def test_not_authorised(self):
         client = APIClient()
@@ -574,7 +574,7 @@ class UpdateChoreTest(APITestCase):
     def test_update_chore(self):
         response = self.client.patch(self.url, {"description": "only wash"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["chore"]["description"], "only wash")
+        self.assertEqual(response.data["description"], "only wash")
 
     def test_not_authorised(self):
         client = APIClient()

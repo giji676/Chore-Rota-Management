@@ -1,3 +1,4 @@
+from datetime import date
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from .models import House, Chore, Rota, ChoreAssignment, HouseMember
@@ -19,23 +20,57 @@ class ChoreSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 class ChoreAssignmentSerializer(serializers.ModelSerializer):
-    person = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.all(),
-        required=False,
-        allow_null=True
-    )
-    completed_at = serializers.DateTimeField(read_only=True)
+    chore_name = serializers.CharField(source="chore.name", read_only=True)
+    person_name = serializers.CharField(source="person.username", read_only=True)
 
     class Meta:
         model = ChoreAssignment
-        fields = "__all__"
+        fields = ["id", "chore", "chore_name", "person", "person_name", "day", "completed"]
 
 class RotaSerializer(serializers.ModelSerializer):
     assignments = ChoreAssignmentSerializer(many=True, read_only=True)
+    start_date = serializers.DateField(required=False, default=date.today)
+    end_date = serializers.DateField(required=False, allow_null=True)
 
     class Meta:
         model = Rota
         fields = "__all__"
+
+class RotaDetailsSerializer(serializers.ModelSerializer):
+    week = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Rota
+        fields = ["id", "house", "start_date", "end_date", "week"]
+
+    DAY_MAP = {
+        "mon": 0,
+        "tue": 1,
+        "wed": 2,
+        "thu": 3,
+        "fri": 4,
+        "sat": 5,
+        "sun": 6,
+    }
+
+    def get_week(self, obj):
+        # Initialize empty week: 0–6
+        week = {str(i): [] for i in range(7)}
+
+        assignments = (
+            obj.assignments
+            .select_related("chore", "person")
+            .all()
+        )
+
+        for assignment in assignments:
+            day_key = self.DAY_MAP.get(assignment.day)
+            if day_key is not None:
+                week[str(day_key)].append(
+                    ChoreAssignmentSerializer(assignment).data
+                )
+
+        return week
 
 class SimpleHouseSerializer(serializers.ModelSerializer):
     members = serializers.SerializerMethodField()
