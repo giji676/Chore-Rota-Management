@@ -17,7 +17,6 @@ export default function WeekCalendar({ rota, onDayPress }) {
             <View style={styles.weekRow}
                 onLayout={(event) => {
                     const { width } = event.nativeEvent.layout;
-                    console.log(width, width/7);
                     setParentWidth(width);
                 }}
             >

@@ -4,6 +4,7 @@ import { Alert, View, Text, Button, FlatList, StyleSheet, ActivityIndicator } fr
 import api from '../utils/api';
 
 import WeekCalendar from "../components/WeekCalendar";
+import CheckBox from "../components/CheckBox";
 
 export default function HouseDashboardScreen({ navigation, route }) {
     // Accept either a full house object or just houseId
@@ -11,6 +12,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
     const [rota, setRota] = useState();
     const [chore, setChore] = useState();
     const [error, setError] = useState('');
+    const [displayDay, setDisplayDay] = useState([]);
 
     useEffect(() => {
         if (!house) return;
@@ -53,47 +55,6 @@ export default function HouseDashboardScreen({ navigation, route }) {
         );
     }
 
-    const createChore = async () => {
-        const res = await api.post("chores/create/", {
-            "house_id": house.id,
-            "name": "hoover",
-            "description": "shit"
-        });
-        return res.data.id;
-    }
-
-    const createAss = async (rotaId, choreId) => {
-        const res = await api.post("chores/assign/", {
-            "rota_id": rotaId,
-            "chore_id": choreId,
-            "day": "mon",
-        });
-        return res.data.id;
-    }
-
-    const getRota = async (rotaId) => {
-        const res = await api.get(`rota/${rotaId}/`);
-        return res.data;
-    }
-
-    const handleCreateRota = async () => {
-        try {
-            let rotaId;
-            if (house.rota.length === 0) {
-                const res = await api.post("rota/create/", { "house": house.id });
-                rotaId = res.data.id;
-            } else {
-                rotaId = house.rota[0].id;
-            }
-            const choreId = await createChore();
-            const assId = await createAss(rotaId, choreId);
-            const newRota = await getRota(rotaId);
-            setRota(newRota);
-            // console.log(JSON.stringify(newRota, null, 2));
-        } catch {
-        }
-    }
-
     return (
         <View style={styles.container}>
             <Text style={styles.title}>{house.name}</Text>
@@ -113,16 +74,26 @@ export default function HouseDashboardScreen({ navigation, route }) {
             {rota && 
                 <WeekCalendar
                     rota={rota}
-                    onDayPress={(dayKey) => console.log("Day clicked:", dayKey)}
+                    onDayPress={(dayKey) => setDisplayDay(rota.week[dayKey])}
                 />
             }
+            {displayDay?.length > 0 && (
+                <>
+                    <View style={styles.markCompleteContainer}>
+                        <Text>Mark Complete</Text>
+                    </View>
+                    <View>
+                        {displayDay.map((ass, idx) => (
+                            <View key={idx} style={styles.choreDetail}>
+                                <Text>{ass.chore_name}</Text>
+                                <CheckBox />
+                            </View>
+                        ))}
+                    </View>
+                </>
+            )}
 
-            <View style={styles.buttonContainer}>
-                <Button
-                    title="Create Rota"
-                    onPress={handleCreateRota}
-                />
-            </View>
+            <Button onPress={() => console.log("save")} title="Save changes"/>
             <View style={styles.buttonContainer}>
                 <Button
                     title="Delete House"
@@ -143,4 +114,13 @@ const styles = StyleSheet.create({
     member: { fontSize: 16, marginBottom: 5 },
     buttonContainer: { marginTop: 20 },
     error: { color: 'red', textAlign: 'center', marginTop: 20 },
+    choreDetail: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+    },
+    markCompleteContainer: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        marginBottom: 5 
+    },
 });
