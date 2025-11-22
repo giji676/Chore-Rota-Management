@@ -6,23 +6,13 @@ import api from '../utils/api';
 export default function HouseDashboardScreen({ navigation, route }) {
     // Accept either a full house object or just houseId
     const [house, setHouse] = useState(route.params.house);
+    const [rota, setRota] = useState();
+    const [chore, setChore] = useState();
     const [error, setError] = useState('');
 
     useEffect(() => {
-        // if (!house && houseId) {
-        //     const fetchHouse = async () => {
-        //         try {
-        //             const res = await api.get(`house/${houseId}/`);
-        //             setHouse(res.data);
-        //         } catch (err) {
-        //             setError(err.response?.data?.error || err.message);
-        //         } finally {
-        //             setLoading(false);
-        //         }
-        //     };
-        //
-        //     fetchHouse();
-        // }
+        if (!house) return;
+        console.log(JSON.stringify(house, null, 2));
     }, [house]);
 
     // if (loading) return <ActivityIndicator size="large" style={styles.loader} />;
@@ -60,6 +50,47 @@ export default function HouseDashboardScreen({ navigation, route }) {
         );
     }
 
+    const createChore = async () => {
+        const res = await api.post("chores/create/", {
+            "house_id": house.id,
+            "name": "hoover",
+            "description": "shit"
+        });
+        return res.data.id;
+    }
+
+    const createAss = async (rotaId, choreId) => {
+        const res = await api.post("chores/assign/", {
+            "rota_id": rotaId,
+            "chore_id": choreId,
+            "day": "mon",
+        });
+        return res.data.id;
+    }
+
+    const getRota = async (rotaId) => {
+        const res = await api.get(`rota/${rotaId}/`);
+        return res.data;
+    }
+
+    const handleCreateRota = async () => {
+        try {
+            let rotaId;
+            if (house.rota.length === 0) {
+                const res = await api.post("rota/create/", { "house": house.id });
+                rotaId = res.data.id;
+            } else {
+                rotaId = house.rota[0].id;
+            }
+            const choreId = await createChore();
+            const assId = await createAss(rotaId, choreId);
+            const newRota = await getRota(rotaId);
+            setRota(newRota);
+            console.log(JSON.stringify(newRota, null, 2));
+        } catch {
+        }
+    }
+
     return (
         <View style={styles.container}>
             <Text style={styles.title}>{house.name}</Text>
@@ -76,10 +107,18 @@ export default function HouseDashboardScreen({ navigation, route }) {
                 )}
             />
 
+            {rota?.assignments?.length && (
+                <View>
+                    {rota.assignments.map((item) => (
+                    <Text key={item.id}>{item.chore_name} {item.day}</Text>
+                    ))}
+                </View>
+            )}
+
             <View style={styles.buttonContainer}>
                 <Button
-                    title="Manage Rota"
-                    onPress={() => navigation.navigate('ManageRota', { houseId: house.id })}
+                    title="Create Rota"
+                    onPress={handleCreateRota}
                 />
             </View>
             <View style={styles.buttonContainer}>
