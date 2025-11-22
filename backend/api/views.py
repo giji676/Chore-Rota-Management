@@ -13,6 +13,7 @@ from .serializers import (
     SimpleHouseSerializer,
     ChoreAssignmentSerializer,
     RotaSerializer,
+    RotaDetailsSerializer,
     ChoreSerializer,
     HouseMemberSerializer,
 )
@@ -176,7 +177,7 @@ class RotaManagementView(APIView):
             return None, Response({"error": "You do not belong to this house"},
                                   status=status.HTTP_403_FORBIDDEN)
 
-        serializer = RotaSerializer(rota)
+        serializer = RotaDetailsSerializer(rota)
         return Response(serializer.data, status=200)
 
     def post(self, request):

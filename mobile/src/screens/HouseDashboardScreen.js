@@ -3,6 +3,8 @@ import React, { useEffect, useState } from 'react';
 import { Alert, View, Text, Button, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
 import api from '../utils/api';
 
+import WeekCalendar from "../components/WeekCalendar";
+
 export default function HouseDashboardScreen({ navigation, route }) {
     // Accept either a full house object or just houseId
     const [house, setHouse] = useState(route.params.house);
@@ -12,7 +14,8 @@ export default function HouseDashboardScreen({ navigation, route }) {
 
     useEffect(() => {
         if (!house) return;
-        console.log(JSON.stringify(house, null, 2));
+        setRota(house.rota[0]);
+        // console.log(JSON.stringify(house.rota[0], null, 2));
     }, [house]);
 
     // if (loading) return <ActivityIndicator size="large" style={styles.loader} />;
@@ -86,7 +89,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
             const assId = await createAss(rotaId, choreId);
             const newRota = await getRota(rotaId);
             setRota(newRota);
-            console.log(JSON.stringify(newRota, null, 2));
+            // console.log(JSON.stringify(newRota, null, 2));
         } catch {
         }
     }
@@ -107,13 +110,12 @@ export default function HouseDashboardScreen({ navigation, route }) {
                 )}
             />
 
-            {rota?.assignments?.length && (
-                <View>
-                    {rota.assignments.map((item) => (
-                    <Text key={item.id}>{item.chore_name} {item.day}</Text>
-                    ))}
-                </View>
-            )}
+            {rota && 
+                <WeekCalendar
+                    rota={rota}
+                    onDayPress={(dayKey) => console.log("Day clicked:", dayKey)}
+                />
+            }
 
             <View style={styles.buttonContainer}>
                 <Button
