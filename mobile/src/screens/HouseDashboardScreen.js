@@ -9,14 +9,31 @@ import CheckBox from "../components/CheckBox";
 export default function HouseDashboardScreen({ navigation, route }) {
     // Accept either a full house object or just houseId
     const [house, setHouse] = useState(route.params.house);
-    const [rota, setRota] = useState();
-    const [chore, setChore] = useState();
     const [error, setError] = useState('');
     const [displayDay, setDisplayDay] = useState([]);
+    const [displayDayKey, setDisplayDayKey] = useState('0');
+    const [updatedChoresState, setUpdatedChoresState] = useState([]);
 
     useEffect(() => {
         if (!house) return;
-        setRota(house.rota[0]);
+        fetchHouse();
+    }, []);
+
+    useEffect(() => {
+        if (!house?.rota[0]) return;
+        setDisplayDay(house.rota[0].week[displayDayKey]);
+        setUpdatedChoresState([]);
+    }, [displayDayKey]);
+
+    const fetchHouse = async () => {
+        const res = await api.get(`house/${house.id}/`);
+        setHouse(res.data);
+    }
+
+    useEffect(() => {
+        if (!house) return;
+        setDisplayDay(house.rota[0].week[displayDayKey]);
+        setUpdatedChoresState([]);
         // console.log(JSON.stringify(house.rota[0], null, 2));
     }, [house]);
 
@@ -53,7 +70,30 @@ export default function HouseDashboardScreen({ navigation, route }) {
                 }
             ]
         );
-    }
+    };
+
+    const handleCheck = (ass) => {
+        setUpdatedChoresState(prev => {
+            const exists = prev.find(item => item.id === ass.id);
+
+            if (exists) {
+                return prev.filter(item => item.id !== ass.id);
+            } else {
+                return [...prev, { ...ass, completed: !ass.completed }];
+            }
+        });
+    };
+
+    const handleSave = async () => {
+        await Promise.all(
+            updatedChoresState.map(async (ass) => {
+                const res = await api.patch(`chores/assignment/${ass.id}/`, { completed: ass.completed });
+                return res.data;
+            })
+        );
+        await fetchHouse();
+        setUpdatedChoresState([]);
+    };
 
     return (
         <View style={styles.container}>
@@ -71,10 +111,12 @@ export default function HouseDashboardScreen({ navigation, route }) {
                 )}
             />
 
-            {rota && 
+            {house?.rota[0] && 
                 <WeekCalendar
-                    rota={rota}
-                    onDayPress={(dayKey) => setDisplayDay(rota.week[dayKey])}
+                    rota={house.rota[0]}
+                    onDayPress={(dayKey) => {
+                        setDisplayDayKey(dayKey);
+                    }}
                 />
             }
             {displayDay?.length > 0 && (
@@ -83,17 +125,22 @@ export default function HouseDashboardScreen({ navigation, route }) {
                         <Text>Mark Complete</Text>
                     </View>
                     <View>
-                        {displayDay.map((ass, idx) => (
-                            <View key={idx} style={styles.choreDetail}>
-                                <Text>{ass.chore_name}</Text>
-                                <CheckBox />
+                        {displayDay.map((ass) => (
+                            <View key={ass.id} style={styles.choreDetail}>
+                                <Text>{ass.id} - {ass.chore_name}</Text>
+                                <CheckBox 
+                                    onPress={() => handleCheck(ass)} 
+                                    checked={ass.completed}
+                                />
                             </View>
                         ))}
                     </View>
                 </>
             )}
 
-            <Button onPress={() => console.log("save")} title="Save changes"/>
+            <View style={styles.buttonContainer}>
+                <Button onPress={() => handleSave()} title="Save changes"/>
+            </View>
             <View style={styles.buttonContainer}>
                 <Button
                     title="Delete House"

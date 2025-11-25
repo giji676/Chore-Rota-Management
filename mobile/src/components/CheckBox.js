@@ -1,12 +1,22 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { TouchableOpacity, View } from "react-native";
 
-export default function CheckBox({ style, checkStyle }) {
-    const [checked, setChecked] = useState(false);
+export default function CheckBox({ onPress, checked: checkedProp, style, checkStyle }) {
+    const [checked, setChecked] = useState(checkedProp || false);
+
+    useEffect(() => {
+        setChecked(checkedProp);
+    }, [checkedProp]);
+
+    const handlePress = () => {
+        const newValue = !checked;
+        setChecked(newValue);
+        if (onPress) onPress(newValue);
+    }
 
     return (
         <TouchableOpacity
-            onPress={() => setChecked(!checked)}
+            onPress={handlePress}
             style={[
                 {
                     width: 24,
