@@ -73,16 +73,24 @@ class UpdateChoreAssignmentView(APIView):
 
         data = request.data.copy()
 
-        person_id = data.get("person")
-        if person_id:
-            try:
-                house_member = HouseMember.objects.get(house=assignment.rota.house, user__id=person_id)
-            except HouseMember.DoesNotExist:
-                return Response({"error": "Person is not a member of this house"},
-                                status=status.HTTP_400_BAD_REQUEST)
-            data["person"] = house_member.user.id
-        else:
-            data["person"] = None
+        if "person" in data:
+            person_id = data.get("person")
+
+            if person_id is not None:
+                try:
+                    house_member = HouseMember.objects.get(
+                        house=assignment.rota.house, 
+                        user__id=person_id
+                    )
+                except HouseMember.DoesNotExist:
+                    return Response(
+                        {"error": "Person is not a member of this house"},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+                data["person"] = house_member.user.id
+            else:
+                data["person"] = None
 
         serializer = ChoreAssignmentSerializer(assignment, data=data, partial=True)
         serializer.is_valid(raise_exception=True)
