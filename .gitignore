@@ -7,3 +7,5 @@ migrations/
 .coverage
 
 db.sqlite3
+
+google-services.json

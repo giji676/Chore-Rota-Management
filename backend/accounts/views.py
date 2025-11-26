@@ -3,11 +3,22 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import get_user_model
 from .serializers import RegisterSerializer, GuestSerializer
-from .models import User
+from .models import User, PushToken
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from rest_framework.permissions import IsAuthenticated, AllowAny
 
 User = get_user_model()
+
+class SavePushTokenView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        token = request.data.get("token")
+        if not token:
+            return Response({"error": "Token missing"}, status=400)
+
+        PushToken.objects.update_or_create(user=request.user, defaults={"token": token})
+        return Response(status=status.HTTP_200_OK)
 
 class RefreshTokenView(APIView):
     permission_classes = [AllowAny]

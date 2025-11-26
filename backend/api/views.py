@@ -23,6 +23,32 @@ User = get_user_model()
 GOOGLE_PLACES_URL = "https://maps.googleapis.com/maps/api/place/autocomplete/json"
 GOOGLE_DETAILS_URL = "https://maps.googleapis.com/maps/api/place/details/json"
 
+
+from accounts.models import PushToken
+
+EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send"
+
+def send_push_notification(user, title, body):
+    tokens = PushToken.objects.filter(user=user).values_list('token', flat=True)
+
+    messages = []
+    for token in tokens:
+        messages.append({
+            "to": token,
+            "sound": "default",
+            "title": title,
+            "body": body,
+            "data": {"extraData": "Optional data"},
+        })
+
+    # Expo API supports sending multiple messages at once
+    response = requests.post(EXPO_PUSH_URL, json=messages, headers={
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+    })
+
+    print(response.json())
+
 class UsersHousesView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -95,6 +121,8 @@ class UpdateChoreAssignmentView(APIView):
         serializer = ChoreAssignmentSerializer(assignment, data=data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
+
+        send_push_notification(user, "Chore updated!", "yayayayayayayayaa")
 
         return Response(serializer.data, status=status.HTTP_200_OK)
 

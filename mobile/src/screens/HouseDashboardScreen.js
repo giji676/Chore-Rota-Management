@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 
 import { Alert, View, Text, Button, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
 import api from '../utils/api';
@@ -6,13 +6,57 @@ import api from '../utils/api';
 import WeekCalendar from "../components/WeekCalendar";
 import CheckBox from "../components/CheckBox";
 
+import * as Notifications from 'expo-notifications';
+import { registerForPushNotificationsAsync, configureAndroidChannel } from '../utils/notifications';
+
+Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: false,
+        shouldSetBadge: false,
+    }),
+});
+
 export default function HouseDashboardScreen({ navigation, route }) {
-    // Accept either a full house object or just houseId
     const [house, setHouse] = useState(route.params.house);
     const [error, setError] = useState('');
     const [displayDay, setDisplayDay] = useState([]);
     const [displayDayKey, setDisplayDayKey] = useState('0');
     const [updatedChoresState, setUpdatedChoresState] = useState([]);
+
+    const notificationListener = useRef();
+    const responseListener = useRef();
+
+    useEffect(() => {
+        async function initNotifications() {
+            try {
+                await configureAndroidChannel();
+                console.log("registering");
+                const token = await registerForPushNotificationsAsync();
+                console.log("token:", token);
+                if (token) {
+                    await api.post("accounts/push-token/", { token });
+                }
+            } catch (error) {
+                console.log("error:", error);
+            }
+        }
+
+        initNotifications();
+
+        const notificationListener = Notifications.addNotificationReceivedListener(notification => {
+            console.log("Notification Received:", notification);
+        });
+
+        const responseListener = Notifications.addNotificationResponseReceivedListener(response => {
+            console.log("Notification Response:", response);
+        });
+
+        return () => {
+            notificationListener.remove();
+            responseListener.remove();
+        };
+    }, []);
 
     useEffect(() => {
         if (!house) return;
