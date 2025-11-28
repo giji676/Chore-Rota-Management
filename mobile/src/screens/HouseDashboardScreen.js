@@ -12,8 +12,8 @@ import { registerForPushNotificationsAsync, configureAndroidChannel } from '../u
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
         shouldShowAlert: true,
-        shouldPlaySound: false,
-        shouldSetBadge: false,
+        shouldPlaySound: true,
+        shouldSetBadge: true,
     }),
 });
 

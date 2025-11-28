@@ -156,3 +156,12 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Celery setup for notifications
+CELERY_BROKER_URL = "redis://localhost:6379/0"
+CELERY_BEAT_SCHEDULE = {
+    'send-chore-reminders-every-minute': {
+        'task': 'api.tasks.send_chore_reminders',
+        'schedule': 20,   # check every minute
+    }
+}

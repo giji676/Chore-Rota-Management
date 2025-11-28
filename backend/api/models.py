@@ -1,6 +1,6 @@
 import string
 import random
-from datetime import date
+from datetime import date, time
 from django.db import models
 from django.utils import timezone
 from django.conf import settings
@@ -95,6 +95,7 @@ class ChoreAssignment(models.Model):
         ("sat", "Saturday"),
         ("sun", "Sunday"),
     ])
+    due_time = models.TimeField(default=time(19, 0))
 
     completed = models.BooleanField(default=False)
     completed_at = models.DateTimeField(null=True, blank=True)
