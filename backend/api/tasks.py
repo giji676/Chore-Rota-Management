@@ -11,47 +11,55 @@ User = get_user_model()
 
 EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send"
 
+
 @shared_task
 def send_chore_reminders():
     now = timezone.localtime()
-    one_hour_later = now + datetime.timedelta(minutes=10)
+    one_hour_later = now + datetime.timedelta(hours=1)
 
-    today_abbrev = now.strftime("%a").lower()[:3]   # "mon"
-    today_full = now.strftime("%A") 
-    tomorrow_str = (now + datetime.timedelta(days=1)).strftime("%a").lower()[:3]
+    # Prepare weekday codes (mon, tue, wed...)
+    today_str = now.strftime("%a").lower()[:3]
+    tomorrow_str = one_hour_later.strftime("%a").lower()[:3]
 
-    # Time window: ±1 minute around the target time
+    # +/- 1 min window for matching
     lower = one_hour_later - datetime.timedelta(minutes=1)
     upper = one_hour_later + datetime.timedelta(minutes=1)
 
-    # Case A — same day (not crossing midnight)
-    chores_due = ChoreAssignment.objects.filter(
-        due_time__gte=lower.time(),
-        due_time__lte=upper.time())
+    # If the time one hour from now is on the next day,
+    # check chores assigned for TOMORROW instead of TODAY
+    if one_hour_later.date() != now.date():
+        day_filter = tomorrow_str           # next day
+    else:
+        day_filter = today_str              # same day
 
-    print("Found chores:", chores_due.count())
+    chores_due = ChoreAssignment.objects.filter(
+        day=day_filter,
+        completed=False,
+        due_time__gte=lower.time(),
+        due_time__lte=upper.time()
+    )
 
     for chore in chores_due:
         user = chore.person
-        print(user)
         if not user:
-            print("no user")
             continue
+
         token_obj = PushToken.objects.filter(user=user).first()
         if not token_obj:
-            print("no token")
             continue
 
         push_token = token_obj.token
-        print("token:", push_token)
 
+        # Expo format
         message = {
             "to": push_token,
             "sound": "default",
             "title": "⏰ Chore Reminder",
             "body": f"You have '{chore.chore.name}' due in 1 hour.",
-            "priority": "high"
+            "priority": "high",
         }
 
-        res = requests.post(EXPO_PUSH_URL, json=message, timeout=5)
-        print("Expo res:", res.json())
+        try:
+            resp = requests.post(EXPO_PUSH_URL, json=message, timeout=5)
+        except Exception as e:
+            print("Error sending notification:", e)
