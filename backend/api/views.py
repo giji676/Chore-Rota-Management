@@ -326,7 +326,7 @@ class ChoreManagementView(APIView):
             return Response({"error": "Only the owner can perform this action"},
                             status=status.HTTP_403_FORBIDDEN)
 
-        allowed_fields = ["name", "description"]
+        allowed_fields = ["name", "description", "color"]
 
         for field, value in data.items():
             if field in allowed_fields:
@@ -364,27 +364,29 @@ class ChoreManagementView(APIView):
         house_id = data.get("house_id")
         name = data.get("name")
         description = data.get("description")
+        color = data.get("color")
 
         if not all([name, house_id, description]):
             return Response({"error": "Missing required fields"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            try:
-                house_id = int(house_id)
-            except:
-                return Response({"error": "House id must be an int"}, status=status.HTTP_400_BAD_REQUEST)
+            house_id = int(house_id)
+        except ValueError:
+            return Response({"error": "House id must be an int"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
             house = House.objects.get(id=house_id)
         except House.DoesNotExist:
             return Response({"error": "Invalid house"}, status=status.HTTP_400_BAD_REQUEST)
 
         if not HouseMember.objects.filter(house=house, user=user).exists():
-            return Response({"error": "You do not belong to this house"},
-                            status=status.HTTP_403_FORBIDDEN)
+            return Response({"error": "You do not belong to this house"}, status=status.HTTP_403_FORBIDDEN)
 
         chore = Chore.objects.create(
             house=house,
             name=name,
             description=description,
+            color=color if color else None
         )
 
         return Response(ChoreSerializer(chore).data, status=status.HTTP_201_CREATED)

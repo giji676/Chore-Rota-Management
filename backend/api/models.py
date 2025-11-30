@@ -6,6 +6,12 @@ from django.utils import timezone
 from django.conf import settings
 from django.contrib.auth.hashers import make_password, check_password
 from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator
+
+HEX_COLOR_VALIDATOR = RegexValidator(
+    regex=r"^#(?:[0-9a-fA-F]{6})$",
+    message="Color must be in HEX format, e.g., #A1B2C3."
+)
 
 def generate_join_code(length=6):
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
@@ -68,6 +74,7 @@ class Chore(models.Model):
     house = models.ForeignKey(House, on_delete=models.CASCADE, related_name="chores")
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True)
+    color = models.CharField(max_length=7, validators=[HEX_COLOR_VALIDATOR], default="#3498db")
 
     def __str__(self):
         return f"{self.name} ({self.house.name})"
