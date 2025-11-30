@@ -43,7 +43,6 @@ export default function LoginScreen({ navigation }) {
             await AsyncStorage.setItem("refresh_token", res.data.refresh_token);
             navigation.replace("HouseAccess");
         } catch (err) {
-            console.log(err.response?.data || err.message);
             setResponse(err.response?.data || err.message);
         }
     };
