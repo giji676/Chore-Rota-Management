@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-
-import { Alert, View, Text, Button, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
+import { Alert, View, Text, Button, FlatList, StyleSheet, TextInput, Modal } from 'react-native';
 import api from '../utils/api';
 
 import WeekCalendar from "../components/WeekCalendar";
@@ -11,7 +10,7 @@ import { registerForPushNotificationsAsync, configureAndroidChannel } from '../u
 
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
-        shouldShowAlert: true,
+        shouldShowBanner: true,
         shouldPlaySound: true,
         shouldSetBadge: true,
     }),
@@ -24,6 +23,12 @@ export default function HouseDashboardScreen({ navigation, route }) {
     const [displayDayKey, setDisplayDayKey] = useState('0');
     const [updatedChoresState, setUpdatedChoresState] = useState([]);
 
+    // Modal state
+    const [modalVisible, setModalVisible] = useState(false);
+    const [newChoreName, setNewChoreName] = useState('');
+    const [newChoreDescription, setNewChoreDescription] = useState('');
+    const [newChoreColor, setNewChoreColor] = useState('#ffffff');
+
     const notificationListener = useRef();
     const responseListener = useRef();
 
@@ -31,9 +36,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
         async function initNotifications() {
             try {
                 await configureAndroidChannel();
-                console.log("registering");
                 const token = await registerForPushNotificationsAsync();
-                console.log("token:", token);
                 if (token) {
                     await api.post("accounts/push-token/", { token });
                 }
@@ -81,7 +84,6 @@ export default function HouseDashboardScreen({ navigation, route }) {
         // console.log(JSON.stringify(house.rota[0], null, 2));
     }, [house]);
 
-    // if (loading) return <ActivityIndicator size="large" style={styles.loader} />;
     if (error) return <Text style={styles.error}>{error}</Text>;
     if (!house) return <Text style={styles.error}>House not found</Text>;
 
@@ -139,6 +141,34 @@ export default function HouseDashboardScreen({ navigation, route }) {
         setUpdatedChoresState([]);
     };
 
+    const handleCreateChore = async () => {
+        if (!newChoreName.trim()) {
+            Alert.alert("Error", "Chore name is required");
+            return;
+        }
+
+        try {
+            const res = await api.post("chores/create/", {
+                house_id: house.id,
+                name: newChoreName,
+                description: newChoreDescription,
+                color: newChoreColor,
+            });
+            // setHouse((prev) => ({
+            //     ...prev,
+            //     chores: [...prev.chores, res.data],
+            // }));
+
+            await fetchHouse();
+            setModalVisible(false);
+            setNewChoreName('');
+            setNewChoreDescription('');
+            setNewChoreColor('#ffffff');
+        } catch (err) {
+            Alert.alert("Error", err.response?.data?.error || err.message);
+        }
+    };
+
     return (
         <View style={styles.container}>
             <Text style={styles.title}>{house.name}</Text>
@@ -183,8 +213,47 @@ export default function HouseDashboardScreen({ navigation, route }) {
             )}
 
             <View style={styles.buttonContainer}>
-                <Button onPress={() => handleSave()} title="Save changes"/>
+                <Button onPress={handleSave} title="Save Changes"/>
             </View>
+            <View style={styles.buttonContainer}>
+                <Button onPress={() => setModalVisible(true)} title="Create Chore"/>
+            </View>
+            <Modal
+
+                visible={modalVisible}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setModalVisible(false)}
+            >
+                <View style={styles.modalBackground}>
+                    <View style={styles.modalContainer}>
+                        <Text style={styles.modalTitle}>Create New Chore</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Chore Name"
+                            value={newChoreName}
+                            onChangeText={setNewChoreName}
+                        />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Description"
+                            value={newChoreDescription}
+                            onChangeText={setNewChoreDescription}
+                        />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Color (Hex)"
+                            value={newChoreColor}
+                            onChangeText={setNewChoreColor}
+                        />
+
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
+                            <Button title="Cancel" onPress={() => setModalVisible(false)} />
+                            <Button title="Create" onPress={handleCreateChore} />
+                        </View>
+                    </View>
+                </View>
+            </Modal>
             <View style={styles.buttonContainer}>
                 <Button
                     title="Delete House"
@@ -213,5 +282,25 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'flex-end',
         marginBottom: 5 
+    },
+    modalBackground: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modalContainer: {
+        width: '80%',
+        backgroundColor: '#fff',
+        padding: 20,
+        borderRadius: 10,
+    },
+    modalTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 10 },
+    input: {
+        borderWidth: 1,
+        borderColor: '#ccc',
+        borderRadius: 5,
+        padding: 10,
+        marginBottom: 10,
     },
 });
