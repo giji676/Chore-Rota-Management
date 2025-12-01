@@ -20,12 +20,12 @@ class ChoreSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 class ChoreAssignmentSerializer(serializers.ModelSerializer):
-    chore_name = serializers.CharField(source="chore.name", read_only=True)
+    chore = ChoreSerializer(read_only=True)
     person_name = serializers.CharField(source="person.username", read_only=True)
 
     class Meta:
         model = ChoreAssignment
-        fields = ["id", "chore", "chore_name", "person", "person_name", "day", "completed"]
+        fields = ["id", "chore", "person", "person_name", "day", "completed"]
 
 class RotaSerializer(serializers.ModelSerializer):
     assignments = ChoreAssignmentSerializer(many=True, read_only=True)

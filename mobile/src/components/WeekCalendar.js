@@ -21,7 +21,7 @@ export default function WeekCalendar({ rota, onDayPress }) {
                 }}
             >
                 {Object.keys(rota.week).map((dayKey) => {
-                    const dayChores = rota.week[dayKey];
+                    const dayChoresAssignments = rota.week[dayKey];
 
                     return (
                         <TouchableOpacity
@@ -32,13 +32,13 @@ export default function WeekCalendar({ rota, onDayPress }) {
                             <Text style={styles.dayHeader}>{DAY_NAMES[dayKey]}</Text>
                             <View style={styles.dayBars}>
 
-                                {dayChores.length > 0 ? (
-                                    dayChores.map((chore) => (
+                                {dayChoresAssignments.length > 0 ? (
+                                    dayChoresAssignments.map((assignment) => (
                                         <View
-                                            key={chore.id}
+                                            key={assignment.id}
                                             style={[
                                                 styles.choreBar,
-                                                { backgroundColor: chore.color || DEFAULT_COLOR },
+                                                { backgroundColor: assignment.chore.color || DEFAULT_COLOR },
                                             ]}
                                         />
                                     ))

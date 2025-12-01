@@ -1,12 +1,13 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Alert, View, Text, Button, FlatList, StyleSheet, TextInput, Modal } from 'react-native';
-import api from '../utils/api';
-
-import WeekCalendar from "../components/WeekCalendar";
-import CheckBox from "../components/CheckBox";
-
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { Picker } from '@react-native-picker/picker';
 import * as Notifications from 'expo-notifications';
 import { registerForPushNotificationsAsync, configureAndroidChannel } from '../utils/notifications';
+
+import api from '../utils/api';
+import WeekCalendar from "../components/WeekCalendar";
+import CheckBox from "../components/CheckBox";
 
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
@@ -28,6 +29,11 @@ export default function HouseDashboardScreen({ navigation, route }) {
     const [newChoreName, setNewChoreName] = useState('');
     const [newChoreDescription, setNewChoreDescription] = useState('');
     const [newChoreColor, setNewChoreColor] = useState('#ffffff');
+
+    const [assignModalVisible, setAssignModalVisible] = useState(false);
+    const [selectedDay, setSelectedDay] = useState('mon');
+    const [selectedTime, setSelectedTime] = useState(new Date());
+    const [selectedMember, setSelectedMember] = useState('');
 
     const notificationListener = useRef();
     const responseListener = useRef();
@@ -169,6 +175,36 @@ export default function HouseDashboardScreen({ navigation, route }) {
         }
     };
 
+    const handleAssignChore = async () => {
+        if (!selectedDay || !selectedTime || !selectedMember) {
+            Alert.alert("Error", "Please select day, time, and assignee");
+            return;
+        }
+
+        try {
+            await api.post("chores/assign/", {
+                // chore_id: selectedChore.id, // replace with your actual selected chore
+                chore_id: 91, // replace with your actual selected chore
+                rota_id: house?.rota[0].id, // replace with your actual selected chore
+                day: selectedDay,
+                time: selectedTime.toTimeString().slice(0, 5), // HH:MM 24h
+                assignee: selectedMember,
+            });
+            await fetchHouse();
+            setAssignModalVisible(false);
+            // reset
+            setSelectedDay('mon');
+            setSelectedTime(new Date());
+            setSelectedMember('');
+        } catch (err) {
+            Alert.alert("Error", err.response?.data?.error || err.message);
+        }
+    };
+
+    const onChangeTime = (event, time) => {
+        if (time) setSelectedTime(time);
+    };
+
     return (
         <View style={styles.container}>
             <Text style={styles.title}>{house.name}</Text>
@@ -201,7 +237,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
                     <View>
                         {displayDay.map((ass) => (
                             <View key={ass.id} style={styles.choreDetail}>
-                                <Text>{ass.id} - {ass.chore_name}</Text>
+                                <Text>{ass.id} - {ass.chore.name}</Text>
                                 <CheckBox 
                                     onPress={() => handleCheck(ass)} 
                                     checked={ass.completed}
@@ -250,6 +286,67 @@ export default function HouseDashboardScreen({ navigation, route }) {
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
                             <Button title="Cancel" onPress={() => setModalVisible(false)} />
                             <Button title="Create" onPress={handleCreateChore} />
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+            <View style={styles.buttonContainer}>
+                <Button title="Assign Chore" onPress={() => setAssignModalVisible(true)} />
+            </View>
+
+            <Modal
+                visible={assignModalVisible}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setAssignModalVisible(false)}
+            >
+                <View style={styles.modalBackground}>
+                    <View style={styles.modalContainer}>
+                        <Text style={styles.modalTitle}>Assign Chore</Text>
+
+                        {/* Day Picker */}
+                        <Text>Day</Text>
+                        <Picker
+                            selectedValue={selectedDay}
+                            onValueChange={(day) => setSelectedDay(day)}
+                            style={{ marginBottom: 10 }}
+                        >
+                            {['mon','tue','wed','thu','fri','sat'].map(day => (
+                                <Picker.Item key={day} label={day.toUpperCase()} value={day} />
+                            ))}
+                        </Picker>
+
+                        {/* Time Picker */}
+                        <Text>Time</Text>
+                        <DateTimePicker
+                            value={selectedTime}
+                            mode="time"
+                            is24Hour={true}
+                            display="default"
+                            onChange={onChangeTime}
+                            style={{ marginBottom: 10 }}
+                        />
+
+                        {/* Assignee Picker */}
+                        <Text>Assignee</Text>
+                        <Picker
+                            selectedValue={selectedMember}
+                            onValueChange={(memberId) => setSelectedMember(memberId)}
+                            style={{ marginBottom: 10 }}
+                        >
+                            {house.members.map(member => (
+                                <Picker.Item
+                                    key={member.id}
+                                    label={member.username + (member.is_guest ? ' (Guest)' : '')}
+                                    value={member.id}
+                                />
+                            ))}
+                        </Picker>
+
+                        {/* Buttons */}
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
+                            <Button title="Cancel" onPress={() => setAssignModalVisible(false)} />
+                            <Button title="Assign" onPress={handleAssignChore} />
                         </View>
                     </View>
                 </View>
