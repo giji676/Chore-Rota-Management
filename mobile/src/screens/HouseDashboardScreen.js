@@ -25,15 +25,21 @@ export default function HouseDashboardScreen({ navigation, route }) {
     const [updatedChoresState, setUpdatedChoresState] = useState([]);
 
     // Modal state
-    const [modalVisible, setModalVisible] = useState(false);
+    // Chore
+    const [choreModalVisible, setChoreModalVisible] = useState(false);
     const [newChoreName, setNewChoreName] = useState('');
     const [newChoreDescription, setNewChoreDescription] = useState('');
     const [newChoreColor, setNewChoreColor] = useState('#ffffff');
 
+    // Chore Assignment
     const [assignModalVisible, setAssignModalVisible] = useState(false);
     const [selectedDay, setSelectedDay] = useState('mon');
     const [selectedTime, setSelectedTime] = useState(new Date());
     const [selectedMember, setSelectedMember] = useState('');
+
+    // Chore Assignment long press
+    const [assLongPressModalVisible, setAssLongPressModalVisible] = useState(false);
+    const [selectedAss, setSelectedAss] = useState();
 
     const notificationListener = useRef();
     const responseListener = useRef();
@@ -177,7 +183,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
             // }));
 
             await fetchHouse();
-            setModalVisible(false);
+            setChoreModalVisible(false);
             setNewChoreName('');
             setNewChoreDescription('');
             setNewChoreColor('#ffffff');
@@ -220,6 +226,9 @@ export default function HouseDashboardScreen({ navigation, route }) {
         const res = await api.delete(`chores/assignment/${ass.id}/delete/`);
     };
 
+    const handleEditAssignment = () => {
+    };
+
     return (
         <View style={styles.container}>
             <Text style={styles.title}>{house.name}</Text>
@@ -256,16 +265,8 @@ export default function HouseDashboardScreen({ navigation, route }) {
                                 <Pressable
                                     key={ass.id}
                                     onLongPress={() => {
-                                        Alert.alert(
-                                            "Chore Options",
-                                            `Chore: ${ass.chore.name}`,
-                                            [
-                                                { text: "Cancel", style: "cancel" },
-                                                { text: ass.completed ? "Restore" : "Complete", onPress: () => handleSaveChore(ass, !ass.completed) },
-                                                // { text: "Edit", onPress: () => openEditChoreModal(ass) },
-                                                { text: "Delete", onPress: () => deleteChoreAssignment(ass) },
-                                            ]
-                                        );
+                                        setSelectedAss(ass);
+                                        setAssLongPressModalVisible(true);
                                     }}
                                     style={styles.choreDetail}
                                 >
@@ -280,19 +281,44 @@ export default function HouseDashboardScreen({ navigation, route }) {
                     </View>
                 </>
             )}
-
+            <Modal
+                visible={assLongPressModalVisible}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setAssLongPressModalVisible(false)}
+            >
+                <View style={styles.assModalBackground}>
+                    <View style={styles.assModalContainer}>
+                        <View style={styles.assButtonColumn}>
+                            <Pressable style={[styles.assModalButton, styles.deleteButton]} onPress={handleEditAssignment}>
+                                <Text style={styles.assModalButtonText}>Delete</Text>
+                            </Pressable>
+                            <Pressable style={styles.assModalButton} onPress={handleEditAssignment}>
+                                <Text style={styles.assModalButtonText}>Edit</Text>
+                            </Pressable>
+                            <Pressable style={styles.assModalButton} onPress={handleEditAssignment}>
+                                <Text style={styles.assModalButtonText}>
+                                    {selectedAss?.completed ? "Restore" : "Complete"}
+                                </Text>
+                            </Pressable>
+                            <Pressable style={styles.assModalButton} onPress={() => setAssLongPressModalVisible(false)}>
+                                <Text style={styles.assModalButtonText}>Cancel</Text>
+                            </Pressable>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
             <View style={styles.buttonContainer}>
                 <Button onPress={handleSaveChores} title="Save Changes"/>
             </View>
             <View style={styles.buttonContainer}>
-                <Button onPress={() => setModalVisible(true)} title="Create Chore"/>
+                <Button onPress={() => setChoreModalVisible(true)} title="Create Chore"/>
             </View>
             <Modal
-
-                visible={modalVisible}
+                visible={choreModalVisible}
                 animationType="slide"
                 transparent={true}
-                onRequestClose={() => setModalVisible(false)}
+                onRequestClose={() => setChoreModalVisible(false)}
             >
                 <View style={styles.modalBackground}>
                     <View style={styles.modalContainer}>
@@ -320,7 +346,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
                         />
 
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
-                            <Button title="Cancel" onPress={() => setModalVisible(false)} />
+                            <Button title="Cancel" onPress={() => setChoreModalVisible(false)} />
                             <Button title="Create" onPress={handleCreateChore} />
                         </View>
                     </View>
@@ -329,7 +355,6 @@ export default function HouseDashboardScreen({ navigation, route }) {
             <View style={styles.buttonContainer}>
                 <Button title="Assign Chore" onPress={() => setAssignModalVisible(true)} />
             </View>
-
             <Modal
                 visible={assignModalVisible}
                 animationType="slide"
@@ -429,12 +454,38 @@ const styles = StyleSheet.create({
         padding: 20,
         borderRadius: 10,
     },
-    modalTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 10 },
+    modalTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        marginBottom: 10
+    },
     input: {
         borderWidth: 1,
         borderColor: '#ccc',
         borderRadius: 5,
         padding: 10,
         marginBottom: 10,
+    },
+    assModalBackground: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    assModalContainer: {
+        borderRadius: 10,
+        backgroundColor: '#fff',
+        borderRadius: 16,
+        overflow: 'hidden',
+    },
+    assButtonColumn: { },
+    assModalButton: {
+        padding: 8,
+        paddingHorizontal: 16,
+        backgroundColor: '#eee',
+    },
+    assModalButtonText: {
+        fontWeight: 'bold',
+        fontSize: 18,
     },
 });
