@@ -122,7 +122,7 @@ class UpdateChoreAssignmentView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
-        send_push_notification(user, "Chore updated!", "yayayayayayayayaa")
+        # send_push_notification(user, "Chore updated!", "yayayayayayayayaa")
 
         return Response(serializer.data, status=status.HTTP_200_OK)
 

@@ -50,10 +50,28 @@ export default function LoginScreen({ navigation }) {
     return (
         <View style={styles.container}>
             <Text style={styles.title}>Login / Register / Guest</Text>
-
-            <TextInput placeholder="Username" value={username} onChangeText={setUsername} style={styles.input} />
-            <TextInput placeholder="Email (register only)" value={email} onChangeText={setEmail} style={styles.input} />
-            <TextInput placeholder="Password" value={password} onChangeText={setPassword} secureTextEntry style={styles.input} />
+            <TextInput
+                placeholder="Username"
+                placeholderTextColor="gray"
+                value={username}
+                onChangeText={setUsername}
+                style={styles.input}
+            />
+            <TextInput
+                placeholder="Email (register only)"
+                placeholderTextColor="gray"
+                value={email}
+                onChangeText={setEmail}
+                style={styles.input}
+            />
+            <TextInput
+                placeholder="Password"
+                placeholderTextColor="gray"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                style={styles.input}
+            />
 
             <Button title="Login" onPress={handleLogin} />
             <View style={{ height: 10 }} />

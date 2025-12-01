@@ -81,12 +81,14 @@ export default function HouseAccessScreen({ navigation }) {
             <TextInput
                 style={styles.input}
                 placeholder="Enter join code"
+                placeholderTextColor="gray"
                 value={joinCode}
                 onChangeText={setJoinCode}
             />
             <TextInput
                 style={styles.input}
                 placeholder="Enter password"
+                placeholderTextColor="gray"
                 value={password}
                 onChangeText={setPassword}
             />

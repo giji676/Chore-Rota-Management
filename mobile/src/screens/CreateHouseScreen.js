@@ -80,6 +80,7 @@ export default function CreateHouseScreen({ navigation }) {
             <TextInput
                 style={styles.input}
                 placeholder="House Name"
+                placeholderTextColor="gray"
                 value={name}
                 onChangeText={setName}
             />
@@ -87,6 +88,7 @@ export default function CreateHouseScreen({ navigation }) {
             <TextInput
                 style={styles.input}
                 placeholder="Address"
+                placeholderTextColor="gray"
                 value={address}
                 onChangeText={text => {
                     setAddress(text);
@@ -113,6 +115,7 @@ export default function CreateHouseScreen({ navigation }) {
                 style={styles.input}
                 secureTextEntry
                 placeholder="House Password"
+                placeholderTextColor="gray"
                 value={password}
                 onChangeText={setPassword}
             />
@@ -120,6 +123,7 @@ export default function CreateHouseScreen({ navigation }) {
             <TextInput
                 style={styles.input}
                 placeholder="Max Members"
+                placeholderTextColor="gray"
                 keyboardType="numeric"
                 value={maxMembers}
                 onChangeText={setMaxMembers}

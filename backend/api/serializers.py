@@ -25,7 +25,7 @@ class ChoreAssignmentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ChoreAssignment
-        fields = ["id", "chore", "person", "person_name", "day", "completed"]
+        fields = ["id", "chore", "person", "person_name", "day", "due_time", "completed"]
 
 class RotaSerializer(serializers.ModelSerializer):
     assignments = ChoreAssignmentSerializer(many=True, read_only=True)

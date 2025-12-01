@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Alert, View, Text, Button, FlatList, StyleSheet, TextInput, Modal } from 'react-native';
+import { Pressable, Alert, View, Text, Button, FlatList, StyleSheet, TextInput, Modal } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
 import * as Notifications from 'expo-notifications';
@@ -53,18 +53,18 @@ export default function HouseDashboardScreen({ navigation, route }) {
 
         initNotifications();
 
-        const notificationListener = Notifications.addNotificationReceivedListener(notification => {
-            console.log("Notification Received:", notification);
-        });
+        // const notificationListener = Notifications.addNotificationReceivedListener(notification => {
+        //     console.log("Notification Received:", notification);
+        // });
+        //
+        // const responseListener = Notifications.addNotificationResponseReceivedListener(response => {
+        //     console.log("Notification Response:", response);
+        // });
 
-        const responseListener = Notifications.addNotificationResponseReceivedListener(response => {
-            console.log("Notification Response:", response);
-        });
-
-        return () => {
-            notificationListener.remove();
-            responseListener.remove();
-        };
+        // return () => {
+        //     notificationListener.remove();
+        //     responseListener.remove();
+        // };
     }, []);
 
     useEffect(() => {
@@ -136,7 +136,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
         });
     };
 
-    const handleSave = async () => {
+    const handleSaveChores = async () => {
         await Promise.all(
             updatedChoresState.map(async (ass) => {
                 const res = await api.patch(`chores/assignment/${ass.id}/`, { completed: ass.completed });
@@ -145,6 +145,17 @@ export default function HouseDashboardScreen({ navigation, route }) {
         );
         await fetchHouse();
         setUpdatedChoresState([]);
+    };
+
+    const handleSaveChore = async (ass, state) => {
+        await api.patch(`chores/assignment/${ass.id}/`, { completed: state });
+        await fetchHouse();
+
+        setUpdatedChores(prev => {
+            if (prev.some(item => item.id === ass.id)) {
+                return prev.filter(item => item.id !== ass.id);
+            }
+        });
     };
 
     const handleCreateChore = async () => {
@@ -205,6 +216,10 @@ export default function HouseDashboardScreen({ navigation, route }) {
         if (time) setSelectedTime(time);
     };
 
+    const deleteChoreAssignment = async (ass) => {
+        const res = await api.delete(`chores/assignment/${ass.id}/delete/`);
+    };
+
     return (
         <View style={styles.container}>
             <Text style={styles.title}>{house.name}</Text>
@@ -235,21 +250,39 @@ export default function HouseDashboardScreen({ navigation, route }) {
                         <Text>Mark Complete</Text>
                     </View>
                     <View>
-                        {displayDay.map((ass) => (
-                            <View key={ass.id} style={styles.choreDetail}>
-                                <Text>{ass.id} - {ass.chore.name}</Text>
-                                <CheckBox 
-                                    onPress={() => handleCheck(ass)} 
-                                    checked={ass.completed}
-                                />
-                            </View>
-                        ))}
+                        {displayDay.map((ass) => {
+                            const [hh, mm] = ass.due_time.split(":");
+                            return (
+                                <Pressable
+                                    key={ass.id}
+                                    onLongPress={() => {
+                                        Alert.alert(
+                                            "Chore Options",
+                                            `Chore: ${ass.chore.name}`,
+                                            [
+                                                { text: "Cancel", style: "cancel" },
+                                                { text: ass.completed ? "Restore" : "Complete", onPress: () => handleSaveChore(ass, !ass.completed) },
+                                                // { text: "Edit", onPress: () => openEditChoreModal(ass) },
+                                                { text: "Delete", onPress: () => deleteChoreAssignment(ass) },
+                                            ]
+                                        );
+                                    }}
+                                    style={styles.choreDetail}
+                                >
+                                    <Text>{`${hh}:${mm}`} - {ass.chore.name}</Text>
+                                    <CheckBox 
+                                        onPress={() => handleCheck(ass)} 
+                                        checked={ass.completed}
+                                    />
+                                </Pressable>
+                            );
+                        })}
                     </View>
                 </>
             )}
 
             <View style={styles.buttonContainer}>
-                <Button onPress={handleSave} title="Save Changes"/>
+                <Button onPress={handleSaveChores} title="Save Changes"/>
             </View>
             <View style={styles.buttonContainer}>
                 <Button onPress={() => setModalVisible(true)} title="Create Chore"/>
@@ -267,18 +300,21 @@ export default function HouseDashboardScreen({ navigation, route }) {
                         <TextInput
                             style={styles.input}
                             placeholder="Chore Name"
+                            placeholderTextColor="gray"
                             value={newChoreName}
                             onChangeText={setNewChoreName}
                         />
                         <TextInput
                             style={styles.input}
                             placeholder="Description"
+                            placeholderTextColor="gray"
                             value={newChoreDescription}
                             onChangeText={setNewChoreDescription}
                         />
                         <TextInput
                             style={styles.input}
                             placeholder="Color (Hex)"
+                            placeholderTextColor="gray"
                             value={newChoreColor}
                             onChangeText={setNewChoreColor}
                         />
@@ -372,6 +408,7 @@ const styles = StyleSheet.create({
     buttonContainer: { marginTop: 20 },
     error: { color: 'red', textAlign: 'center', marginTop: 20 },
     choreDetail: {
+        paddingBottom: 8,
         flexDirection: 'row',
         justifyContent: 'space-between',
     },
