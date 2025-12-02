@@ -142,7 +142,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
         });
     };
 
-    const handleSaveChores = async () => {
+    const handleSaveChoreAssignments = async () => {
         await Promise.all(
             updatedChoresState.map(async (ass) => {
                 const res = await api.patch(`chores/assignment/${ass.id}/`, { completed: ass.completed });
@@ -153,7 +153,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
         setUpdatedChoresState([]);
     };
 
-    const handleSaveChore = async (ass, state) => {
+    const handleSaveChoreAssignment = async (ass, state) => {
         await api.patch(`chores/assignment/${ass.id}/`, { completed: state });
         await fetchHouse();
 
@@ -296,7 +296,10 @@ export default function HouseDashboardScreen({ navigation, route }) {
                             <Pressable style={styles.assModalButton} onPress={handleEditAssignment}>
                                 <Text style={styles.assModalButtonText}>Edit</Text>
                             </Pressable>
-                            <Pressable style={styles.assModalButton} onPress={handleEditAssignment}>
+                            <Pressable style={styles.assModalButton} onPress={() => {
+                                handleSaveChoreAssignment(selectedAss, !selectedAss.completed);
+                                setAssLongPressModalVisible(false);
+                            }}>
                                 <Text style={styles.assModalButtonText}>
                                     {selectedAss?.completed ? "Restore" : "Complete"}
                                 </Text>
@@ -309,7 +312,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
                 </View>
             </Modal>
             <View style={styles.buttonContainer}>
-                <Button onPress={handleSaveChores} title="Save Changes"/>
+                <Button onPress={handleSaveChoreAssignments} title="Save Changes"/>
             </View>
             <View style={styles.buttonContainer}>
                 <Button onPress={() => setChoreModalVisible(true)} title="Create Chore"/>
