@@ -137,6 +137,7 @@ class AssignChoreView(APIView):
         chore_id = data.get("chore_id")
         person_id = data.get("person_id")
         day = data.get("day")
+        due_time = data.get("due_time")
 
         if not all([rota_id, chore_id, day]):
             return Response(
@@ -174,6 +175,7 @@ class AssignChoreView(APIView):
             rota=rota,
             chore=chore,
             day=day,
+            due_time=due_time,
             defaults={"person": person}
         )
 

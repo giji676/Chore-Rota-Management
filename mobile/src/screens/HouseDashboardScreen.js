@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Pressable, Alert, View, Text, Button, FlatList, StyleSheet, TextInput, Modal } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import WheelPicker from "react-native-wheel-scrollview-picker";
 import { Picker } from '@react-native-picker/picker';
 import * as Notifications from 'expo-notifications';
 import { registerForPushNotificationsAsync, configureAndroidChannel } from '../utils/notifications';
@@ -34,12 +34,16 @@ export default function HouseDashboardScreen({ navigation, route }) {
     // Chore Assignment
     const [assignModalVisible, setAssignModalVisible] = useState(false);
     const [selectedDay, setSelectedDay] = useState('mon');
-    const [selectedTime, setSelectedTime] = useState(new Date());
+    const [selectedHour, setSelectedHour] = useState(12);
+    const [selectedMinute, setSelectedMinute] = useState(30);
     const [selectedMember, setSelectedMember] = useState('');
 
     // Chore Assignment long press
     const [assLongPressModalVisible, setAssLongPressModalVisible] = useState(false);
     const [selectedAss, setSelectedAss] = useState();
+    
+    const hours = [...Array(24).keys()].map(n => n.toString().padStart(2, "0"));
+    const minutes = [...Array(60).keys()].map(n => n.toString().padStart(2, "0"));
 
     const notificationListener = useRef();
     const responseListener = useRef();
@@ -58,19 +62,6 @@ export default function HouseDashboardScreen({ navigation, route }) {
         }
 
         initNotifications();
-
-        // const notificationListener = Notifications.addNotificationReceivedListener(notification => {
-        //     console.log("Notification Received:", notification);
-        // });
-        //
-        // const responseListener = Notifications.addNotificationResponseReceivedListener(response => {
-        //     console.log("Notification Response:", response);
-        // });
-
-        // return () => {
-        //     notificationListener.remove();
-        //     responseListener.remove();
-        // };
     }, []);
 
     useEffect(() => {
@@ -193,7 +184,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
     };
 
     const handleAssignChore = async () => {
-        if (!selectedDay || !selectedTime || !selectedMember) {
+        if (!selectedDay || selectedHour === null || selectedMinute === null || !selectedMember) {
             Alert.alert("Error", "Please select day, time, and assignee");
             return;
         }
@@ -204,14 +195,13 @@ export default function HouseDashboardScreen({ navigation, route }) {
                 chore_id: 91, // replace with your actual selected chore
                 rota_id: house?.rota[0].id, // replace with your actual selected chore
                 day: selectedDay,
-                time: selectedTime.toTimeString().slice(0, 5), // HH:MM 24h
-                assignee: selectedMember,
+                due_time: `${hours[selectedHour]}:${minutes[selectedMinute]}`,
+                person_id: selectedMember,
             });
             await fetchHouse();
             setAssignModalVisible(false);
             // reset
             setSelectedDay('mon');
-            setSelectedTime(new Date());
             setSelectedMember('');
         } catch (err) {
             Alert.alert("Error", err.response?.data?.error || err.message);
@@ -260,8 +250,8 @@ export default function HouseDashboardScreen({ navigation, route }) {
                         <Text>Mark Complete</Text>
                     </View>
                     <View>
-                        {displayDay.map((ass) => {
-                            const [hh, mm] = ass.due_time.split(":");
+                        {displayDay?.map((ass) => {
+                            const [hh, mm] = ass.due_time?.split(":") ?? ["00","00"];
                             return (
                                 <Pressable
                                     key={ass.id}
@@ -381,7 +371,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
                         <Picker
                             selectedValue={selectedDay}
                             onValueChange={(day) => setSelectedDay(day)}
-                            style={{ marginBottom: 10 }}
+                            style={styles.picker}
                         >
                             {['mon','tue','wed','thu','fri','sat'].map(day => (
                                 <Picker.Item key={day} label={day.toUpperCase()} value={day} />
@@ -390,23 +380,32 @@ export default function HouseDashboardScreen({ navigation, route }) {
 
                         {/* Time Picker */}
                         <Text>Time</Text>
-                        <DateTimePicker
-                            value={selectedTime}
-                            mode="time"
-                            is24Hour={true}
-                            display="default"
-                            onChange={onChangeTime}
-                            style={{ marginBottom: 10 }}
-                        />
+                        <View style={{ flexDirection: "row", justifyContent: "center", marginVertical: 10 }}>
+
+                            <WheelPicker
+                                dataSource={hours}
+                                selectedIndex={selectedHour}
+                                onValueChange={(index) => setSelectedHour(index)}
+                            />
+
+                            <Text style={{ fontSize: 30, marginHorizontal: 10 }}>:</Text>
+
+                            <WheelPicker
+                                dataSource={minutes}
+                                selectedIndex={selectedMinute}
+                                onValueChange={(index) => setSelectedMinute(index)}
+                            />
+
+                        </View>
 
                         {/* Assignee Picker */}
-                        <Text>Assignee</Text>
+                        <Text>Assign to</Text>
                         <Picker
                             selectedValue={selectedMember}
                             onValueChange={(memberId) => setSelectedMember(memberId)}
-                            style={{ marginBottom: 10 }}
+                            style={styles.picker}
                         >
-                            {house.members.map(member => (
+                            {house?.members?.map(member => (
                                 <Picker.Item
                                     key={member.id}
                                     label={member.username + (member.is_guest ? ' (Guest)' : '')}
@@ -463,7 +462,7 @@ const styles = StyleSheet.create({
         width: '80%',
         backgroundColor: '#fff',
         padding: 20,
-        borderRadius: 10,
+        borderRadius: 16,
     },
     modalTitle: {
         fontSize: 20,
@@ -475,7 +474,7 @@ const styles = StyleSheet.create({
         borderColor: '#ccc',
         borderRadius: 5,
         padding: 10,
-        marginBottom: 10,
+        marginBottom: 16,
     },
     assModalBackground: {
         flex: 1,
@@ -498,5 +497,11 @@ const styles = StyleSheet.create({
     assModalButtonText: {
         fontWeight: 'bold',
         fontSize: 18,
+    },
+    picker: {
+        color: '#444',
+        marginBottom: 10,
+        backgroundColor: '#eee',
+        fontWeight: 'bold',
     },
 });
