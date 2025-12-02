@@ -224,6 +224,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
 
     const deleteChoreAssignment = async (ass) => {
         const res = await api.delete(`chores/assignment/${ass.id}/delete/`);
+        await fetchHouse();
     };
 
     const handleEditAssignment = () => {
@@ -290,7 +291,11 @@ export default function HouseDashboardScreen({ navigation, route }) {
                 <View style={styles.assModalBackground}>
                     <View style={styles.assModalContainer}>
                         <View style={styles.assButtonColumn}>
-                            <Pressable style={[styles.assModalButton, styles.deleteButton]} onPress={handleEditAssignment}>
+                            <Pressable style={[styles.assModalButton, styles.deleteButton]} onPress={() => {
+                                deleteChoreAssignment(selectedAss)
+                                setAssLongPressModalVisible(false);
+                                setSelectedAss(null);
+                            }}>
                                 <Text style={styles.assModalButtonText}>Delete</Text>
                             </Pressable>
                             <Pressable style={styles.assModalButton} onPress={handleEditAssignment}>
@@ -304,7 +309,10 @@ export default function HouseDashboardScreen({ navigation, route }) {
                                     {selectedAss?.completed ? "Restore" : "Complete"}
                                 </Text>
                             </Pressable>
-                            <Pressable style={styles.assModalButton} onPress={() => setAssLongPressModalVisible(false)}>
+                            <Pressable style={styles.assModalButton} onPress={() => {
+                                setAssLongPressModalVisible(false);
+                                setSelectedAss(null);
+                            }}>
                                 <Text style={styles.assModalButtonText}>Cancel</Text>
                             </Pressable>
                         </View>
