@@ -75,10 +75,11 @@ class RotaDetailsSerializer(serializers.ModelSerializer):
 class SimpleHouseSerializer(serializers.ModelSerializer):
     members = serializers.SerializerMethodField()
     rota = serializers.SerializerMethodField()
+    chores = serializers.SerializerMethodField()
 
     class Meta:
         model = House
-        fields = ["id", "name", "address", "join_code", "max_members", "members", "rota"]
+        fields = ["id", "name", "address", "join_code", "max_members", "members", "rota", "chores"]
 
     def get_members(self, obj):
         house_members = obj.housemember_set.select_related("user")
@@ -87,3 +88,7 @@ class SimpleHouseSerializer(serializers.ModelSerializer):
     def get_rota(self, obj):
         house_rota = obj.rotas.all().order_by("-start_date")
         return RotaDetailsSerializer(house_rota, many=True).data
+
+    def get_chores(self, obj):
+        house_chores = obj.chores.all()
+        return ChoreSerializer(house_chores, many=True).data

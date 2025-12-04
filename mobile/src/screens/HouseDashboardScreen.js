@@ -37,6 +37,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
     const [selectedHour, setSelectedHour] = useState(12);
     const [selectedMinute, setSelectedMinute] = useState(30);
     const [selectedMember, setSelectedMember] = useState('');
+    const [selectedChore, setSelectedChore] = useState();
 
     // Chore Assignment long press
     const [assLongPressModalVisible, setAssLongPressModalVisible] = useState(false);
@@ -184,15 +185,19 @@ export default function HouseDashboardScreen({ navigation, route }) {
     };
 
     const handleAssignChore = async () => {
-        if (!selectedDay || selectedHour === null || selectedMinute === null || !selectedMember) {
-            Alert.alert("Error", "Please select day, time, and assignee");
+        if (!selectedChore) {
+            Alert.alert("Error", "CHORE MF");
             return;
         }
+        if (!selectedDay || selectedHour === null || selectedMinute === null || !selectedMember) {
+            Alert.alert("Error", "Please select chore, day, time, and assignee");
+            return;
+        }
+        console.log("chore:", selectedChore);
 
         try {
             await api.post("chores/assign/", {
-                // chore_id: selectedChore.id, // replace with your actual selected chore
-                chore_id: 91, // replace with your actual selected chore
+                chore_id: selectedChore,
                 rota_id: house?.rota[0].id, // replace with your actual selected chore
                 day: selectedDay,
                 due_time: `${hours[selectedHour]}:${minutes[selectedMinute]}`,
@@ -365,6 +370,22 @@ export default function HouseDashboardScreen({ navigation, route }) {
                 <View style={styles.modalBackground}>
                     <View style={styles.modalContainer}>
                         <Text style={styles.modalTitle}>Assign Chore</Text>
+
+                        {/* Chore Picker */}
+                        <Text>Chore</Text>
+                        <Picker
+                            selectedValue={selectedChore}
+                            onValueChange={(chore) => setSelectedChore(chore)}
+                            style={styles.picker}
+                        >
+                            {house?.chores?.map(chore => (
+                                <Picker.Item
+                                    key={chore.id}
+                                    label={chore.name.toUpperCase()}
+                                    value={chore.id}
+                                />
+                            ))}
+                        </Picker>
 
                         {/* Day Picker */}
                         <Text>Day</Text>
