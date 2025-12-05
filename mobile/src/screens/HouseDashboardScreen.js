@@ -373,19 +373,31 @@ export default function HouseDashboardScreen({ navigation, route }) {
 
                         {/* Chore Picker */}
                         <Text>Chore</Text>
-                        <Picker
-                            selectedValue={selectedChore}
-                            onValueChange={(chore) => setSelectedChore(chore)}
-                            style={styles.picker}
-                        >
-                            {house?.chores?.map(chore => (
-                                <Picker.Item
-                                    key={chore.id}
-                                    label={chore.name.toUpperCase()}
-                                    value={chore.id}
-                                />
-                            ))}
-                        </Picker>
+                        <View style={{ flexDirection: "row", alignItems: "center" }}>
+                            <Picker
+                                selectedValue={selectedChore}
+                                onValueChange={(chore) => setSelectedChore(chore)}
+                                style={[styles.picker, { flex: 1 }]}
+                            >
+                                {house?.chores?.map((chore) => (
+                                    <Picker.Item key={chore.id} label={chore.name.toUpperCase()} value={chore.id} />
+                                ))}
+                            </Picker>
+                            <Pressable
+                                onPress={() => setChoreModalVisible(true)}
+                                style={{
+                                    height: 50,
+                                    paddingHorizontal: 15,
+                                    backgroundColor: "#3498db",
+                                    justifyContent: "center",
+                                    alignItems: "center",
+                                    borderRadius: 6,
+                                    marginLeft: 10,
+                                }}
+                            >
+                                <Text style={{ color: "white", fontWeight: "bold" }}>Create New</Text>
+                            </Pressable>
+                        </View>
 
                         {/* Day Picker */}
                         <Text>Day</Text>
@@ -521,7 +533,6 @@ const styles = StyleSheet.create({
     },
     picker: {
         color: '#444',
-        marginBottom: 10,
         backgroundColor: '#eee',
         fontWeight: 'bold',
     },
