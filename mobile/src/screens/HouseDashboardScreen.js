@@ -9,6 +9,8 @@ import api from '../utils/api';
 import WeekCalendar from "../components/WeekCalendar";
 import CheckBox from "../components/CheckBox";
 
+// TODO: all the `rota[0]` instances need to be change to use the actual selected rota
+
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
         shouldShowBanner: true,
@@ -185,20 +187,10 @@ export default function HouseDashboardScreen({ navigation, route }) {
     };
 
     const handleAssignChore = async () => {
-        if (!selectedChore) {
-            Alert.alert("Error", "CHORE MF");
-            return;
-        }
-        if (!selectedDay || selectedHour === null || selectedMinute === null || !selectedMember) {
-            Alert.alert("Error", "Please select chore, day, time, and assignee");
-            return;
-        }
-        console.log("chore:", selectedChore);
-
         try {
             await api.post("chores/assign/", {
                 chore_id: selectedChore,
-                rota_id: house?.rota[0].id, // replace with your actual selected chore
+                rota_id: house?.rota[0].id,
                 day: selectedDay,
                 due_time: `${hours[selectedHour]}:${minutes[selectedMinute]}`,
                 person_id: selectedMember,
@@ -224,6 +216,23 @@ export default function HouseDashboardScreen({ navigation, route }) {
 
     const handleEditAssignment = () => {
     };
+
+    useEffect(() => {
+        if (assignModalVisible && house) {
+            if (!selectedChore && house.chores.length > 0)
+                setSelectedChore(house.chores[0].id);
+
+            if (!selectedDay)
+                setSelectedDay('mon');
+
+            if (!selectedMember && house.members.length > 0)
+                setSelectedMember(house.members[0].id);
+
+            // Time defaults:
+            if (selectedHour == null) setSelectedHour(12);
+            if (selectedMinute == null) setSelectedMinute(30);
+        }
+    }, [assignModalVisible, house]);
 
     return (
         <View style={styles.container}>
