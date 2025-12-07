@@ -171,11 +171,6 @@ export default function HouseDashboardScreen({ navigation, route }) {
                 description: newChoreDescription,
                 color: newChoreColor,
             });
-            // setHouse((prev) => ({
-            //     ...prev,
-            //     chores: [...prev.chores, res.data],
-            // }));
-
             await fetchHouse();
             setChoreModalVisible(false);
             setNewChoreName('');

@@ -7,6 +7,12 @@ from django.conf import settings
 from django.contrib.auth.hashers import make_password, check_password
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
+from dateutil.relativedelta import relativedelta
+from .helpers.repeat import (
+    relativedelta_to_dict,
+    dict_to_relativedelta,
+    generate_repeat_label,
+)
 
 HEX_COLOR_VALIDATOR = RegexValidator(
     regex=r"^#(?:[0-9a-fA-F]{6})$",
@@ -79,45 +85,79 @@ class Chore(models.Model):
     def __str__(self):
         return f"{self.name} ({self.house.name})"
 
-class Rota(models.Model):
-    house = models.ForeignKey(House, on_delete=models.CASCADE, related_name="rotas")
-    start_date = models.DateField(default=date.today)  
-    end_date = models.DateField(null=True, blank=True)
+class ChoreSchedule(models.Model):
+    chore = models.ForeignKey(
+        Chore,
+        on_delete=models.CASCADE,
+        related_name="schedules"
+    )
 
-    created_at = models.DateTimeField(auto_now_add=True)
+    # assignee for this chore schedule
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="chore_schedules"
+    )
+
+    start_date = models.DateField(default=timezone.now)
+
+    # JSON with relativedelta fields
+    repeat_delta = models.JSONField(default=dict)
+
+    @property
+    def delta(self) -> relativedelta:
+        return dict_to_relativedelta(self.repeat_delta)
+
+    @delta.setter
+    def delta(self, value: relativedelta):
+        self.repeat_delta = relativedelta_to_dict(value)
+
+    @property
+    def repeat_label(self) -> str:
+        return generate_repeat_label(self.delta)
+
+    def next_due_date(self, last_datetime):
+        return last_datetime + self.delta
 
     def __str__(self):
-        return f"Rota ({self.house.name}) {self.start_date} - {self.end_date}"
+        return f"{self.chore.name} for {self.user.username} ({self.repeat_label})"
 
-class ChoreAssignment(models.Model):
-    rota = models.ForeignKey(Rota, on_delete=models.CASCADE, related_name="assignments")
-    chore = models.ForeignKey(Chore, on_delete=models.CASCADE)
-    person = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
-    day = models.CharField(max_length=10, choices=[
-        ("mon", "Monday"),
-        ("tue", "Tuesday"),
-        ("wed", "Wednesday"),
-        ("thu", "Thursday"),
-        ("fri", "Friday"),
-        ("sat", "Saturday"),
-        ("sun", "Sunday"),
-    ])
-    due_time = models.TimeField(default=time(19, 0))
+    class Meta:
+        unique_together = ("chore", "user")
+
+class ChoreOccurrence(models.Model):
+    schedule = models.ForeignKey(
+        ChoreSchedule,
+        on_delete=models.CASCADE,
+        related_name="occurrences"
+    )
+
+    due_date = models.DateTimeField()
 
     completed = models.BooleanField(default=False)
     completed_at = models.DateTimeField(null=True, blank=True)
 
-    class Meta:
-        unique_together = ("rota", "chore", "day")
+    notification_sent = models.BooleanField(default=False)
+    notification_sent_at = models.DateTimeField(null=True, blank=True)
 
     def save(self, *args, **kwargs):
-        if self.completed and self.completed_at is None:
+        if self.completed and not self.completed_at:
             self.completed_at = timezone.now()
 
-        if not self.completed and self.completed_at is not None:
+        if not self.completed:
             self.completed_at = None
+
+        if self.notification_sent and not self.notification_sent_at:
+            self.notification_sent_at = timezone.now()
+
+        if not self.notification_sent:
+            self.notification_sent_at = None
 
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.chore.name} - {self.person} on {self.day}"
+        return (
+            f"{self.schedule.chore.name} "
+                f"for {self.schedule.user.username} "
+                f"on {self.due_date.date()}"
+        )
