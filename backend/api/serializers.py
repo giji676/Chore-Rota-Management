@@ -1,7 +1,7 @@
 from datetime import date
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
-from .models import House, Chore, Rota, ChoreAssignment, HouseMember
+from .models import House, Chore, HouseMember, ChoreOccurrence, ChoreSchedule
 
 User = get_user_model()
 
