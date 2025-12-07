@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import House, HouseMember, Chore, Rota, ChoreAssignment
+from .models import House, HouseMember, Chore, ChoreSchedule, ChoreOccurrence
 
 @admin.register(House)
 class HouseAdmin(admin.ModelAdmin):
@@ -14,17 +14,27 @@ class HouseMemberAdmin(admin.ModelAdmin):
 
 @admin.register(Chore)
 class ChoreAdmin(admin.ModelAdmin):
-    list_display = ("id", "name", "house")
+    list_display = ("id", "name", "house", "color")
     list_filter = ("house",)
     search_fields = ("name",)
 
-@admin.register(Rota)
-class RotaAdmin(admin.ModelAdmin):
-    list_display = ("id", "house", "start_date", "end_date", "created_at")
-    list_filter = ("house", "start_date")
+@admin.register(ChoreSchedule)
+class ChoreScheduleAdmin(admin.ModelAdmin):
+    list_display = ("id", "chore", "user", "start_date", "repeat_label")
+    list_filter = ("chore__house", "user")
+    search_fields = ("chore__name", "user__username")
+    readonly_fields = ("repeat_label",)
 
-@admin.register(ChoreAssignment)
-class ChoreAssignmentAdmin(admin.ModelAdmin):
-    list_display = ("id", "rota", "chore", "person", "day", "completed")
-    list_filter = ("rota", "day", "completed")
-    search_fields = ("chore__name", "person__username")
+@admin.register(ChoreOccurrence)
+class ChoreOccurrenceAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "schedule",
+        "due_date",
+        "completed",
+        "completed_at",
+        "notification_sent",
+        "notification_sent_at",
+    )
+    list_filter = ("schedule__chore__house", "schedule__user", "completed", "notification_sent")
+    search_fields = ("schedule__chore__name", "schedule__user__username")
