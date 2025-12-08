@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions } from "react-native";
 
-const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+// const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const DAY_NAMES = ["M", "T", "W", "T", "F", "S", "S"];
 const DEFAULT_COLOR = "#3498db";
 
 export default function WeekCalendar({ occurrences, onDayPress }) {

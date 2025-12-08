@@ -229,8 +229,6 @@ class ChoreOccurrenceManagementView(APIView):
         user = request.user
         data = request.data
 
-        user_id = data.get("user_id")
-
         try:
             occurrence = ChoreOccurrence.objects.get(id=occurrence_id)
         except ChoreSchedule.DoesNotExist:
@@ -241,7 +239,7 @@ class ChoreOccurrenceManagementView(APIView):
         except HouseMember.DoesNotExist:
             return Response({"error": "You are not a part of this house"}, status=status.HTTP_403_FORBIDDEN)
 
-        if user.id != int(user_id) and house_member.role != "owner":
+        if user.id != house_member.user.id and house_member.role != "owner":
             return Response({"error": "Only the owner can perform this action"}, status=status.HTTP_403_FORBIDDEN)
 
         allowed_fields = ["due_date", "completed"]
@@ -258,8 +256,6 @@ class ChoreOccurrenceManagementView(APIView):
         user = request.user
         data = request.data
 
-        user_id = data.get("user_id")
-
         try:
             occurrence = ChoreOccurrence.objects.get(id=occurrence_id)
         except ChoreSchedule.DoesNotExist:
@@ -273,7 +269,7 @@ class ChoreOccurrenceManagementView(APIView):
         except HouseMember.DoesNotExist:
             return Response({"error": "You are not a part of this house"}, status=status.HTTP_403_FORBIDDEN)
 
-        if user.id != int(user_id) and house_member.role != "owner":
+        if user.id != house_member.user.id and house_member.role != "owner":
             return Response({"error": "Only the owner can perform this action"}, status=status.HTTP_403_FORBIDDEN)
 
         occurrence.delete()
