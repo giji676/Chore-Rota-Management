@@ -195,7 +195,7 @@ class HouseManagementView(APIView):
         house.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-class ChoreOccurranceManagementView(APIView):
+class ChoreOccurrenceManagementView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -216,27 +216,27 @@ class ChoreOccurranceManagementView(APIView):
         except ChoreSchedule.DoesNotExist:
             return Response({"error": "Schedule not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        occurrance = ChoreOccurrence.objects.create(
+        occurrence = ChoreOccurrence.objects.create(
             schedule=schedule,
             due_date=due_date,
         )
 
-        serializer = ChoreOccurrenceSerializer(occurrance)
+        serializer = ChoreOccurrenceSerializer(occurrence)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-    def patch(self, request, occurrance_id):
+    def patch(self, request, occurrence_id):
         user = request.user
         data = request.data
 
         user_id = data.get("user_id")
 
         try:
-            occurrance = ChoreOccurrence.objects.get(id=occurrance_id)
+            occurrence = ChoreOccurrence.objects.get(id=occurrence_id)
         except ChoreSchedule.DoesNotExist:
-            return Response({"error": "Occurance not found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Occurrence not found"}, status=status.HTTP_404_NOT_FOUND)
 
         try:
-            house_member = HouseMember.objects.get(house=occurrance.schedule.chore.house, user=user)
+            house_member = HouseMember.objects.get(house=occurrence.schedule.chore.house, user=user)
         except HouseMember.DoesNotExist:
             return Response({"error": "You are not a part of this house"}, status=status.HTTP_403_FORBIDDEN)
 
@@ -247,35 +247,35 @@ class ChoreOccurranceManagementView(APIView):
 
         for field, value in data.items():
             if field in allowed_fields:
-                setattr(occurrance, field, value)
+                setattr(occurrence, field, value)
 
-        occurrance.save()
+        occurrence.save()
 
-        return Response(ChoreOccurrenceSerializer(occurrance).data, status=status.HTTP_200_OK)
+        return Response(ChoreOccurrenceSerializer(occurrence).data, status=status.HTTP_200_OK)
 
-    def delete(self, request, occurrance_id):
+    def delete(self, request, occurrence_id):
         user = request.user
         data = request.data
 
         user_id = data.get("user_id")
 
         try:
-            occurrance = ChoreOccurrence.objects.get(id=occurrance_id)
+            occurrence = ChoreOccurrence.objects.get(id=occurrence_id)
         except ChoreSchedule.DoesNotExist:
-            return Response({"error": "Occurance not found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Occurrence not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        if not HouseMember.objects.filter(house=occurrance.schedule.chore.house, user=user).exists():
+        if not HouseMember.objects.filter(house=occurrence.schedule.chore.house, user=user).exists():
             return Response({"error": "You are not a part of this house"},
                             status=status.HTTP_403_FORBIDDEN)
         try:
-            house_member = HouseMember.objects.get(house=occurrance.schedule.chore.house, user=user)
+            house_member = HouseMember.objects.get(house=occurrence.schedule.chore.house, user=user)
         except HouseMember.DoesNotExist:
             return Response({"error": "You are not a part of this house"}, status=status.HTTP_403_FORBIDDEN)
 
         if user.id != int(user_id) and house_member.role != "owner":
             return Response({"error": "Only the owner can perform this action"}, status=status.HTTP_403_FORBIDDEN)
 
-        occurrance.delete()
+        occurrence.delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
