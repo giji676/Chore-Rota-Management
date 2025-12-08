@@ -289,7 +289,7 @@ class ChoreScheduleManagementView(APIView):
         chore_id = data.get("chore_id")
         user_id = data.get("user_id")
         start_date = data.get("start_date")
-        time_delta = data.get("time_delta")
+        repeat_delta = data.get("repeat_delta")
 
         if not all([chore_id, user_id]):
             return Response(
@@ -317,9 +317,9 @@ class ChoreScheduleManagementView(APIView):
 
         schedule = ChoreSchedule.objects.create(
             chore=chore,
-            user=target_house_member,
+            user=target_house_member.user,
             start_date=start_date,
-            time_delta=time_delta,
+            repeat_delta=repeat_delta,
         )
 
         serializer = ChoreScheduleSerializer(schedule)

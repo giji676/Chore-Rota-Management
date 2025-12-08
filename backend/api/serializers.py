@@ -22,7 +22,7 @@ class ChoreSerializer(serializers.ModelSerializer):
 class ChoreScheduleSerializer(serializers.ModelSerializer):
     chore_name = serializers.CharField(source="chore.name", read_only=True)
     user_name = serializers.CharField(source="user.username", read_only=True)
-    repeat_label = serializers.CharField(source="repeat_label", read_only=True)
+    repeat_label = serializers.CharField(read_only=True)
 
     class Meta:
         model = ChoreSchedule
