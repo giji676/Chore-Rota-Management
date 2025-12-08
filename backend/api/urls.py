@@ -3,31 +3,30 @@ from . import views
 
 urlpatterns = [
     # House endpoints
-    path("house/create/", views.HouseManagementView.as_view(), name="create-house"),
-    path("house/<int:house_id>/", views.HouseManagementView.as_view(), name="get-house"),
-    path("house/delete/<int:house_id>/", views.HouseManagementView.as_view(), name="delete-house"),
-    path("house/update/<int:house_id>/", views.HouseManagementView.as_view(), name="update-house"),
+    path("houses/create/", views.HouseManagementView.as_view(), name="create-house"),
+    path("houses/<int:house_id>/update/", views.HouseManagementView.as_view(), name="update-house"),
+    path("houses/<int:house_id>/delete/", views.HouseManagementView.as_view(), name="delete-house"),
+    path("houses/<int:house_id>/details/", views.HouseDetailsView.as_view(), name="house-details"),
 
-    path("house/join/<str:join_code>/", views.JoinHouseView.as_view(), name="join-house"),
-    path("houses/user/", views.UsersHousesView.as_view(), name="get-houses"),
+    path("houses/join/<str:join_code>/", views.JoinHouseView.as_view(), name="join-house"),
+    path("houses/user/", views.UsersHousesView.as_view(), name="user-houses"),
 
     # Address endpoints
     path("address-autocomplete/", views.AddressAutocompleteView.as_view(), name="address-autocomplete"),
     path("address-details/", views.AddressDetailsView.as_view(), name="address-details"),
 
-    # Rota endpoints
-    path("rota/create/", views.RotaManagementView.as_view(), name="create-rota"),
-    path("rota/delete/<int:rota_id>/", views.RotaManagementView.as_view(), name="delete-rota"),
-    path("rota/update/<int:rota_id>/", views.RotaManagementView.as_view(), name="update-rota"),
-    path("rota/<int:rota_id>/", views.RotaManagementView.as_view(), name="get-rota"),
-
     # Chore endpoints
     path("chores/create/", views.ChoreManagementView.as_view(), name="create-chore"),
-    path("chores/delete/<int:chore_id>/", views.ChoreManagementView.as_view(), name="delete-chore"),
-    path("chores/update/<int:chore_id>/", views.ChoreManagementView.as_view(), name="update-chore"),
+    path("chores/<int:chore_id>/update/", views.ChoreManagementView.as_view(), name="update-chore"),
+    path("chores/<int:chore_id>/delete/", views.ChoreManagementView.as_view(), name="delete-chore"),
 
-    # Chore Assignment endpoints
-    path("chores/assign/", views.AssignChoreView.as_view(), name="assign-chore"),
-    path("chores/assignment/<int:assignment_id>/", views.UpdateChoreAssignmentView.as_view(), name="update-chore-assignment"),
-    path("chores/assignment/<int:assignment_id>/delete/", views.DeleteChoreAssignmentView.as_view(), name="delete-chore-assignment"),
+    # Chore Schedule endpoints
+    path("schedules/create/", views.ChoreScheduleManagementView.as_view(), name="create-schedule"),
+    path("schedules/<int:schedule_id>/update/", views.ChoreScheduleManagementView.as_view(), name="update-schedule"),
+    path("schedules/<int:schedule_id>/delete/", views.ChoreScheduleManagementView.as_view(), name="delete-schedule"),
+
+    # Chore Occurrence endpoints
+    path("occurrences/create/", views.ChoreOccurranceManagementView.as_view(), name="create-occurrence"),
+    path("occurrences/<int:occurrence_id>/update/", views.ChoreOccurranceManagementView.as_view(), name="update-occurrence"),
+    path("occurrences/<int:occurrence_id>/delete/", views.ChoreOccurranceManagementView.as_view(), name="delete-occurrence"),
 ]
