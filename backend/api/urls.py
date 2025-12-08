@@ -26,7 +26,7 @@ urlpatterns = [
     path("schedules/<int:schedule_id>/delete/", views.ChoreScheduleManagementView.as_view(), name="delete-schedule"),
 
     # Chore Occurrence endpoints
-    path("occurrences/create/", views.ChoreOccurranceManagementView.as_view(), name="create-occurrence"),
-    path("occurrences/<int:occurrence_id>/update/", views.ChoreOccurranceManagementView.as_view(), name="update-occurrence"),
-    path("occurrences/<int:occurrence_id>/delete/", views.ChoreOccurranceManagementView.as_view(), name="delete-occurrence"),
+    path("occurrences/create/", views.ChoreOccurrenceManagementView.as_view(), name="create-occurrence"),
+    path("occurrences/<int:occurrence_id>/update/", views.ChoreOccurrenceManagementView.as_view(), name="update-occurrence"),
+    path("occurrences/<int:occurrence_id>/delete/", views.ChoreOccurrenceManagementView.as_view(), name="delete-occurrence"),
 ]

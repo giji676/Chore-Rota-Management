@@ -1,50 +1,59 @@
-import React from 'react';
-import { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
+import React, { useState } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions } from "react-native";
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const DEFAULT_COLOR = "#3498db";
 
-export default function WeekCalendar({ rota, onDayPress }) {
-    if (!rota || !rota.week) return null;
+export default function WeekCalendar({ occurrences, onDayPress }) {
     const [parentWidth, setParentWidth] = useState(0);
 
-    const screenWidth = Dimensions.get('window').width;
-    const dayWidth = screenWidth / 7;
+    if (!occurrences) return null;
+
+    // Group occurrences by day index (Mon=0 ... Sun=6)
+    const occByDay = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
+
+    occurrences.forEach((occ) => {
+        const date = new Date(occ.due_date);
+        let dayIndex = date.getDay() - 1; // JS: Sunday=0 → convert to 6
+        if (dayIndex < 0) dayIndex = 6;
+        occByDay[dayIndex].push(occ);
+    });
 
     return (
         <ScrollView horizontal={false} style={styles.container}>
-            <View style={styles.weekRow}
+            <View
+                style={styles.weekRow}
                 onLayout={(event) => {
-                    const { width } = event.nativeEvent.layout;
-                    setParentWidth(width);
+                    setParentWidth(event.nativeEvent.layout.width);
                 }}
             >
-                {Object.keys(rota.week).map((dayKey) => {
-                    const dayChoresAssignments = rota.week[dayKey];
-
+                {Object.keys(occByDay).map((dayKey) => {
+                    const list = occByDay[dayKey];
                     return (
                         <TouchableOpacity
                             key={dayKey}
-                            style={[styles.daySection, { width: parentWidth/7 }]}
-                            onPress={() => onDayPress && onDayPress(dayKey)}
+                            style={[styles.daySection, { width: parentWidth / 7 }]}
+                            onPress={() => onDayPress && onDayPress(Number(dayKey))}
                         >
+                            {/* Day Header */}
                             <Text style={styles.dayHeader}>{DAY_NAMES[dayKey]}</Text>
-                            <View style={styles.dayBars}>
 
-                                {dayChoresAssignments.length > 0 ? (
-                                    dayChoresAssignments.map((assignment) => (
+                            {/* Occurrence Bars */}
+                            <View style={styles.dayBars}>
+                                {list.length > 0 ? (
+                                    list.map((occ) => (
                                         <View
-                                            key={assignment.id}
+                                            key={occ.id}
                                             style={[
                                                 styles.choreBar,
-                                                { backgroundColor: assignment.chore.color || DEFAULT_COLOR },
+                                                { backgroundColor: occ.chore?.color || DEFAULT_COLOR },
                                             ]}
                                         />
                                     ))
                                 ) : (
-                                        <View style={[styles.choreBar, { backgroundColor: '#ccc' }]} />
-                                    )}
+                                    // Empty indicator
+                                    <View style={[styles.choreBar, { backgroundColor: "#ccc" }]} />
+                                )}
                             </View>
                         </TouchableOpacity>
                     );
@@ -59,20 +68,20 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
     },
     weekRow: {
-        flexDirection: 'row',
+        flexDirection: "row",
     },
     daySection: {
-        alignItems: 'center',
+        alignItems: "center",
     },
     dayHeader: {
-        fontWeight: 'bold',
+        fontWeight: "bold",
         marginBottom: 5,
     },
     dayBars: {
-        width: '90%',
+        width: "90%",
     },
     choreBar: {
-        width: '100%',
+        width: "100%",
         height: 8,
         borderRadius: 4,
         marginVertical: 2,

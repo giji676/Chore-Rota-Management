@@ -1,4 +1,5 @@
 import requests
+from datetime import datetime
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
@@ -290,6 +291,8 @@ class ChoreScheduleManagementView(APIView):
         user_id = data.get("user_id")
         start_date = data.get("start_date")
         repeat_delta = data.get("repeat_delta")
+
+        start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
 
         if not all([chore_id, user_id]):
             return Response(

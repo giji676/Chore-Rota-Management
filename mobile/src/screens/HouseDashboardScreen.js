@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { Pressable, Alert, View, Text, Button, FlatList, StyleSheet, TextInput, Modal } from 'react-native';
 import WheelPicker from "react-native-wheel-scrollview-picker";
 import { Picker } from '@react-native-picker/picker';
@@ -8,8 +8,6 @@ import { registerForPushNotificationsAsync, configureAndroidChannel } from '../u
 import api from '../utils/api';
 import WeekCalendar from "../components/WeekCalendar";
 import CheckBox from "../components/CheckBox";
-
-// TODO: all the `rota[0]` instances need to be change to use the actual selected rota
 
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
@@ -22,29 +20,24 @@ Notifications.setNotificationHandler({
 export default function HouseDashboardScreen({ navigation, route }) {
     const [house, setHouse] = useState(route.params.house);
     const [error, setError] = useState('');
-    const [displayDay, setDisplayDay] = useState([]);
-    const [displayDayKey, setDisplayDayKey] = useState('0');
-    const [updatedChoresState, setUpdatedChoresState] = useState([]);
-
-    // Modal state
-    // Chore
+    const [displayDayKey, setDisplayDayKey] = useState(0);
     const [choreModalVisible, setChoreModalVisible] = useState(false);
     const [newChoreName, setNewChoreName] = useState('');
     const [newChoreDescription, setNewChoreDescription] = useState('');
     const [newChoreColor, setNewChoreColor] = useState('#ffffff');
 
-    // Chore Assignment
     const [assignModalVisible, setAssignModalVisible] = useState(false);
     const [selectedDay, setSelectedDay] = useState('mon');
     const [selectedHour, setSelectedHour] = useState(12);
     const [selectedMinute, setSelectedMinute] = useState(30);
     const [selectedMember, setSelectedMember] = useState('');
     const [selectedChore, setSelectedChore] = useState();
+    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+    const [repeatDelta, setRepeatDelta] = useState({days: 7});
 
-    // Chore Assignment long press
-    const [assLongPressModalVisible, setAssLongPressModalVisible] = useState(false);
-    const [selectedAss, setSelectedAss] = useState();
-    
+    const [occLongPressModalVisible, setOccLongPressModalVisible] = useState(false);
+    const [selectedOcc, setSelectedOcc] = useState();
+
     const hours = [...Array(24).keys()].map(n => n.toString().padStart(2, "0"));
     const minutes = [...Array(60).keys()].map(n => n.toString().padStart(2, "0"));
 
@@ -59,11 +52,10 @@ export default function HouseDashboardScreen({ navigation, route }) {
                 if (token) {
                     await api.post("accounts/push-token/", { token });
                 }
-            } catch (error) {
-                console.log("error:", error);
+            } catch (err) {
+                console.log("Notification init error:", err);
             }
         }
-
         initNotifications();
     }, []);
 
@@ -72,28 +64,35 @@ export default function HouseDashboardScreen({ navigation, route }) {
         fetchHouse();
     }, []);
 
-    useEffect(() => {
-        if (!house?.rota[0]) return;
-        setDisplayDay(house.rota[0].week[displayDayKey]);
-        setUpdatedChoresState([]);
-    }, [displayDayKey]);
-
     const fetchHouse = async () => {
-        const res = await api.get(`house/${house.id}/`);
-        setHouse(res.data);
-    }
+        try {
+            const res = await api.get(`house/${house.id}/details/`);
+            console.log(JSON.stringify(res.data, null, 2));
+            setHouse(res.data);
+        } catch (err) {
+            setError("Failed to fetch house");
+        }
+    };
 
-    useEffect(() => {
-        if (!house) return;
-        setDisplayDay(house.rota[0].week[displayDayKey]);
-        setUpdatedChoresState([]);
-        // console.log(JSON.stringify(house.rota[0], null, 2));
+    const occurrencesByDay = useMemo(() => {
+        if (!house?.occurrences) return {0:[],1:[],2:[],3:[],4:[],5:[],6:[]};
+        const map = {0:[],1:[],2:[],3:[],4:[],5:[],6:[]};
+        house.occurrences.forEach((occ) => {
+            const date = new Date(occ.due_date);
+            let dayIndex = date.getDay() - 1; // JS: 0=Sun
+            if(dayIndex < 0) dayIndex = 6;
+            map[dayIndex].push(occ);
+        });
+        return map;
     }, [house]);
+
+    const displayDay = occurrencesByDay[displayDayKey] || [];
 
     if (error) return <Text style={styles.error}>{error}</Text>;
     if (!house) return <Text style={styles.error}>House not found</Text>;
 
-    const handleDelete = async () => {
+    // --- Handlers ---
+    const handleDeleteHouse = async () => {
         Alert.alert(
             "Confirm Delete",
             "Are you sure you want to delete this house? This action cannot be undone.",
@@ -104,19 +103,11 @@ export default function HouseDashboardScreen({ navigation, route }) {
                     style: "destructive",
                     onPress: async () => {
                         try {
-                            const res = await api.delete(`house/${house.id}/`);
+                            await api.delete(`house/${house.id}/`);
                             Alert.alert("House deleted successfully");
                             navigation.goBack();
                         } catch (err) {
-                            if (err.response && err.response.status !== 204) {
-                                Alert.alert(
-                                    "Error",
-                                    err.response?.data?.error || err.message
-                                );
-                            } else {
-                                Alert.alert("House deleted successfully");
-                                navigation.goBack();
-                            }
+                            Alert.alert("Error", err.response?.data?.error || err.message);
                         }
                     }
                 }
@@ -124,38 +115,14 @@ export default function HouseDashboardScreen({ navigation, route }) {
         );
     };
 
-    const handleCheck = (ass) => {
-        setUpdatedChoresState(prev => {
-            const exists = prev.find(item => item.id === ass.id);
-
-            if (exists) {
-                return prev.filter(item => item.id !== ass.id);
-            } else {
-                return [...prev, { ...ass, completed: !ass.completed }];
-            }
-        });
+    const handleCheckOccurrence = async (occ) => {
+        await api.patch(`occurrences/${occ.id}/update/`, { completed: !occ.completed });
+        fetchHouse();
     };
 
-    const handleSaveChoreAssignments = async () => {
-        await Promise.all(
-            updatedChoresState.map(async (ass) => {
-                const res = await api.patch(`chores/assignment/${ass.id}/`, { completed: ass.completed });
-                return res.data;
-            })
-        );
-        await fetchHouse();
-        setUpdatedChoresState([]);
-    };
-
-    const handleSaveChoreAssignment = async (ass, state) => {
-        await api.patch(`chores/assignment/${ass.id}/`, { completed: state });
-        await fetchHouse();
-
-        setUpdatedChores(prev => {
-            if (prev.some(item => item.id === ass.id)) {
-                return prev.filter(item => item.id !== ass.id);
-            }
-        });
+    const handleDeleteOccurrence = async (occ) => {
+        await api.delete(`occurrences/${occ.id}/delete/`);
+        fetchHouse();
     };
 
     const handleCreateChore = async () => {
@@ -163,15 +130,14 @@ export default function HouseDashboardScreen({ navigation, route }) {
             Alert.alert("Error", "Chore name is required");
             return;
         }
-
         try {
-            const res = await api.post("chores/create/", {
+            await api.post("chores/create/", {
                 house_id: house.id,
                 name: newChoreName,
                 description: newChoreDescription,
                 color: newChoreColor,
             });
-            await fetchHouse();
+            fetchHouse();
             setChoreModalVisible(false);
             setNewChoreName('');
             setNewChoreDescription('');
@@ -183,49 +149,23 @@ export default function HouseDashboardScreen({ navigation, route }) {
 
     const handleAssignChore = async () => {
         try {
-            await api.post("chores/assign/", {
+            await api.post(`schedules/create/`, {
                 chore_id: selectedChore,
-                rota_id: house?.rota[0].id,
-                day: selectedDay,
-                due_time: `${hours[selectedHour]}:${minutes[selectedMinute]}`,
-                person_id: selectedMember,
+                user_id: selectedMember,
+                start_date: selectedDate,
+                repeat_delta: repeatDelta
             });
-            await fetchHouse();
+            fetchHouse();
             setAssignModalVisible(false);
-            // reset
-            setSelectedDay('mon');
-            setSelectedMember('');
         } catch (err) {
             Alert.alert("Error", err.response?.data?.error || err.message);
         }
     };
 
-    const onChangeTime = (event, time) => {
-        if (time) setSelectedTime(time);
-    };
-
-    const deleteChoreAssignment = async (ass) => {
-        const res = await api.delete(`chores/assignment/${ass.id}/delete/`);
-        await fetchHouse();
-    };
-
-    const handleEditAssignment = () => {
-    };
-
     useEffect(() => {
         if (assignModalVisible && house) {
-            if (!selectedChore && house.chores.length > 0)
-                setSelectedChore(house.chores[0].id);
-
-            if (!selectedDay)
-                setSelectedDay('mon');
-
-            if (!selectedMember && house.members.length > 0)
-                setSelectedMember(house.members[0].id);
-
-            // Time defaults:
-            if (selectedHour == null) setSelectedHour(12);
-            if (selectedMinute == null) setSelectedMinute(30);
+            if (!selectedChore && house.chores.length > 0) setSelectedChore(house.chores[0].id);
+            if (!selectedMember && house.members.length > 0) setSelectedMember(house.members[0].id);
         }
     }, [assignModalVisible, house]);
 
@@ -245,85 +185,63 @@ export default function HouseDashboardScreen({ navigation, route }) {
                 )}
             />
 
-            {house?.rota[0] && 
+            {house?.occurrences?.length > 0 && 
                 <WeekCalendar
-                    rota={house.rota[0]}
-                    onDayPress={(dayKey) => {
-                        setDisplayDayKey(dayKey);
-                    }}
+                    occurrences={house.occurrences}
+                    onDayPress={setDisplayDayKey}
                 />
             }
+
             {displayDay?.length > 0 && (
                 <>
                     <View style={styles.markCompleteContainer}>
                         <Text>Mark Complete</Text>
                     </View>
                     <View>
-                        {displayDay?.map((ass) => {
-                            const [hh, mm] = ass.due_time?.split(":") ?? ["00","00"];
-                            return (
-                                <Pressable
-                                    key={ass.id}
-                                    onLongPress={() => {
-                                        setSelectedAss(ass);
-                                        setAssLongPressModalVisible(true);
-                                    }}
-                                    style={styles.choreDetail}
-                                >
-                                    <Text>{`${hh}:${mm}`} - {ass.chore.name}</Text>
-                                    <CheckBox 
-                                        onPress={() => handleCheck(ass)} 
-                                        checked={ass.completed}
-                                    />
-                                </Pressable>
-                            );
-                        })}
+                        {displayDay.map((occ) => (
+                            <Pressable
+                                key={occ.id}
+                                onLongPress={() => {
+                                    setSelectedOcc(occ);
+                                    setOccLongPressModalVisible(true);
+                                }}
+                                style={styles.choreDetail}
+                            >
+                                <Text>{occ.chore_name} - {new Date(occ.due_date).toLocaleString()}</Text>
+                                <CheckBox
+                                    onPress={() => handleCheckOccurrence(occ)}
+                                    checked={occ.completed}
+                                />
+                            </Pressable>
+                        ))}
                     </View>
                 </>
             )}
+
+            {/* Occurrence Long Press Modal */}
             <Modal
-                visible={assLongPressModalVisible}
+                visible={occLongPressModalVisible}
                 animationType="slide"
                 transparent={true}
-                onRequestClose={() => setAssLongPressModalVisible(false)}
+                onRequestClose={() => setOccLongPressModalVisible(false)}
             >
                 <View style={styles.assModalBackground}>
                     <View style={styles.assModalContainer}>
-                        <View style={styles.assButtonColumn}>
-                            <Pressable style={[styles.assModalButton, styles.deleteButton]} onPress={() => {
-                                deleteChoreAssignment(selectedAss)
-                                setAssLongPressModalVisible(false);
-                                setSelectedAss(null);
-                            }}>
-                                <Text style={styles.assModalButtonText}>Delete</Text>
-                            </Pressable>
-                            <Pressable style={styles.assModalButton} onPress={handleEditAssignment}>
-                                <Text style={styles.assModalButtonText}>Edit</Text>
-                            </Pressable>
-                            <Pressable style={styles.assModalButton} onPress={() => {
-                                handleSaveChoreAssignment(selectedAss, !selectedAss.completed);
-                                setAssLongPressModalVisible(false);
-                            }}>
-                                <Text style={styles.assModalButtonText}>
-                                    {selectedAss?.completed ? "Restore" : "Complete"}
-                                </Text>
-                            </Pressable>
-                            <Pressable style={styles.assModalButton} onPress={() => {
-                                setAssLongPressModalVisible(false);
-                                setSelectedAss(null);
-                            }}>
-                                <Text style={styles.assModalButtonText}>Cancel</Text>
-                            </Pressable>
-                        </View>
+                        <Pressable style={[styles.assModalButton, styles.deleteButton]} onPress={() => {
+                            handleDeleteOccurrence(selectedOcc);
+                            setOccLongPressModalVisible(false);
+                            setSelectedOcc(null);
+                        }}>
+                            <Text style={styles.assModalButtonText}>Delete</Text>
+                        </Pressable>
+                        <Pressable style={styles.assModalButton} onPress={() => setOccLongPressModalVisible(false)}>
+                            <Text style={styles.assModalButtonText}>Cancel</Text>
+                        </Pressable>
                     </View>
                 </View>
             </Modal>
-            <View style={styles.buttonContainer}>
-                <Button onPress={handleSaveChoreAssignments} title="Save Changes"/>
-            </View>
-            <View style={styles.buttonContainer}>
-                <Button onPress={() => setChoreModalVisible(true)} title="Create Chore"/>
-            </View>
+
+            {/* Create Chore Modal */}
             <Modal
                 visible={choreModalVisible}
                 animationType="slide"
@@ -354,7 +272,6 @@ export default function HouseDashboardScreen({ navigation, route }) {
                             value={newChoreColor}
                             onChangeText={setNewChoreColor}
                         />
-
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
                             <Button title="Cancel" onPress={() => setChoreModalVisible(false)} />
                             <Button title="Create" onPress={handleCreateChore} />
@@ -362,9 +279,8 @@ export default function HouseDashboardScreen({ navigation, route }) {
                     </View>
                 </View>
             </Modal>
-            <View style={styles.buttonContainer}>
-                <Button title="Assign Chore" onPress={() => setAssignModalVisible(true)} />
-            </View>
+
+            {/* Assign Chore Modal */}
             <Modal
                 visible={assignModalVisible}
                 animationType="slide"
@@ -377,63 +293,15 @@ export default function HouseDashboardScreen({ navigation, route }) {
 
                         {/* Chore Picker */}
                         <Text>Chore</Text>
-                        <View style={{ flexDirection: "row", alignItems: "center" }}>
-                            <Picker
-                                selectedValue={selectedChore}
-                                onValueChange={(chore) => setSelectedChore(chore)}
-                                style={[styles.picker, { flex: 1 }]}
-                            >
-                                {house?.chores?.map((chore) => (
-                                    <Picker.Item key={chore.id} label={chore.name.toUpperCase()} value={chore.id} />
-                                ))}
-                            </Picker>
-                            <Pressable
-                                onPress={() => setChoreModalVisible(true)}
-                                style={{
-                                    height: 50,
-                                    paddingHorizontal: 15,
-                                    backgroundColor: "#3498db",
-                                    justifyContent: "center",
-                                    alignItems: "center",
-                                    borderRadius: 6,
-                                    marginLeft: 10,
-                                }}
-                            >
-                                <Text style={{ color: "white", fontWeight: "bold" }}>Create New</Text>
-                            </Pressable>
-                        </View>
-
-                        {/* Day Picker */}
-                        <Text>Day</Text>
                         <Picker
-                            selectedValue={selectedDay}
-                            onValueChange={(day) => setSelectedDay(day)}
+                            selectedValue={selectedChore}
+                            onValueChange={(chore) => setSelectedChore(chore)}
                             style={styles.picker}
                         >
-                            {['mon','tue','wed','thu','fri','sat'].map(day => (
-                                <Picker.Item key={day} label={day.toUpperCase()} value={day} />
+                            {house?.chores?.map((chore) => (
+                                <Picker.Item key={chore.id} label={chore.name} value={chore.id} />
                             ))}
                         </Picker>
-
-                        {/* Time Picker */}
-                        <Text>Time</Text>
-                        <View style={{ flexDirection: "row", justifyContent: "center", marginVertical: 10 }}>
-
-                            <WheelPicker
-                                dataSource={hours}
-                                selectedIndex={selectedHour}
-                                onValueChange={(index) => setSelectedHour(index)}
-                            />
-
-                            <Text style={{ fontSize: 30, marginHorizontal: 10 }}>:</Text>
-
-                            <WheelPicker
-                                dataSource={minutes}
-                                selectedIndex={selectedMinute}
-                                onValueChange={(index) => setSelectedMinute(index)}
-                            />
-
-                        </View>
 
                         {/* Assignee Picker */}
                         <Text>Assign to</Text>
@@ -451,7 +319,6 @@ export default function HouseDashboardScreen({ navigation, route }) {
                             ))}
                         </Picker>
 
-                        {/* Buttons */}
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
                             <Button title="Cancel" onPress={() => setAssignModalVisible(false)} />
                             <Button title="Assign" onPress={handleAssignChore} />
@@ -459,12 +326,15 @@ export default function HouseDashboardScreen({ navigation, route }) {
                     </View>
                 </View>
             </Modal>
+
             <View style={styles.buttonContainer}>
-                <Button
-                    title="Delete House"
-                    color="red"
-                    onPress={handleDelete}
-                />
+                <Button title="Create Chore" onPress={() => setChoreModalVisible(true)} />
+            </View>
+            <View style={styles.buttonContainer}>
+                <Button title="Assign Chore" onPress={() => setAssignModalVisible(true)} />
+            </View>
+            <View style={styles.buttonContainer}>
+                <Button title="Delete House" color="red" onPress={handleDeleteHouse} />
             </View>
         </View>
     );
@@ -472,72 +342,21 @@ export default function HouseDashboardScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
     container: { flex: 1, padding: 20 },
-    loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     title: { fontSize: 24, fontWeight: 'bold', marginBottom: 10 },
     joinCode: { fontSize: 16, marginBottom: 20 },
     subTitle: { fontSize: 18, marginBottom: 10 },
     member: { fontSize: 16, marginBottom: 5 },
     buttonContainer: { marginTop: 20 },
     error: { color: 'red', textAlign: 'center', marginTop: 20 },
-    choreDetail: {
-        paddingBottom: 8,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-    },
-    markCompleteContainer: {
-        flexDirection: 'row',
-        justifyContent: 'flex-end',
-        marginBottom: 5 
-    },
-    modalBackground: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    modalContainer: {
-        width: '80%',
-        backgroundColor: '#fff',
-        padding: 20,
-        borderRadius: 16,
-    },
-    modalTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        marginBottom: 10
-    },
-    input: {
-        borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 5,
-        padding: 10,
-        marginBottom: 16,
-    },
-    assModalBackground: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    assModalContainer: {
-        borderRadius: 10,
-        backgroundColor: '#fff',
-        borderRadius: 16,
-        overflow: 'hidden',
-    },
-    assButtonColumn: { },
-    assModalButton: {
-        padding: 8,
-        paddingHorizontal: 16,
-        backgroundColor: '#eee',
-    },
-    assModalButtonText: {
-        fontWeight: 'bold',
-        fontSize: 18,
-    },
-    picker: {
-        color: '#444',
-        backgroundColor: '#eee',
-        fontWeight: 'bold',
-    },
+    choreDetail: { paddingBottom: 8, flexDirection: 'row', justifyContent: 'space-between' },
+    markCompleteContainer: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 5 },
+    modalBackground: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+    modalContainer: { width: '80%', backgroundColor: '#fff', padding: 20, borderRadius: 16 },
+    modalTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 10 },
+    input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 5, padding: 10, marginBottom: 16 },
+    assModalBackground: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+    assModalContainer: { borderRadius: 16, backgroundColor: '#fff', overflow: 'hidden', padding: 10 },
+    assModalButton: { padding: 12, backgroundColor: '#eee', marginBottom: 5, borderRadius: 8 },
+    assModalButtonText: { fontWeight: 'bold', fontSize: 18 },
+    picker: { color: '#444', backgroundColor: '#eee', fontWeight: 'bold', marginVertical: 5 }
 });

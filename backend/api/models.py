@@ -100,6 +100,7 @@ class ChoreSchedule(models.Model):
     )
 
     start_date = models.DateField(default=timezone.now)
+    due_time = models.TimeField(default=time(hour=19, minute=0))
 
     # JSON with relativedelta fields
     repeat_delta = models.JSONField(default=dict)
