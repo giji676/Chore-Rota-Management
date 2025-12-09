@@ -17,7 +17,6 @@ def chore_occurrence_pre_save(sender, instance, **kwargs):
 
 @receiver(post_save, sender=ChoreOccurrence)
 def chore_occurrence_post_save(sender, instance, created, **kwargs):
-    print("post save")
     if not getattr(instance, "_was_completed", False) and instance.completed:
         generate_next_occurrence_after(instance)
 

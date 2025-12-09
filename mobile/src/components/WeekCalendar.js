@@ -1,65 +1,126 @@
-import React, { useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions } from "react-native";
+import React, { useState, useEffect } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from "react-native";
 
-// const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const DAY_NAMES = ["M", "T", "W", "T", "F", "S", "S"];
 const DEFAULT_COLOR = "#3498db";
 
-export default function WeekCalendar({ occurrences, onDayPress }) {
-    const [parentWidth, setParentWidth] = useState(0);
-
+export default function MonthCalendar({ occurrences, selectedDay, onDayPress }) {
     if (!occurrences) return null;
 
-    // Group occurrences by day index (Mon=0 ... Sun=6)
-    const occByDay = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
+    // Pick month/year to display based on first occurrence (or current date)
+    const firstDate = occurrences.length > 0
+        ? new Date(occurrences[0].due_date)
+        : new Date();
 
-    occurrences.forEach((occ) => {
-        const date = new Date(occ.due_date);
-        let dayIndex = date.getDay() - 1; // JS: Sunday=0 → convert to 6
-        if (dayIndex < 0) dayIndex = 6;
-        occByDay[dayIndex].push(occ);
+    const year = firstDate.getFullYear();
+    const month = firstDate.getMonth();
+
+    const monthYearLabel = firstDate.toLocaleString("default", {
+        month: "long",
+        year: "numeric",
     });
 
-    return (
-        <ScrollView horizontal={false} style={styles.container}>
-            <View
-                style={styles.weekRow}
-                onLayout={(event) => {
-                    setParentWidth(event.nativeEvent.layout.width);
-                }}
-            >
-                {Object.keys(occByDay).map((dayKey) => {
-                    const list = occByDay[dayKey];
-                    return (
-                        <TouchableOpacity
-                            key={dayKey}
-                            style={[styles.daySection, { width: parentWidth / 7 }]}
-                            onPress={() => onDayPress && onDayPress(Number(dayKey))}
-                        >
-                            {/* Day Header */}
-                            <Text style={styles.dayHeader}>{DAY_NAMES[dayKey]}</Text>
+    // --- Build a list of all days in the month ---
+    const getMonthDays = () => {
+        let days = [];
 
-                            {/* Occurrence Bars */}
-                            <View style={styles.dayBars}>
-                                {list.length > 0 ? (
-                                    list.map((occ) => (
-                                        <View
-                                            key={occ.id}
-                                            style={[
-                                                styles.choreBar,
-                                                { backgroundColor: occ.chore?.color || DEFAULT_COLOR },
-                                            ]}
-                                        />
-                                    ))
-                                ) : (
-                                    // Empty indicator
-                                    <View style={[styles.choreBar, { backgroundColor: "#ccc" }]} />
-                                )}
-                            </View>
-                        </TouchableOpacity>
-                    );
-                })}
+        // First day of the month (1st)
+        const first = new Date(year, month, 1);
+        // Last day of the month
+        const last = new Date(year, month + 1, 0);
+        const totalDays = last.getDate();
+
+        // Determine how many empty cells needed before day 1 (start on Monday)
+        let startDay = first.getDay(); // Sun=0..Sat=6
+        if (startDay === 0) startDay = 7; // convert to Mon=1..Sun=7
+        const emptyBefore = startDay - 1;
+
+        // Add empty placeholders
+        for (let i = 0; i < emptyBefore; i++) {
+            days.push(null);
+        }
+
+        // Add all actual days
+        for (let day = 1; day <= totalDays; day++) {
+            days.push(new Date(year, month, day));
+        }
+
+        return days;
+    };
+
+    const monthDays = getMonthDays();
+
+    // Group occurrences by YYYY-MM-DD
+    const occByDate = {};
+    occurrences.forEach((occ) => {
+        const d = new Date(occ.due_date);
+        const key = d.toISOString().split("T")[0];
+        if (!occByDate[key]) occByDate[key] = [];
+        occByDate[key].push(occ);
+    });
+
+    // Split monthDays into rows of 7
+    const rows = [];
+    for (let i = 0; i < monthDays.length; i += 7) {
+        rows.push(monthDays.slice(i, i + 7));
+    }
+
+    return (
+        <ScrollView style={styles.container}>
+            <Text style={styles.monthHeader}>{monthYearLabel}</Text>
+
+            {/* Column headers */}
+            <View style={styles.weekRow}>
+                {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => (
+                    <Text key={`${d}-${i}`} style={styles.dayHeader}>{d}</Text>
+                ))}
             </View>
+
+            {/* Calendar Rows */}
+            {rows.map((week, rowIndex) => (
+                <View key={rowIndex} style={styles.weekRow}>
+                    {week.map((date, colIndex) => {
+                        if (!date) {
+                            return (
+                                <View
+                                    key={`empty-${rowIndex}-${colIndex}`}
+                                    style={styles.dayCell}
+                                />
+                            );
+                        }
+
+                        const key = date.toISOString().split("T")[0];
+                        const isSelected = key === selectedDay;
+                        const occs = occByDate[key] || [];
+
+                        return (
+                            <TouchableOpacity
+                                key={`${key}-${colIndex}`} 
+                                style={[
+                                    styles.dayCell,
+                                    isSelected && styles.dayCellSelected,
+                                ]}
+                                onPress={() => {
+                                    onDayPress(key);
+                                }}
+                            >
+                                {/* Date number */}
+                                <Text style={styles.dateNumber}>{date.getDate()}</Text>
+
+                                {/* Occurrence bars */}
+                                {occs.map((occ) => (
+                                    <View
+                                        key={occ.id}
+                                        style={[
+                                            styles.choreBar,
+                                            { backgroundColor: occ.chore?.color || DEFAULT_COLOR },
+                                        ]}
+                                    />
+                                ))}
+                            </TouchableOpacity>
+                        );
+                    })}
+                </View>
+            ))}
         </ScrollView>
     );
 }
@@ -68,23 +129,41 @@ const styles = StyleSheet.create({
     container: {
         paddingVertical: 10,
     },
+    monthHeader: {
+        fontSize: 20,
+        fontWeight: "bold",
+        marginBottom: 12,
+        textAlign: "center",
+    },
     weekRow: {
         flexDirection: "row",
     },
-    daySection: {
-        alignItems: "center",
-    },
     dayHeader: {
+        flex: 1,
+        textAlign: "center",
         fontWeight: "bold",
         marginBottom: 5,
     },
-    dayBars: {
-        width: "90%",
+    dayCell: {
+        width: `${100 / 7}%`,
+        minHeight: 36,
+        padding: 4,
+        alignItems: "center",
+    },
+    dayCellSelected: {
+        borderWidth: 1,
+        borderColor: "#aaa",
+        backgroundColor: "#eee",
+        borderRadius: 6,
+    },
+    dateNumber: {
+        fontWeight: "600",
+        marginBottom: 4,
     },
     choreBar: {
         width: "100%",
-        height: 8,
-        borderRadius: 4,
+        height: 6,
+        borderRadius: 3,
         marginVertical: 2,
     },
 });

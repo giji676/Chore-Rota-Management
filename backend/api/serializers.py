@@ -38,7 +38,7 @@ class ChoreScheduleSerializer(serializers.ModelSerializer):
         ]
 
 class ChoreOccurrenceSerializer(serializers.ModelSerializer):
-    chore_name = serializers.CharField(source="schedule.chore.name", read_only=True)
+    chore = serializers.SerializerMethodField()
     user_name = serializers.CharField(source="schedule.user.username", read_only=True)
     repeat_label = serializers.CharField(source="schedule.repeat_label", read_only=True)
 
@@ -47,7 +47,7 @@ class ChoreOccurrenceSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "schedule",
-            "chore_name",
+            "chore",
             "user_name",
             "repeat_label",
             "due_date",
@@ -56,6 +56,10 @@ class ChoreOccurrenceSerializer(serializers.ModelSerializer):
             "notification_sent",
             "notification_sent_at",
         ]
+
+    def get_chore(self, obj):
+        chore = obj.schedule.chore
+        return ChoreSerializer(chore).data
 
 class HouseSerializer(serializers.ModelSerializer):
     members = serializers.SerializerMethodField()

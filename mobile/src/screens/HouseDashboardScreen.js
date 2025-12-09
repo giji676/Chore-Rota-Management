@@ -67,7 +67,6 @@ export default function HouseDashboardScreen({ navigation, route }) {
     const fetchHouse = async () => {
         try {
             const res = await api.get(`house/${house.id}/details/`);
-            console.log(JSON.stringify(res.data, null, 2));
             setHouse(res.data);
         } catch (err) {
             setError("Failed to fetch house");
@@ -91,7 +90,6 @@ export default function HouseDashboardScreen({ navigation, route }) {
     if (error) return <Text style={styles.error}>{error}</Text>;
     if (!house) return <Text style={styles.error}>House not found</Text>;
 
-    // --- Handlers ---
     const handleDeleteHouse = async () => {
         Alert.alert(
             "Confirm Delete",
@@ -169,25 +167,29 @@ export default function HouseDashboardScreen({ navigation, route }) {
         }
     }, [assignModalVisible, house]);
 
+
+    useEffect(() => {
+    }, [displayDayKey]);
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>{house.name}</Text>
-            <Text style={styles.joinCode}>Join Code: {house.join_code}</Text>
-
-            <Text style={styles.subTitle}>Members:</Text>
-            <FlatList
-                data={house.members}
-                keyExtractor={(item) => item.id.toString()}
-                renderItem={({ item }) => (
-                    <Text style={styles.member}>
-                        {item.username}{item.is_guest ? ' (Guest)' : ''}
-                    </Text>
-                )}
-            />
+            {/* <Text style={styles.title}>{house.name}</Text> */}
+            {/* <Text style={styles.joinCode}>Join Code: {house.join_code}</Text> */}
+            {/**/}
+            {/* <Text style={styles.subTitle}>Members:</Text> */}
+            {/* <FlatList */}
+            {/*     data={house.members} */}
+            {/*     keyExtractor={(item) => item.id.toString()} */}
+            {/*     renderItem={({ item }) => ( */}
+            {/*         <Text style={styles.member}> */}
+            {/*             {item.username}{item.is_guest ? ' (Guest)' : ''} */}
+            {/*         </Text> */}
+            {/*     )} */}
+            {/* /> */}
 
             {house?.occurrences?.length > 0 && 
                 <WeekCalendar
                     occurrences={house.occurrences}
+                    selectedDay={displayDayKey}
                     onDayPress={setDisplayDayKey}
                 />
             }
@@ -207,7 +209,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
                                 }}
                                 style={styles.choreDetail}
                             >
-                                <Text>{occ.chore_name} - {new Date(occ.due_date).toLocaleString()}</Text>
+                                <Text>{occ.chore.name} - {new Date(occ.due_date).toLocaleString()}</Text>
                                 <CheckBox
                                     onPress={() => handleCheckOccurrence(occ)}
                                     checked={occ.completed}
