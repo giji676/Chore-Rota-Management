@@ -20,7 +20,7 @@ Notifications.setNotificationHandler({
 export default function HouseDashboardScreen({ navigation, route }) {
     const [house, setHouse] = useState(route.params.house);
     const [error, setError] = useState('');
-    const [displayDayKey, setDisplayDayKey] = useState(0);
+    const [displayDayKey, setDisplayDayKey] = useState();
     const [choreModalVisible, setChoreModalVisible] = useState(false);
     const [newChoreName, setNewChoreName] = useState('');
     const [newChoreDescription, setNewChoreDescription] = useState('');
@@ -73,19 +73,22 @@ export default function HouseDashboardScreen({ navigation, route }) {
         }
     };
 
-    const occurrencesByDay = useMemo(() => {
-        if (!house?.occurrences) return {0:[],1:[],2:[],3:[],4:[],5:[],6:[]};
-        const map = {0:[],1:[],2:[],3:[],4:[],5:[],6:[]};
+    const occurrencesByDate = useMemo(() => {
+        if (!house?.occurrences) return {};
+
+        const map = {};
         house.occurrences.forEach((occ) => {
-            const date = new Date(occ.due_date);
-            let dayIndex = date.getDay() - 1; // JS: 0=Sun
-            if(dayIndex < 0) dayIndex = 6;
-            map[dayIndex].push(occ);
+            const key = new Date(occ.due_date).toISOString().split("T")[0];
+            if (!map[key]) map[key] = [];
+            map[key].push(occ);
         });
+
         return map;
     }, [house]);
 
-    const displayDay = occurrencesByDay[displayDayKey] || [];
+    const displayDay = displayDayKey
+        ? occurrencesByDate[displayDayKey] || []
+        : [];
 
     if (error) return <Text style={styles.error}>{error}</Text>;
     if (!house) return <Text style={styles.error}>House not found</Text>;
@@ -186,13 +189,15 @@ export default function HouseDashboardScreen({ navigation, route }) {
             {/*     )} */}
             {/* /> */}
 
-            {house?.occurrences?.length > 0 && 
+            {house?.occurrences?.length > 0 ? (
                 <WeekCalendar
                     occurrences={house.occurrences}
                     selectedDay={displayDayKey}
                     onDayPress={setDisplayDayKey}
                 />
-            }
+            ) : (
+                    <Text>NO OCCS</Text>
+                )}
 
             {displayDay?.length > 0 && (
                 <>
