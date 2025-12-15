@@ -41,9 +41,6 @@ export default function HouseDashboardScreen({ navigation, route }) {
     const hours = [...Array(24).keys()].map(n => n.toString().padStart(2, "0"));
     const minutes = [...Array(60).keys()].map(n => n.toString().padStart(2, "0"));
 
-    const notificationListener = useRef();
-    const responseListener = useRef();
-
     useEffect(() => {
         async function initNotifications() {
             try {
@@ -64,6 +61,13 @@ export default function HouseDashboardScreen({ navigation, route }) {
         fetchHouse();
     }, []);
 
+    useEffect(() => {
+        if (assignModalVisible && house) {
+            if (!selectedChore && house.chores.length > 0) setSelectedChore(house.chores[0].id);
+            if (!selectedMember && house.members.length > 0) setSelectedMember(house.members[0].id);
+        }
+    }, [assignModalVisible, house]);
+
     const fetchHouse = async () => {
         try {
             const res = await api.get(`house/${house.id}/details/`);
@@ -72,26 +76,6 @@ export default function HouseDashboardScreen({ navigation, route }) {
             setError("Failed to fetch house");
         }
     };
-
-    const occurrencesByDate = useMemo(() => {
-        if (!house?.occurrences) return {};
-
-        const map = {};
-        house.occurrences.forEach((occ) => {
-            const key = new Date(occ.due_date).toISOString().split("T")[0];
-            if (!map[key]) map[key] = [];
-            map[key].push(occ);
-        });
-
-        return map;
-    }, [house]);
-
-    const displayDay = displayDayKey
-        ? occurrencesByDate[displayDayKey] || []
-        : [];
-
-    if (error) return <Text style={styles.error}>{error}</Text>;
-    if (!house) return <Text style={styles.error}>House not found</Text>;
 
     const handleDeleteHouse = async () => {
         Alert.alert(
@@ -124,6 +108,9 @@ export default function HouseDashboardScreen({ navigation, route }) {
     const handleDeleteOccurrence = async (occ) => {
         await api.delete(`occurrences/${occ.id}/delete/`);
         fetchHouse();
+    };
+
+    const handleEditOccurrence = async (occ) => {
     };
 
     const handleCreateChore = async () => {
@@ -163,32 +150,25 @@ export default function HouseDashboardScreen({ navigation, route }) {
         }
     };
 
-    useEffect(() => {
-        if (assignModalVisible && house) {
-            if (!selectedChore && house.chores.length > 0) setSelectedChore(house.chores[0].id);
-            if (!selectedMember && house.members.length > 0) setSelectedMember(house.members[0].id);
-        }
-    }, [assignModalVisible, house]);
+    const occurrencesByDate = useMemo(() => {
+        if (!house?.occurrences) return {};
 
+        const map = {};
+        house.occurrences.forEach((occ) => {
+            const key = new Date(occ.due_date).toISOString().split("T")[0];
+            if (!map[key]) map[key] = [];
+            map[key].push(occ);
+        });
 
-    useEffect(() => {
-    }, [displayDayKey]);
+        return map;
+    }, [house]);
+
+    const displayDay = displayDayKey
+        ? occurrencesByDate[displayDayKey] || []
+        : [];
+
     return (
         <View style={styles.container}>
-            {/* <Text style={styles.title}>{house.name}</Text> */}
-            {/* <Text style={styles.joinCode}>Join Code: {house.join_code}</Text> */}
-            {/**/}
-            {/* <Text style={styles.subTitle}>Members:</Text> */}
-            {/* <FlatList */}
-            {/*     data={house.members} */}
-            {/*     keyExtractor={(item) => item.id.toString()} */}
-            {/*     renderItem={({ item }) => ( */}
-            {/*         <Text style={styles.member}> */}
-            {/*             {item.username}{item.is_guest ? ' (Guest)' : ''} */}
-            {/*         </Text> */}
-            {/*     )} */}
-            {/* /> */}
-
             {house?.occurrences?.length > 0 ? (
                 <WeekCalendar
                     occurrences={house.occurrences}
@@ -241,7 +221,14 @@ export default function HouseDashboardScreen({ navigation, route }) {
                         }}>
                             <Text style={styles.assModalButtonText}>Delete</Text>
                         </Pressable>
-                        <Pressable style={styles.assModalButton} onPress={() => setOccLongPressModalVisible(false)}>
+                        <Pressable style={styles.assModalButton} onPress={() =>
+                            handleEditOccurrence(selectedOcc)
+                        }>
+                            <Text style={styles.assModalButtonText}>Edit</Text>
+                        </Pressable>
+                        <Pressable style={styles.assModalButton} onPress={() =>
+                            setOccLongPressModalVisible(false)
+                        }>
                             <Text style={styles.assModalButtonText}>Cancel</Text>
                         </Pressable>
                     </View>
