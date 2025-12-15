@@ -8,6 +8,9 @@ import { registerForPushNotificationsAsync, configureAndroidChannel } from '../u
 import api from '../utils/api';
 import WeekCalendar from "../components/WeekCalendar";
 import CheckBox from "../components/CheckBox";
+import OccurrenceLongPressModal from "../components/modals/OccurrenceLongPressModal";
+import CreateChoreModal from "../components/modals/CreateChoreModal";
+import AssignChoreModal from "../components/modals/AssignChoreModal";
 
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
@@ -206,120 +209,39 @@ export default function HouseDashboardScreen({ navigation, route }) {
             )}
 
             {/* Occurrence Long Press Modal */}
-            <Modal
+            <OccurrenceLongPressModal
                 visible={occLongPressModalVisible}
-                animationType="slide"
-                transparent={true}
-                onRequestClose={() => setOccLongPressModalVisible(false)}
-            >
-                <View style={styles.assModalBackground}>
-                    <View style={styles.assModalContainer}>
-                        <Pressable style={[styles.assModalButton, styles.deleteButton]} onPress={() => {
-                            handleDeleteOccurrence(selectedOcc);
-                            setOccLongPressModalVisible(false);
-                            setSelectedOcc(null);
-                        }}>
-                            <Text style={styles.assModalButtonText}>Delete</Text>
-                        </Pressable>
-                        <Pressable style={styles.assModalButton} onPress={() =>
-                            handleEditOccurrence(selectedOcc)
-                        }>
-                            <Text style={styles.assModalButtonText}>Edit</Text>
-                        </Pressable>
-                        <Pressable style={styles.assModalButton} onPress={() =>
-                            setOccLongPressModalVisible(false)
-                        }>
-                            <Text style={styles.assModalButtonText}>Cancel</Text>
-                        </Pressable>
-                    </View>
-                </View>
-            </Modal>
+                occurrence={selectedOcc}
+                onClose={() => setOccLongPressModalVisible(false)}
+                onEdit={handleEditOccurrence}
+                onDelete={handleDeleteOccurrence}
+            />
 
             {/* Create Chore Modal */}
-            <Modal
+            <CreateChoreModal
                 visible={choreModalVisible}
-                animationType="slide"
-                transparent={true}
-                onRequestClose={() => setChoreModalVisible(false)}
-            >
-                <View style={styles.modalBackground}>
-                    <View style={styles.modalContainer}>
-                        <Text style={styles.modalTitle}>Create New Chore</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Chore Name"
-                            placeholderTextColor="gray"
-                            value={newChoreName}
-                            onChangeText={setNewChoreName}
-                        />
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Description"
-                            placeholderTextColor="gray"
-                            value={newChoreDescription}
-                            onChangeText={setNewChoreDescription}
-                        />
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Color (Hex)"
-                            placeholderTextColor="gray"
-                            value={newChoreColor}
-                            onChangeText={setNewChoreColor}
-                        />
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
-                            <Button title="Cancel" onPress={() => setChoreModalVisible(false)} />
-                            <Button title="Create" onPress={handleCreateChore} />
-                        </View>
-                    </View>
-                </View>
-            </Modal>
+                onClose={() => setChoreModalVisible(false)}
+                onCreate={handleCreateChore}
+                choreName={newChoreName}
+                setChoreName={setNewChoreName}
+                choreDescription={newChoreDescription}
+                setChoreDescription={setNewChoreDescription}
+                choreColor={newChoreColor}
+                setChoreColor={setNewChoreColor}
+            />
 
             {/* Assign Chore Modal */}
-            <Modal
+            <AssignChoreModal
                 visible={assignModalVisible}
-                animationType="slide"
-                transparent={true}
-                onRequestClose={() => setAssignModalVisible(false)}
-            >
-                <View style={styles.modalBackground}>
-                    <View style={styles.modalContainer}>
-                        <Text style={styles.modalTitle}>Assign Chore</Text>
-
-                        {/* Chore Picker */}
-                        <Text>Chore</Text>
-                        <Picker
-                            selectedValue={selectedChore}
-                            onValueChange={(chore) => setSelectedChore(chore)}
-                            style={styles.picker}
-                        >
-                            {house?.chores?.map((chore) => (
-                                <Picker.Item key={chore.id} label={chore.name} value={chore.id} />
-                            ))}
-                        </Picker>
-
-                        {/* Assignee Picker */}
-                        <Text>Assign to</Text>
-                        <Picker
-                            selectedValue={selectedMember}
-                            onValueChange={(memberId) => setSelectedMember(memberId)}
-                            style={styles.picker}
-                        >
-                            {house?.members?.map(member => (
-                                <Picker.Item
-                                    key={member.id}
-                                    label={member.username + (member.is_guest ? ' (Guest)' : '')}
-                                    value={member.id}
-                                />
-                            ))}
-                        </Picker>
-
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
-                            <Button title="Cancel" onPress={() => setAssignModalVisible(false)} />
-                            <Button title="Assign" onPress={handleAssignChore} />
-                        </View>
-                    </View>
-                </View>
-            </Modal>
+                onClose={() => setAssignModalVisible(false)}
+                onAssign={handleAssignChore}
+                chores={house?.chores || []}
+                members={house?.members || []}
+                selectedChore={selectedChore}
+                setSelectedChore={setSelectedChore}
+                selectedMember={selectedMember}
+                setSelectedMember={setSelectedMember}
+            />
 
             <View style={styles.buttonContainer}>
                 <Button title="Create Chore" onPress={() => setChoreModalVisible(true)} />
@@ -336,21 +258,20 @@ export default function HouseDashboardScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
     container: { flex: 1, padding: 20 },
-    title: { fontSize: 24, fontWeight: 'bold', marginBottom: 10 },
+    title: { fontSize: 24, fontWeight: "bold", marginBottom: 10 },
     joinCode: { fontSize: 16, marginBottom: 20 },
     subTitle: { fontSize: 18, marginBottom: 10 },
     member: { fontSize: 16, marginBottom: 5 },
     buttonContainer: { marginTop: 20 },
-    error: { color: 'red', textAlign: 'center', marginTop: 20 },
-    choreDetail: { paddingBottom: 8, flexDirection: 'row', justifyContent: 'space-between' },
-    markCompleteContainer: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 5 },
-    modalBackground: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
-    modalContainer: { width: '80%', backgroundColor: '#fff', padding: 20, borderRadius: 16 },
-    modalTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 10 },
-    input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 5, padding: 10, marginBottom: 16 },
-    assModalBackground: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
-    assModalContainer: { borderRadius: 16, backgroundColor: '#fff', overflow: 'hidden', padding: 10 },
-    assModalButton: { padding: 12, backgroundColor: '#eee', marginBottom: 5, borderRadius: 8 },
-    assModalButtonText: { fontWeight: 'bold', fontSize: 18 },
-    picker: { color: '#444', backgroundColor: '#eee', fontWeight: 'bold', marginVertical: 5 }
+    error: { color: "red", textAlign: "center", marginTop: 20 },
+    choreDetail: {
+        paddingBottom: 8,
+        flexDirection: "row",
+        justifyContent: "space-between",
+    },
+    markCompleteContainer: {
+        flexDirection: "row",
+        justifyContent: "flex-end",
+        marginBottom: 5,
+    },
 });
