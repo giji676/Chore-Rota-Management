@@ -182,31 +182,39 @@ export default function HouseDashboardScreen({ navigation, route }) {
                     <Text>NO OCCS</Text>
                 )}
 
-            {displayDay?.length > 0 && (
-                <>
-                    <View style={styles.markCompleteContainer}>
-                        <Text>Mark Complete</Text>
-                    </View>
-                    <View>
-                        {displayDay.map((occ) => (
-                            <Pressable
-                                key={occ.id}
-                                onLongPress={() => {
-                                    setSelectedOcc(occ);
-                                    setOccLongPressModalVisible(true);
-                                }}
-                                style={styles.choreDetail}
-                            >
-                                <Text>{occ.chore.name} - {new Date(occ.due_date).toLocaleString()}</Text>
-                                <CheckBox
-                                    onPress={() => handleCheckOccurrence(occ)}
-                                    checked={occ.completed}
-                                />
-                            </Pressable>
-                        ))}
-                    </View>
-                </>
-            )}
+            {displayDay.map((occ, index) => (
+                <View key={occ.id}>
+                    <Pressable
+                        onLongPress={() => {
+                            setSelectedOcc(occ);
+                            setOccLongPressModalVisible(true);
+                        }}
+                        style={styles.choreDetail}
+                    >
+                        <View style={{ flexDirection: "column" }}>
+                            <Text style={{ fontSize: 22 }}>{occ.chore.name}</Text>
+                            <Text>
+                                {new Date(occ.due_date).toLocaleString("en-GB", {
+                                    day: "2-digit",
+                                    month: "2-digit",
+                                    year: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                })}
+                            </Text>
+                        </View>
+
+                        <CheckBox
+                            onPress={() => handleCheckOccurrence(occ)}
+                            checked={occ.completed}
+                        />
+                    </Pressable>
+
+                    {index < displayDay.length - 1 && (
+                        <View style={styles.divider} />
+                    )}
+                </View>
+            ))}
 
             {/* Occurrence Long Press Modal */}
             <OccurrenceLongPressModal
@@ -265,13 +273,20 @@ const styles = StyleSheet.create({
     buttonContainer: { marginTop: 20 },
     error: { color: "red", textAlign: "center", marginTop: 20 },
     choreDetail: {
-        paddingBottom: 8,
+        padding: 5,
+        paddingRight: 12,
         flexDirection: "row",
         justifyContent: "space-between",
+        alignItems: "center",
     },
     markCompleteContainer: {
         flexDirection: "row",
         justifyContent: "flex-end",
         marginBottom: 5,
+    },
+    divider: {
+        height: 1.5,
+        backgroundColor: "#ddd",
+        marginVertical: 5,
     },
 });
