@@ -6,7 +6,7 @@ import * as Notifications from 'expo-notifications';
 import { registerForPushNotificationsAsync, configureAndroidChannel } from '../utils/notifications';
 
 import api from '../utils/api';
-import WeekCalendar from "../components/WeekCalendar";
+import MonthCalendar from "../components/MonthCalendar";
 import CheckBox from "../components/CheckBox";
 import OccurrenceLongPressModal from "../components/modals/OccurrenceLongPressModal";
 import CreateChoreModal from "../components/modals/CreateChoreModal";
@@ -40,6 +40,10 @@ export default function HouseDashboardScreen({ navigation, route }) {
 
     const [occLongPressModalVisible, setOccLongPressModalVisible] = useState(false);
     const [selectedOcc, setSelectedOcc] = useState();
+
+    const [currentMonth, setCurrentMonth] = useState(
+        new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+    );
 
     const hours = [...Array(24).keys()].map(n => n.toString().padStart(2, "0"));
     const minutes = [...Array(60).keys()].map(n => n.toString().padStart(2, "0"));
@@ -170,13 +174,28 @@ export default function HouseDashboardScreen({ navigation, route }) {
         ? occurrencesByDate[displayDayKey] || []
         : [];
 
+    const goToPrevMonth = () => {
+        setCurrentMonth(
+            (prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1)
+        );
+    };
+
+    const goToNextMonth = () => {
+        setCurrentMonth(
+            (prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1)
+        );
+    };
+
     return (
         <View style={styles.container}>
             {house?.occurrences?.length > 0 ? (
-                <WeekCalendar
+                <MonthCalendar
                     occurrences={house.occurrences}
                     selectedDay={displayDayKey}
                     onDayPress={setDisplayDayKey}
+                    currentMonth={currentMonth}
+                    onPrevMonth={goToPrevMonth}
+                    onNextMonth={goToNextMonth}
                 />
             ) : (
                     <Text>NO OCCS</Text>
