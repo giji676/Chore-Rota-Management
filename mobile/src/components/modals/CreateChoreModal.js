@@ -32,13 +32,14 @@ export default function CreateChoreModal({
                     />
 
                     <TextInput
-                        style={styles.input}
+                        style={[styles.input, styles.multiline]}
                         placeholder="Description"
                         placeholderTextColor="gray"
                         value={choreDescription}
                         onChangeText={setChoreDescription}
+                        multiline
+                        textAlignVertical="top"
                     />
-
                     <TextInput
                         style={styles.input}
                         placeholder="Color (Hex)"

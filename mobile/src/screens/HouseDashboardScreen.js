@@ -222,28 +222,34 @@ export default function HouseDashboardScreen({ navigation, route }) {
                             }}
                             style={styles.choreDetail}
                         >
-                            <View style={{ flexDirection: "column" }}>
-                                <Text style={{ fontSize: 22 }}>{occ.chore.name}</Text>
-                                <Text>
-                                    {new Date(occ.due_date).toLocaleString("en-GB", {
-                                        day: "2-digit",
-                                        month: "2-digit",
-                                        year: "numeric",
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                    })}
-                                </Text>
+                            <View>
+                                <View style={styles.row}>
+                                    <View style={styles.textColumn}>
+                                        <Text style={styles.choreName}>{occ.chore.name}</Text>
+                                        <Text style={styles.dateText}>
+                                            {new Date(occ.due_date).toLocaleString("en-GB", {
+                                                day: "2-digit",
+                                                month: "2-digit",
+                                                year: "numeric",
+                                                hour: "2-digit",
+                                                minute: "2-digit",
+                                            })}
+                                        </Text>
+                                    </View>
+
+                                    <CheckBox
+                                        onPress={() => handleCheckOccurrence(occ)}
+                                        checked={occ.completed}
+                                        style={{ marginLeft: "auto" }}
+                                    />
+                                </View>
+
                                 {expandedOccId === occ.id && (
                                     <Text style={styles.description}>
                                         {occ.chore.description}
                                     </Text>
                                 )}
                             </View>
-
-                            <CheckBox
-                                onPress={() => handleCheckOccurrence(occ)}
-                                checked={occ.completed}
-                            />
                         </Pressable>
 
                         {index < displayDay.length - 1 && (
@@ -325,6 +331,22 @@ const styles = StyleSheet.create({
         height: 1.5,
         backgroundColor: "#ddd",
         marginVertical: 5,
+    },
+    row: {
+        flexDirection: "row",
+        alignItems: "center",
+        width: "100%",
+    },
+    textColumn: {
+        flexDirection: "column",
+        flexShrink: 1,
+    },
+    choreName: {
+        fontSize: 22,
+        fontWeight: "500",
+    },
+    dateText: {
+        color: "#666",
     },
     description: {
         marginTop: 6,
