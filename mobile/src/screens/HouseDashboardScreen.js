@@ -41,6 +41,8 @@ export default function HouseDashboardScreen({ navigation, route }) {
     const [occLongPressModalVisible, setOccLongPressModalVisible] = useState(false);
     const [selectedOcc, setSelectedOcc] = useState();
 
+    const [expandedOccId, setExpandedOccId] = useState(null);
+
     const [currentMonth, setCurrentMonth] = useState(
         new Date(new Date().getFullYear(), new Date().getMonth(), 1)
     );
@@ -209,6 +211,11 @@ export default function HouseDashboardScreen({ navigation, route }) {
                 {displayDay.map((occ, index) => (
                     <View key={occ.id}>
                         <Pressable
+                            onPress={() => {
+                                setExpandedOccId(prev =>
+                                    prev === occ.id ? null : occ.id
+                                );
+                            }}
                             onLongPress={() => {
                                 setSelectedOcc(occ);
                                 setOccLongPressModalVisible(true);
@@ -226,6 +233,11 @@ export default function HouseDashboardScreen({ navigation, route }) {
                                         minute: "2-digit",
                                     })}
                                 </Text>
+                                {expandedOccId === occ.id && (
+                                    <Text style={styles.description}>
+                                        {occ.chore.description}
+                                    </Text>
+                                )}
                             </View>
 
                             <CheckBox
@@ -313,5 +325,10 @@ const styles = StyleSheet.create({
         height: 1.5,
         backgroundColor: "#ddd",
         marginVertical: 5,
+    },
+    description: {
+        marginTop: 6,
+        color: "#666",
+        fontSize: 14,
     },
 });
