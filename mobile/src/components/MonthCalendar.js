@@ -131,7 +131,10 @@ export default function MonthCalendar({
                                             key={occ.id}
                                             style={[
                                                 styles.choreBar,
-                                                { backgroundColor: occ.chore?.color || DEFAULT_COLOR },
+                                                {
+                                                    backgroundColor: occ.chore?.color || DEFAULT_COLOR,
+                                                    opacity: occ.completed ? 0.4 : 1,
+                                                },
                                             ]}
                                         />
                                     ))}
