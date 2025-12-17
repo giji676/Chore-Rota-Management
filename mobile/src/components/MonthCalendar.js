@@ -29,6 +29,7 @@ export default function MonthCalendar({
         month: "long",
         year: "numeric",
     });
+    const currentDate = new Date().getDate();
 
     /* SWIPE HANDLER */
     const panResponder = useRef(
@@ -112,6 +113,7 @@ export default function MonthCalendar({
                             const key = date.toISOString().split("T")[0];
                             const occs = occByDate[key] || [];
                             const isSelected = key === selectedDay;
+                            const isToday = key === new Date().toISOString().split("T")[0];
 
                             return (
                                 <TouchableOpacity
@@ -122,7 +124,10 @@ export default function MonthCalendar({
                                     ]}
                                     onPress={() => onDayPress(key)}
                                 >
-                                    <Text style={styles.dateNumber}>
+                                    <Text style={[
+                                        styles.dateNumber,
+                                        isToday && styles.todaysCell,
+                                    ]}>
                                         {date.getDate()}
                                     </Text>
 
@@ -200,5 +205,11 @@ const styles = StyleSheet.create({
         height: 6,
         borderRadius: 3,
         marginVertical: 2,
+    },
+    todaysCell: {
+        backgroundColor: "#666",
+        color: "#fff",
+        borderRadius: 4,
+        paddingHorizontal: 3,
     },
 });
