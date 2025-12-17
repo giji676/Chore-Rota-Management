@@ -188,52 +188,68 @@ export default function HouseDashboardScreen({ navigation, route }) {
 
     return (
         <View style={styles.container}>
-            {house?.occurrences?.length > 0 ? (
-                <MonthCalendar
-                    occurrences={house.occurrences}
-                    selectedDay={displayDayKey}
-                    onDayPress={setDisplayDayKey}
-                    currentMonth={currentMonth}
-                    onPrevMonth={goToPrevMonth}
-                    onNextMonth={goToNextMonth}
-                />
-            ) : (
-                    <Text>NO OCCS</Text>
-                )}
-
-            {displayDay.map((occ, index) => (
-                <View key={occ.id}>
-                    <Pressable
-                        onLongPress={() => {
-                            setSelectedOcc(occ);
-                            setOccLongPressModalVisible(true);
-                        }}
-                        style={styles.choreDetail}
-                    >
-                        <View style={{ flexDirection: "column" }}>
-                            <Text style={{ fontSize: 22 }}>{occ.chore.name}</Text>
-                            <Text>
-                                {new Date(occ.due_date).toLocaleString("en-GB", {
-                                    day: "2-digit",
-                                    month: "2-digit",
-                                    year: "numeric",
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                })}
-                            </Text>
-                        </View>
-
-                        <CheckBox
-                            onPress={() => handleCheckOccurrence(occ)}
-                            checked={occ.completed}
-                        />
-                    </Pressable>
-
-                    {index < displayDay.length - 1 && (
-                        <View style={styles.divider} />
+            <View>
+                {house?.occurrences?.length > 0 ? (
+                    <MonthCalendar
+                        occurrences={house.occurrences}
+                        selectedDay={displayDayKey}
+                        onDayPress={setDisplayDayKey}
+                        currentMonth={currentMonth}
+                        onPrevMonth={goToPrevMonth}
+                        onNextMonth={goToNextMonth}
+                    />
+                ) : (
+                        <Text>NO OCCS</Text>
                     )}
+            </View>
+
+            <View style={{flex: 1}} />
+
+            <View>
+                {displayDay.map((occ, index) => (
+                    <View key={occ.id}>
+                        <Pressable
+                            onLongPress={() => {
+                                setSelectedOcc(occ);
+                                setOccLongPressModalVisible(true);
+                            }}
+                            style={styles.choreDetail}
+                        >
+                            <View style={{ flexDirection: "column" }}>
+                                <Text style={{ fontSize: 22 }}>{occ.chore.name}</Text>
+                                <Text>
+                                    {new Date(occ.due_date).toLocaleString("en-GB", {
+                                        day: "2-digit",
+                                        month: "2-digit",
+                                        year: "numeric",
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                    })}
+                                </Text>
+                            </View>
+
+                            <CheckBox
+                                onPress={() => handleCheckOccurrence(occ)}
+                                checked={occ.completed}
+                            />
+                        </Pressable>
+
+                        {index < displayDay.length - 1 && (
+                            <View style={styles.divider} />
+                        )}
+                    </View>
+                ))}
+
+                <View style={styles.buttonContainer}>
+                    <Button title="Create Chore" onPress={() => setChoreModalVisible(true)} />
                 </View>
-            ))}
+                <View style={styles.buttonContainer}>
+                    <Button title="Assign Chore" onPress={() => setAssignModalVisible(true)} />
+                </View>
+                <View style={styles.buttonContainer}>
+                    <Button title="Delete House" color="red" onPress={handleDeleteHouse} />
+                </View>
+            </View>
 
             {/* Occurrence Long Press Modal */}
             <OccurrenceLongPressModal
@@ -269,16 +285,6 @@ export default function HouseDashboardScreen({ navigation, route }) {
                 selectedMember={selectedMember}
                 setSelectedMember={setSelectedMember}
             />
-
-            <View style={styles.buttonContainer}>
-                <Button title="Create Chore" onPress={() => setChoreModalVisible(true)} />
-            </View>
-            <View style={styles.buttonContainer}>
-                <Button title="Assign Chore" onPress={() => setAssignModalVisible(true)} />
-            </View>
-            <View style={styles.buttonContainer}>
-                <Button title="Delete House" color="red" onPress={handleDeleteHouse} />
-            </View>
         </View>
     );
 }
