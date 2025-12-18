@@ -80,24 +80,28 @@ class GuestView(APIView):
 
     def post(self, request):
         serializer = GuestSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
 
         device_id = serializer.validated_data["device_id"]
+        first_name = serializer.validated_data["first_name"]
+        last_name = serializer.validated_data["last_name"]
 
         user, created = User.objects.get_or_create(
             device_id=device_id,
             defaults={
-                "email": f"guest_{device_id[:6]}@example.com",  # dummy email since email is required
-                "first_name": "Guest",
-                "last_name": device_id[:6],
+                "email": f"guest_{device_id[:8]}@example.com",
+                "first_name": first_name,
+                "last_name": last_name,
                 "is_guest": True,
             }
         )
 
-        if not created and not user.is_guest:
+        # If the guest already exists, update their name (important)
+        if not created:
+            user.first_name = first_name
+            user.last_name = last_name
             user.is_guest = True
-            user.save()
+            user.save(update_fields=["first_name", "last_name", "is_guest"])
 
         refresh = RefreshToken.for_user(user)
 

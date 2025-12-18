@@ -17,3 +17,5 @@ class RegisterSerializer(serializers.ModelSerializer):
 
 class GuestSerializer(serializers.Serializer):
     device_id = serializers.CharField(max_length=255)
+    first_name = serializers.CharField(max_length=150)
+    last_name = serializers.CharField(max_length=150)
