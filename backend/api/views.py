@@ -404,12 +404,16 @@ class ChoreManagementView(APIView):
         if not HouseMember.objects.filter(house=house, user=user).exists():
             return Response({"error": "You do not belong to this house"}, status=status.HTTP_403_FORBIDDEN)
 
-        chore = Chore.objects.create(
-            house=house,
-            name=name,
-            description=description,
-            color=color if color else None
-        )
+        chore_kwargs = {
+            "house": house,
+            "name": name,
+            "description": description,
+        }
+
+        if color:
+            chore_kwargs["color"] = color
+
+        chore = Chore.objects.create(**chore_kwargs)
 
         return Response(ChoreSerializer(chore).data, status=status.HTTP_201_CREATED)
 
