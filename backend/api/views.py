@@ -150,17 +150,19 @@ class HouseManagementView(APIView):
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-    def patch(self, request):
+    def patch(self, request, house_id):
         user = request.user
         data = request.data
 
-        # User must belong to exactly one house to update it
         try:
             member = HouseMember.objects.get(user=user)
         except HouseMember.DoesNotExist:
-            return Response({"error": "You do not belong to any house"}, status=403)
+            return Response({"error": "You are not a part of this house"}, status=400)
 
-        house = member.house
+        try:
+            house = House.objects.get(id=house_id)
+        except House.DoesNotExist:
+            return Response({"error": "House does not exist"}, status=404)
 
         if member.role != "owner":
             return Response({"error": "Only the owner can update the house"}, status=403)

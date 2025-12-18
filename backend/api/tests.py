@@ -9,6 +9,55 @@ from api.models import House, HouseMember, Chore
 
 User = get_user_model()
 
+class UpdateHouseTest(APITestCase):
+
+    def setUp(self):
+        self.owner = User.objects.create_user(username="owner", password="password123")
+        self.guest = User.objects.create_user(username="guest", password="password123")
+
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.owner)
+
+        self.house = House.objects.create(
+            name="Crescent",
+            address= "10A the crescent",
+            place_id= "TEST_PLACE_ID",
+            max_members=6
+        )
+        self.house.set_password("housepassword")
+        self.house.save()
+        self.house.add_member(user=self.owner, role="owner")
+
+        self.url = reverse("update-house", kwargs={"house_id": self.house.id})
+
+    def test_update_house(self):
+        response = self.client.patch(self.url, {"max_members": 8, "password": "new_password_123"})
+        self.house.refresh_from_db()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["max_members"], 8)
+        self.assertTrue(self.house.check_password("new_password_123"))
+
+    def test_invalid_house(self):
+        url = reverse("update-house", kwargs={"house_id": 999})
+        response = self.client.patch(url, {"max_members": 8})
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertIn("does not exist", response.data["error"].lower())
+
+    def test_as_member(self):
+        self.house.add_member(user=self.guest, role="guest")
+        client = APIClient()
+        client.force_authenticate(self.guest)
+        response = client.patch(self.url, {"max_members": 8})
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn("only the owner", response.data["error"].lower())
+
+    def test_not_part_of_house(self):
+        client = APIClient()
+        client.force_authenticate(self.guest)
+        response = client.patch(self.url, {"max_members": 8})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("not a part of this house", response.data["error"].lower())
+
 class UsersHousesTest(APITestCase):
     def setUp(self):
         self.owner = User.objects.create_user(username="owner", password="password123")
@@ -96,7 +145,13 @@ class HouseGetTest(APITestCase):
         url = reverse("house-details", kwargs={"house_id": 999})
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND) # 404 from get_object_or_404 shortcut
-        # self.assertIn("not found", response.data["error"].lower())
+
+    def test_not_part_of_house(self):
+        client = APIClient()
+        client.force_authenticate(user=self.guest)
+        response = client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn("not part of this house", response.data["error"].lower())
 
 class HouseDeleteTest(APITestCase):
     def setUp(self):
