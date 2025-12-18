@@ -1,5 +1,7 @@
 import requests
+from time import timezone
 from datetime import datetime
+from django.db import transaction
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
@@ -52,6 +54,73 @@ def send_push_notification(user, title, body):
         "Accept": "application/json",
         "Content-Type": "application/json"
     })
+
+class ChoreAndScheduleView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @transaction.atomic
+    def post(self, request):
+        user = request.user
+        data = request.data
+
+        # ---- Chore fields ----
+        house_id = data.get("house_id")
+        name = data.get("name")
+        description = data.get("description")
+        color = data.get("color")
+
+        # ---- Schedule fields ----
+        assignee_id = data.get("assignee_id")
+        start_date = data.get("start_date")
+        repeat_delta = data.get("repeat_delta")
+
+        if not all([house_id, name, assignee_id]):
+            return Response(
+                {"error": "Missing required fields"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        house = get_object_or_404(House, id=house_id)
+        house_member = get_object_or_404(HouseMember, house=house, user=user)
+        assignee = get_object_or_404(HouseMember, house=house, user_id=assignee_id)
+
+        # Only owner can assign chores to others
+        if assignee.user_id != user.id and house_member.role != "owner":
+            return Response(
+                {"error": "Only owner can assign chores to others"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # ---- Create Chore ----
+        chore_kwargs = {
+            "house": house,
+            "name": name,
+            "description": description,
+        }
+
+        if color:
+            chore_kwargs["color"] = color
+
+        chore = Chore.objects.create(**chore_kwargs)
+
+        # ---- Create Schedule ----
+        if start_date:
+            start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
+
+        schedule = ChoreSchedule.objects.create(
+            chore=chore,
+            user=assignee.user,
+            start_date=start_date or timezone.now().date(),
+            repeat_delta=repeat_delta or {},
+        )
+
+        return Response(
+            {
+                "chore": ChoreSerializer(chore).data,
+                "schedule": ChoreScheduleSerializer(schedule).data,
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
 class HouseDetailsView(APIView):
     permission_classes = [IsAuthenticated]

@@ -29,4 +29,7 @@ urlpatterns = [
     path("occurrences/create/", views.ChoreOccurrenceManagementView.as_view(), name="create-occurrence"),
     path("occurrences/<int:occurrence_id>/update/", views.ChoreOccurrenceManagementView.as_view(), name="update-occurrence"),
     path("occurrences/<int:occurrence_id>/delete/", views.ChoreOccurrenceManagementView.as_view(), name="delete-occurrence"),
+
+    # Chore and Chore Schedule combined endpoint
+    path("chores/schedule/create/", views.ChoreAndScheduleView.as_view(), name="create-chore-and-schedule"),
 ]
