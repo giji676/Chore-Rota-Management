@@ -9,6 +9,195 @@ from api.models import House, HouseMember, Chore, ChoreSchedule, ChoreOccurrence
 
 User = get_user_model()
 
+class DeleteChoreScheduleTest(APITestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(username="owner", password="password123")
+        self.guest = User.objects.create_user(username="guest", password="password123")
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.owner)
+
+        self.house = House.objects.create(
+            name="Crescent",
+            address="10A the crescent",
+            place_id="TEST_PLACE_ID",
+            max_members=6
+        )
+        self.house.set_password("housepassword")
+        self.house.save()
+        self.house.add_member(user=self.owner, role="owner")
+        self.house.add_member(user=self.guest, role="member")
+
+        self.chore = Chore.objects.create(
+            house=self.house,
+            name="dishes",
+            description="wash and dry dishes"
+        )
+
+        self.schedule = ChoreSchedule.objects.create(
+            chore=self.chore,
+            user=self.guest,
+            start_date="2025-12-20",
+            repeat_delta={"days": 1},
+        )
+
+        self.url = reverse("delete-schedule", kwargs={"schedule_id": self.schedule.id})
+
+    def test_delete_schedule(self):
+        response = self.client.delete(self.url, {"user_id": self.guest.id})
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(ChoreSchedule.objects.filter(id=self.schedule.id).exists())
+
+    def test_non_owner_cannot_delete(self):
+        client = APIClient()
+        client.force_authenticate(self.guest)
+        # authed as guest (member), tries to delete someone elses (owners)
+        response = client.delete(self.url, {"user_id": self.owner.id})
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_invalid_schedule(self):
+        url = reverse("delete-schedule", kwargs={"schedule_id": 999})
+        response = self.client.delete(url, {"user_id": self.guest.id})
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+class UpdateChoreScheduleTest(APITestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(username="owner", password="password123")
+        self.guest = User.objects.create_user(username="guest", password="password123")
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.owner)
+
+        self.house = House.objects.create(
+            name="Crescent",
+            address="10A the crescent",
+            place_id="TEST_PLACE_ID",
+            max_members=6
+        )
+        self.house.set_password("housepassword")
+        self.house.save()
+        self.house.add_member(user=self.owner, role="owner")
+        self.house.add_member(user=self.guest, role="member")
+
+        self.chore = Chore.objects.create(
+            house=self.house,
+            name="dishes",
+            description="wash and dry dishes"
+        )
+
+        self.schedule = ChoreSchedule.objects.create(
+            chore=self.chore,
+            user=self.guest,
+            start_date="2025-12-20",
+            repeat_delta={"days": 1},
+        )
+
+        self.url = reverse("update-schedule", kwargs={"schedule_id": self.schedule.id})
+
+    def test_update_schedule(self):
+        data = {"repeat_delta": {"days": 2}}
+        response = self.client.patch(self.url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["repeat_delta"], {"days": 2})
+
+    def test_non_owner_cannot_update_other(self):
+        client = APIClient()
+        client.force_authenticate(self.guest)
+        data = {"repeat_delta": {"days": 3}, "user_id": self.owner.id}
+        response = client.patch(self.url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn("only the owner", response.data["error"].lower())
+
+    def test_invalid_schedule(self):
+        url = reverse("update-schedule", kwargs={"schedule_id": 999})
+        response = self.client.patch(url, {"repeat_delta": {"days": 2}}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_user_not_in_house(self):
+        outsider = User.objects.create_user(username="outsider", password="123")
+        client = APIClient()
+        client.force_authenticate(outsider)
+        data = {"repeat_delta": {"days": 5}}
+        response = client.patch(self.url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+class CreateChoreScheduleTest(APITestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(username="owner", password="password123")
+        self.guest = User.objects.create_user(username="guest", password="password123")
+
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.owner)
+
+        self.house = House.objects.create(
+            name="Crescent",
+            address="10A the crescent",
+            place_id="TEST_PLACE_ID",
+            max_members=6
+        )
+        self.house.set_password("housepassword")
+        self.house.save()
+        self.house.add_member(user=self.owner, role="owner")
+        self.house.add_member(user=self.guest, role="member")
+
+        self.chore = Chore.objects.create(
+            house=self.house,
+            name="dishes",
+            description="wash and dry dishes"
+        )
+
+        self.url = reverse("create-schedule")
+
+    def test_create_schedule(self):
+        data = {
+            "chore_id": self.chore.id,
+            "user_id": self.guest.id,
+            "start_date": "2025-12-20",
+            "repeat_delta": {"days": 1},
+        }
+        response = self.client.post(self.url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["chore"], self.chore.id)
+        self.assertEqual(response.data["user"], self.guest.id)
+
+    def test_missing_fields(self):
+        response = self.client.post(self.url, {}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("missing required fields", response.data["error"].lower())
+
+    def test_non_owner_assign_other(self):
+        # guest trying to assign schedule to owner
+        client = APIClient()
+        client.force_authenticate(user=self.guest)
+        data = {
+            "chore_id": self.chore.id,
+            "user_id": self.owner.id,
+            "start_date": "2025-12-20",
+            "repeat_delta": {"days": 1},
+        }
+        response = client.post(self.url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn("only the owner", response.data["error"].lower())
+
+    def test_invalid_chore(self):
+        data = {
+            "chore_id": 999,
+            "user_id": self.guest.id,
+            "start_date": "2025-12-20",
+            "repeat_delta": {"days": 1},
+        }
+        response = self.client.post(self.url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_user_not_in_house(self):
+        outsider = User.objects.create_user(username="outsider", password="123")
+        data = {
+            "chore_id": self.chore.id,
+            "user_id": outsider.id,
+            "start_date": "2025-12-20",
+            "repeat_delta": {"days": 1},
+        }
+        response = self.client.post(self.url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
 class DeleteChoreOccurrenceTest(APITestCase):
     def setUp(self):
         self.owner = User.objects.create_user(username="owner", password="password123")
@@ -472,6 +661,7 @@ class CreateChoreTest(APITestCase):
             "house_id": self.house.id,
             "name": "dishes",
             "description": "wash and dry dishes",
+            "color": "#ff0000",
         }
 
     def test_create_chore(self):

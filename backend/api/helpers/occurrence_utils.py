@@ -9,15 +9,22 @@ def _start_datetime_for_schedule(schedule):
     """
     Return a timezone-aware datetime for the schedule's start.
     Uses schedule.start_date and schedule.due_time if present, otherwise midnight.
+    Handles start_date as either a date object or a string.
     """
     tz = timezone.get_current_timezone()
     start_date = schedule.start_date
+
+    # Convert string to date if needed
+    if isinstance(start_date, str):
+        start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
+
     # if schedule has due_time field use it; else default to midnight
     due_time = getattr(schedule, "due_time", None)
     if due_time is None:
         dt = datetime.combine(start_date, dt_time(0, 0))
     else:
         dt = datetime.combine(start_date, due_time)
+
     return timezone.make_aware(dt, tz) if timezone.is_naive(dt) else dt
 
 def generate_occurrences_for_schedule(schedule, days_ahead=30):

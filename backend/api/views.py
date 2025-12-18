@@ -259,8 +259,6 @@ class ChoreScheduleManagementView(APIView):
         start_date = data.get("start_date")
         repeat_delta = data.get("repeat_delta")
 
-        start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
-
         if not all([chore_id, user_id]):
             return Response(
                 {"error": "Missing required fields"},
@@ -274,12 +272,18 @@ class ChoreScheduleManagementView(APIView):
         if user.id != int(user_id) and house_member.role != "owner":
             return Response({"error": "Only the owner can perform this action"}, status=status.HTTP_403_FORBIDDEN)
 
-        schedule = ChoreSchedule.objects.create(
-            chore=chore,
-            user=target_house_member.user,
-            start_date=start_date,
-            repeat_delta=repeat_delta,
-        )
+        if start_date:
+            start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
+
+        schedule_kwargs = {
+            "chore": chore,
+            "user": target_house_member.user,
+            "repeat_delta": repeat_delta,
+        }
+        if start_date:
+            schedule_kwargs["start_date"] = start_date
+
+        schedule = ChoreSchedule.objects.create(**schedule_kwargs)
 
         serializer = ChoreScheduleSerializer(schedule)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -293,11 +297,7 @@ class ChoreScheduleManagementView(APIView):
         schedule = get_object_or_404(ChoreSchedule, id=schedule_id)
         house_member = get_object_or_404(HouseMember, house=schedule.chore.house, user=user)
 
-        if not HouseMember.objects.filter(house=schedule.chore.house, user=user).exists():
-            return Response({"error": "You are not a part of this house"},
-                            status=status.HTTP_403_FORBIDDEN)
-
-        if user.id != int(user_id) and house_member.role != "owner":
+        if user_id and user.id != int(user_id) and house_member.role != "owner":
             return Response({"error": "Only the owner can perform this action"}, status=status.HTTP_403_FORBIDDEN)
 
         for field, value in data.items():
