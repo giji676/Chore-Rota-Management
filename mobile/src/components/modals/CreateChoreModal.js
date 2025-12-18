@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { View, Text, Modal, TextInput, Button, StyleSheet } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 
@@ -15,7 +15,39 @@ export default function CreateChoreModal({
     setChoreColor,
     selectedMember,
     setSelectedMember,
+    repeatDelta,
+    setRepeatDelta,
 }) {
+    const repeatDeltaPresets = {
+        "Don't repeat": {},
+        "Every day": {"days": 1},
+        "Every week": {"days": 7},
+        "Every 2 weeks": {"days": 14},
+        "Every month": {"months": 1},
+        Custom: "custom",
+    };
+    const [repeatDeltaLabel, setRepeatDeltaLabel] = useState("Every week"); // Picker
+    const [customNum, setCustomNum] = useState("1");
+    const [customUnit, setCustomUnit] = useState("day");
+
+    const onChangePicker = (label) => {
+        setRepeatDeltaLabel(label);
+        if (label === "Custom") {
+            // Keep repeatDelta as is for now; user will update via custom inputs
+            setRepeatDelta(getRepeatValue("1", "day")); // default initial custom value
+        } else {
+            setRepeatDelta(repeatDeltaPresets[label]);
+        }
+    };
+
+    const getRepeatValue = (num = customNum, unit = customUnit) => {
+        const n = parseInt(num, 10);
+        if (unit === "day") return { days: n };
+        if (unit === "week") return { days: 7 * n };
+        if (unit === "month") return { months: n };
+        return {};
+    };
+
     return (
         <Modal
             visible={visible}
@@ -44,6 +76,7 @@ export default function CreateChoreModal({
                         multiline
                         textAlignVertical="top"
                     />
+
                     <TextInput
                         style={styles.input}
                         placeholder="Color (Hex)"
@@ -70,6 +103,43 @@ export default function CreateChoreModal({
                         ))}
                     </Picker>
 
+
+                    <View>
+                        <Picker selectedValue={repeatDeltaLabel} onValueChange={onChangePicker}>
+                            {Object.keys(repeatDeltaPresets).map((label) => (
+                                <Picker.Item key={label} label={label} value={label} />
+                            ))}
+                        </Picker>
+
+                        {repeatDeltaLabel === "Custom" && (
+                            <View style={styles.customContainer}>
+                                <Text>Every</Text>
+                                <TextInput
+                                    style={styles.inputCustomNum}
+                                    keyboardType="numeric"
+                                    value={customNum}
+                                    onChangeText={(text) => {
+                                        setCustomNum(text);
+                                        setRepeatDelta(getRepeatValue(text, customUnit));
+                                    }}
+                                />
+
+                                <Picker
+                                    selectedValue={customUnit}
+                                    onValueChange={(unit) => {
+                                        setCustomUnit(unit);
+                                        setRepeatDelta(getRepeatValue(customNum, unit));
+                                    }}
+                                    style={styles.unitPicker}
+                                >
+                                    <Picker.Item label="day" value="day" />
+                                    <Picker.Item label="week" value="week" />
+                                    <Picker.Item label="month" value="month" />
+                                </Picker>
+                            </View>
+                        )}
+                    </View>
+
                     <View style={styles.buttons}>
                         <Button title="Cancel" onPress={onClose} />
                         <Button title="Create" onPress={onCreate} />
@@ -88,32 +158,58 @@ const styles = StyleSheet.create({
         alignItems: "center",
     },
     modal: {
-        width: "80%",
+        width: "85%",
+        maxWidth: 400,
         backgroundColor: "#fff",
         padding: 20,
         borderRadius: 16,
+        flexShrink: 0,
     },
     title: {
         fontSize: 20,
         fontWeight: "bold",
-        marginBottom: 10,
+        marginBottom: 15,
+        textAlign: "center",
     },
     input: {
         borderWidth: 1,
         borderColor: "#ccc",
-        borderRadius: 5,
+        borderRadius: 8,
         padding: 10,
-        marginBottom: 16,
+        marginBottom: 15,
+        fontSize: 16,
     },
     buttons: {
         flexDirection: "row",
         justifyContent: "space-between",
-        marginTop: 10,
+        marginTop: 15,
     },
     picker: {
         color: "#444",
         backgroundColor: "#eee",
         fontWeight: "bold",
-        marginVertical: 5,
+        marginVertical: 10,
+        borderRadius: 8,
+    },
+    customContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginTop: 10,
+        paddingHorizontal: 10,
+        backgroundColor: "#f0f0f0",
+    },
+    inputCustomNum: {
+        borderWidth: 1,
+        borderColor: "#ccc",
+        borderRadius: 8,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        width: 60,
+        marginHorizontal: 10,
+        fontSize: 16,
+        textAlign: "center",
+    },
+    unitPicker: {
+        flex: 1,
     },
 });

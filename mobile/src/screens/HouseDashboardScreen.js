@@ -272,6 +272,8 @@ export default function HouseDashboardScreen({ navigation, route }) {
                 members={house?.members || []}
                 selectedMember={selectedMember}
                 setSelectedMember={setSelectedMember}
+                repeatDelta={repeatDelta}
+                setRepeatDelta={setRepeatDelta}
             />
         </View>
     );
