@@ -202,7 +202,6 @@ class ChoreOccurrenceManagementView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        user = request.user
         data = request.data
 
         schedule_id = data.get("schedule_id")
@@ -231,17 +230,13 @@ class ChoreOccurrenceManagementView(APIView):
         user = request.user
         data = request.data
 
-        try:
-            occurrence = ChoreOccurrence.objects.get(id=occurrence_id)
-        except ChoreSchedule.DoesNotExist:
-            return Response({"error": "Occurrence not found"}, status=status.HTTP_404_NOT_FOUND)
+        occurrence = get_object_or_404(ChoreOccurrence, id=occurrence_id)
+        house_member = get_object_or_404(
+            HouseMember,
+            house=occurrence.schedule.chore.house,
+            user=user)
 
-        try:
-            house_member = HouseMember.objects.get(house=occurrence.schedule.chore.house, user=user)
-        except HouseMember.DoesNotExist:
-            return Response({"error": "You are not a part of this house"}, status=status.HTTP_403_FORBIDDEN)
-
-        if user.id != house_member.user.id and house_member.role != "owner":
+        if house_member.role != "owner":
             return Response({"error": "Only the owner can perform this action"}, status=status.HTTP_403_FORBIDDEN)
 
         allowed_fields = ["due_date", "completed"]
@@ -256,26 +251,20 @@ class ChoreOccurrenceManagementView(APIView):
 
     def delete(self, request, occurrence_id):
         user = request.user
-        data = request.data
 
-        try:
-            occurrence = ChoreOccurrence.objects.get(id=occurrence_id)
-        except ChoreSchedule.DoesNotExist:
-            return Response({"error": "Occurrence not found"}, status=status.HTTP_404_NOT_FOUND)
+        occurrence = get_object_or_404(ChoreOccurrence, id=occurrence_id)
+        house_member = get_object_or_404(
+            HouseMember,
+            house=occurrence.schedule.chore.house,
+            user=user)
 
-        if not HouseMember.objects.filter(house=occurrence.schedule.chore.house, user=user).exists():
-            return Response({"error": "You are not a part of this house"},
-                            status=status.HTTP_403_FORBIDDEN)
-        try:
-            house_member = HouseMember.objects.get(house=occurrence.schedule.chore.house, user=user)
-        except HouseMember.DoesNotExist:
-            return Response({"error": "You are not a part of this house"}, status=status.HTTP_403_FORBIDDEN)
-
-        if user.id != house_member.user.id and house_member.role != "owner":
-            return Response({"error": "Only the owner can perform this action"}, status=status.HTTP_403_FORBIDDEN)
+        if house_member.role != "owner":
+            return Response(
+                {"error": "Only the owner can perform this action"},
+                status=status.HTTP_403_FORBIDDEN
+            )
 
         occurrence.delete()
-
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 class ChoreScheduleManagementView(APIView):

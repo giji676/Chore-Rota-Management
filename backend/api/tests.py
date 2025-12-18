@@ -5,12 +5,189 @@ from rest_framework.test import APITestCase, APIClient
 from django.urls import reverse
 from django.utils import timezone
 from django.contrib.auth import get_user_model
-from api.models import House, HouseMember, Chore
+from api.models import House, HouseMember, Chore, ChoreSchedule, ChoreOccurrence
 
 User = get_user_model()
 
-class UpdateHouseTest(APITestCase):
+class DeleteChoreOccurrenceTest(APITestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(username="owner", password="password123")
+        self.guest = User.objects.create_user(username="guest", password="password123")
 
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.owner)
+
+        self.house = House.objects.create(
+            name="Crescent",
+            address="10A the crescent",
+            place_id="TEST_PLACE_ID",
+            max_members=6
+        )
+        self.house.set_password("housepassword")
+        self.house.save()
+        self.house.add_member(user=self.owner, role="owner")
+
+        self.chore = Chore.objects.create(
+            house=self.house,
+            name="dishes",
+            description="wash dishes",
+        )
+
+        self.schedule = ChoreSchedule.objects.create(
+            chore=self.chore,
+            user=self.owner,
+            repeat_delta={}
+        )
+
+        self.occurrence = ChoreOccurrence.objects.create(
+            schedule=self.schedule,
+            due_date=timezone.now()
+        )
+
+        self.url = reverse("delete-occurrence", kwargs={
+            "occurrence_id": self.occurrence.id
+        })
+
+    def test_delete_occurrence(self):
+        response = self.client.delete(self.url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(
+            ChoreOccurrence.objects.filter(id=self.occurrence.id).exists()
+        )
+
+    def test_not_part_of_house(self):
+        client = APIClient()
+        client.force_authenticate(user=self.guest)
+        response = client.delete(self.url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_invalid_occurrence(self):
+        url = reverse("delete-occurrence", kwargs={"occurrence_id": 999})
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_as_member(self):
+        self.house.add_member(user=self.guest, role="guest")
+        client = APIClient()
+        client.force_authenticate(self.guest)
+        response = client.delete(self.url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+class UpdateChoreOccurrenceTest(APITestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(username="owner", password="password123")
+        self.guest = User.objects.create_user(username="guest", password="password123")
+
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.owner)
+
+        self.house = House.objects.create(
+            name="Crescent",
+            address="10A the crescent",
+            place_id="TEST_PLACE_ID",
+            max_members=6
+        )
+        self.house.set_password("housepassword")
+        self.house.save()
+        self.house.add_member(user=self.owner, role="owner")
+
+        self.chore = Chore.objects.create(
+            house=self.house,
+            name="dishes",
+            description="wash dishes",
+        )
+
+        self.schedule = ChoreSchedule.objects.create(
+            chore=self.chore,
+            user=self.owner,
+            repeat_delta={}
+        )
+
+        self.occurrence = ChoreOccurrence.objects.create(
+            schedule=self.schedule,
+            due_date=timezone.now()
+        )
+
+        self.url = reverse("update-occurrence", kwargs={
+            "occurrence_id": self.occurrence.id
+        })
+
+    def test_update_occurrence(self):
+        response = self.client.patch(self.url, {"completed": True})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["completed"])
+
+    def test_not_part_of_house(self):
+        client = APIClient()
+        client.force_authenticate(user=self.guest)
+        response = client.patch(self.url, {"completed": True})
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_invalid_occurrence(self):
+        url = reverse("update-occurrence", kwargs={"occurrence_id": 999})
+        response = self.client.patch(url, {"completed": True})
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_as_member(self):
+        self.house.add_member(user=self.guest, role="guest")
+        client = APIClient()
+        client.force_authenticate(self.guest)
+        response = client.patch(self.url, {"completed": True})
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+class CreateChoreOccurrenceTest(APITestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(username="owner", password="password123")
+        self.guest = User.objects.create_user(username="guest", password="password123")
+
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.owner)
+
+        self.house = House.objects.create(
+            name="Crescent",
+            address="10A the crescent",
+            place_id="TEST_PLACE_ID",
+            max_members=6
+        )
+        self.house.set_password("housepassword")
+        self.house.save()
+        self.house.add_member(user=self.owner, role="owner")
+
+        self.chore = Chore.objects.create(
+            house=self.house,
+            name="dishes",
+            description="wash dishes",
+        )
+
+        self.schedule = ChoreSchedule.objects.create(
+            chore=self.chore,
+            user=self.owner,
+            repeat_delta={}
+        )
+
+        self.url = reverse("create-occurrence")
+
+    def test_create_occurrence(self):
+        response = self.client.post(self.url, {
+            "schedule_id": self.schedule.id,
+            "due_date": timezone.now()
+        })
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_missing_fields(self):
+        response = self.client.post(self.url, {})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("missing required fields", response.data["error"].lower())
+
+    def test_invalid_schedule(self):
+        response = self.client.post(self.url, {
+            "schedule_id": 999,
+            "due_date": timezone.now()
+        })
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertIn("schedule not found", response.data["error"].lower())
+
+class UpdateHouseTest(APITestCase):
     def setUp(self):
         self.owner = User.objects.create_user(username="owner", password="password123")
         self.guest = User.objects.create_user(username="guest", password="password123")
