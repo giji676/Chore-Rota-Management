@@ -1,13 +1,40 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model, authenticate
 from .serializers import RegisterSerializer, GuestSerializer
-from .models import User, PushToken
+from .models import PushToken
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from rest_framework.permissions import IsAuthenticated, AllowAny
 
 User = get_user_model()
+
+class LoginView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get("email")
+        password = request.data.get("password")
+
+        if not email or not password:
+            return Response(
+                {"error": "Email and password are required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user = authenticate(request, email=email, password=password)
+        if not user:
+            return Response(
+                {"error": "Invalid credentials"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        refresh = RefreshToken.for_user(user)
+
+        return Response({
+            "access_token": str(refresh.access_token),
+            "refresh_token": str(refresh),
+        })
 
 class SavePushTokenView(APIView):
     permission_classes = [IsAuthenticated]
@@ -30,18 +57,22 @@ class RefreshTokenView(APIView):
 
         try:
             refresh = RefreshToken(refresh_token)
-            new_access = str(refresh.access_token)
-            return Response({"access_token": new_access})
+            return Response({"access_token": str(refresh.access_token)})
         except TokenError as e:
             return Response({"error": "Invalid refresh token", "details": str(e)}, status=status.HTTP_401_UNAUTHORIZED)
 
 class RegisterView(APIView):
+    permission_classes = [AllowAny]
+
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
-            user = serializer.save()
+            user = serializer.save()  # save() should handle first_name, last_name, email, password
             refresh = RefreshToken.for_user(user)
-            return Response({"refresh": str(refresh), "access": str(refresh.access_token)})
+            return Response({
+                "access_token": str(refresh.access_token),
+                "refresh_token": str(refresh)
+            })
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class GuestView(APIView):
@@ -49,7 +80,6 @@ class GuestView(APIView):
 
     def post(self, request):
         serializer = GuestSerializer(data=request.data)
-
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -58,7 +88,9 @@ class GuestView(APIView):
         user, created = User.objects.get_or_create(
             device_id=device_id,
             defaults={
-                "username": f"guest_{device_id[:6]}",
+                "email": f"guest_{device_id[:6]}@example.com",  # dummy email since email is required
+                "first_name": "Guest",
+                "last_name": device_id[:6],
                 "is_guest": True,
             }
         )
@@ -66,6 +98,7 @@ class GuestView(APIView):
         if not created and not user.is_guest:
             user.is_guest = True
             user.save()
+
         refresh = RefreshToken.for_user(user)
 
         return Response({
