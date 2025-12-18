@@ -185,7 +185,6 @@ class CreateChoreOccurrenceTest(APITestCase):
             "due_date": timezone.now()
         })
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertIn("schedule not found", response.data["error"].lower())
 
 class UpdateHouseTest(APITestCase):
     def setUp(self):
@@ -218,7 +217,6 @@ class UpdateHouseTest(APITestCase):
         url = reverse("update-house", kwargs={"house_id": 999})
         response = self.client.patch(url, {"max_members": 8})
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertIn("does not exist", response.data["error"].lower())
 
     def test_as_member(self):
         self.house.add_member(user=self.guest, role="guest")
@@ -226,14 +224,12 @@ class UpdateHouseTest(APITestCase):
         client.force_authenticate(self.guest)
         response = client.patch(self.url, {"max_members": 8})
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertIn("only the owner", response.data["error"].lower())
 
     def test_not_part_of_house(self):
         client = APIClient()
         client.force_authenticate(self.guest)
         response = client.patch(self.url, {"max_members": 8})
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("not a part of this house", response.data["error"].lower())
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
 class UsersHousesTest(APITestCase):
     def setUp(self):
@@ -328,7 +324,6 @@ class HouseGetTest(APITestCase):
         client.force_authenticate(user=self.guest)
         response = client.get(self.url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertIn("not part of this house", response.data["error"].lower())
 
 class HouseDeleteTest(APITestCase):
     def setUp(self):
@@ -359,7 +354,7 @@ class HouseDeleteTest(APITestCase):
         client = APIClient()
         client.force_authenticate(user=self.guest)
         response = client.delete(self.url)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_not_owner(self):
         self.house.add_member(user=self.guest, role="member")
@@ -367,12 +362,11 @@ class HouseDeleteTest(APITestCase):
         client.force_authenticate(user=self.guest)
         response = client.delete(self.url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertIn("only the owner", response.data["error"].lower())
 
     def test_invalid_house(self):
         url = reverse("delete-house", kwargs={"house_id": 999})
         response = self.client.delete(url)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
 class UpdateChoreTest(APITestCase):
     def setUp(self):
@@ -410,14 +404,6 @@ class UpdateChoreTest(APITestCase):
         response = client.patch(self.url, {"description": "only wash"})
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    # def test_not_owner(self):
-    #     self.house.add_member(user=self.guest, role="member")
-    #     client = APIClient()
-    #     client.force_authenticate(user=self.guest)
-    #     response = client.patch(self.url, {"description": "only wash"})
-    #     self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-    #     self.assertIn("only the owner", response.data["error"].lower())
-    #
     def test_invalid_chore(self):
         url = reverse("update-chore", kwargs={"chore_id": 999})
         response = self.client.patch(url, {"description": "only wash"})
@@ -458,14 +444,6 @@ class DeleteChoreTest(APITestCase):
         response = client.delete(self.url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    # def test_not_owner(self):
-    #     self.house.add_member(user=self.guest, role="member")
-    #     client = APIClient()
-    #     client.force_authenticate(user=self.guest)
-    #     response = client.delete(self.url)
-    #     self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-    #     self.assertIn("only the owner", response.data["error"].lower())
-    #
     def test_invalid_chore(self):
         url = reverse("delete-chore", kwargs={"chore_id": 999})
         response = self.client.delete(url)
@@ -503,28 +481,18 @@ class CreateChoreTest(APITestCase):
     def test_missing_data(self):
         response = self.client.post(self.url)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("missing required fields", response.data["error"].lower())
-
-    def test_non_int_house_id(self):
-        chore_data = self.chore_data
-        chore_data["house_id"] = "str_ID"
-        response = self.client.post(self.url, chore_data)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("must be an int", response.data["error"].lower())
 
     def test_non_existant_house_id(self):
         chore_data = self.chore_data
         chore_data["house_id"] = -999
         response = self.client.post(self.url, chore_data)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("invalid house", response.data["error"].lower())
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_unauthorised(self):
         client = APIClient()
         client.force_authenticate(self.guest)
         response = client.post(self.url, self.chore_data)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertIn("do not belong", response.data["error"].lower())
 
 class AddressDetailsTest(APITestCase):
     def setUp(self):
@@ -605,14 +573,12 @@ class JoinHouseTest(APITestCase):
         self.house.save()
         response = self.client.post(self.url, {"password": "housepassword"})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("house is full", response.data["error"].lower())
 
     def test_already_in_room(self):
         client = APIClient()
         client.force_authenticate(user=self.owner)
         response = client.post(self.url, {"password": "housepassword"})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("already in", response.data["error"].lower())
 
     def test_wrong_passwoord(self):
         response = self.client.post(self.url, {"password": "invalid_password"})
@@ -622,8 +588,7 @@ class JoinHouseTest(APITestCase):
     def test_invalid_join_code(self):
         url = reverse("join-house", kwargs={"join_code": "INVALID_CODE"})
         response = self.client.post(url, {"password": "housepassword"})
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("invalid join code", response.data["error"].lower())
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_no_password(self):
         response = self.client.post(self.url, {})

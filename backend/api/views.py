@@ -104,10 +104,7 @@ class JoinHouseView(APIView):
         if not password:
             return Response({"error": "Password required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            house = House.objects.get(join_code=join_code)
-        except House.DoesNotExist:
-            return Response({"error": "Invalid join code"}, status=status.HTTP_400_BAD_REQUEST)
+        house = get_object_or_404(House, join_code=join_code)
 
         if not house.check_password(password):
             return Response({"error": "Wrong password"}, status=status.HTTP_403_FORBIDDEN)
@@ -154,15 +151,8 @@ class HouseManagementView(APIView):
         user = request.user
         data = request.data
 
-        try:
-            member = HouseMember.objects.get(user=user)
-        except HouseMember.DoesNotExist:
-            return Response({"error": "You are not a part of this house"}, status=400)
-
-        try:
-            house = House.objects.get(id=house_id)
-        except House.DoesNotExist:
-            return Response({"error": "House does not exist"}, status=404)
+        member = get_object_or_404(HouseMember, user=user)
+        house = get_object_or_404(House, id=house_id)
 
         if member.role != "owner":
             return Response({"error": "Only the owner can update the house"}, status=403)
@@ -182,15 +172,8 @@ class HouseManagementView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def delete(self, request, house_id):
-        try:
-            house = House.objects.get(id=house_id)
-        except House.DoesNotExist:
-            return Response({"error": "House not found"}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            house_member = HouseMember.objects.get(house=house, user=request.user)
-        except HouseMember.DoesNotExist:
-            return Response({"error": "You are not a part of this house"}, status=status.HTTP_403_FORBIDDEN)
+        house = get_object_or_404(House, id=house_id)
+        house_member = get_object_or_404(HouseMember, house=house, user=request.user)
 
         if house_member.role != "owner":
             return Response({"error": "Only the owner can delete this house"}, status=status.HTTP_403_FORBIDDEN)
@@ -213,10 +196,7 @@ class ChoreOccurrenceManagementView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        try:
-            schedule = ChoreSchedule.objects.get(id=schedule_id)
-        except ChoreSchedule.DoesNotExist:
-            return Response({"error": "Schedule not found"}, status=status.HTTP_404_NOT_FOUND)
+        schedule = get_object_or_404(ChoreSchedule, id=schedule_id)
 
         occurrence = ChoreOccurrence.objects.create(
             schedule=schedule,
@@ -287,23 +267,12 @@ class ChoreScheduleManagementView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        try:
-            chore = Chore.objects.get(id=chore_id)
-        except Chore.DoesNotExist:
-            return Response({"error": "Chore not found"}, status=status.HTTP_404_NOT_FOUND)
-
-        try:
-            house_member = HouseMember.objects.get(house=chore.house, user=user)
-        except HouseMember.DoesNotExist:
-            return Response({"error": "You are not a part of this house"}, status=status.HTTP_403_FORBIDDEN)
+        chore = get_object_or_404(Chore, id=chore_id)
+        house_member = get_object_or_404(HouseMember, house=chore.house, user=user)
+        target_house_member  = get_object_or_404(HouseMember, house=chore.house, user=user_id)
 
         if user.id != int(user_id) and house_member.role != "owner":
             return Response({"error": "Only the owner can perform this action"}, status=status.HTTP_403_FORBIDDEN)
-
-        try:
-            target_house_member = HouseMember.objects.get(house=chore.house, user=user_id)
-        except HouseMember.DoesNotExist:
-            return Response({"error": "Assigned user not part of this house"}, status=status.HTTP_403_FORBIDDEN)
 
         schedule = ChoreSchedule.objects.create(
             chore=chore,
@@ -321,18 +290,12 @@ class ChoreScheduleManagementView(APIView):
 
         user_id = data.get("user_id")
 
-        try:
-            schedule = ChoreSchedule.objects.get(id=schedule_id)
-        except ChoreSchedule.DoesNotExist:
-            return Response({"error": "Schedule not found"}, status=status.HTTP_404_NOT_FOUND)
+        schedule = get_object_or_404(ChoreSchedule, id=schedule_id)
+        house_member = get_object_or_404(HouseMember, house=schedule.chore.house, user=user)
 
         if not HouseMember.objects.filter(house=schedule.chore.house, user=user).exists():
             return Response({"error": "You are not a part of this house"},
                             status=status.HTTP_403_FORBIDDEN)
-        try:
-            house_member = HouseMember.objects.get(house=chore.house, user=user)
-        except HouseMember.DoesNotExist:
-            return Response({"error": "You are not a part of this house"}, status=status.HTTP_403_FORBIDDEN)
 
         if user.id != int(user_id) and house_member.role != "owner":
             return Response({"error": "Only the owner can perform this action"}, status=status.HTTP_403_FORBIDDEN)
@@ -350,15 +313,8 @@ class ChoreScheduleManagementView(APIView):
 
         user_id = data.get("user_id")
 
-        try:
-            schedule = ChoreSchedule.objects.get(id=schedule_id)
-        except ChoreSchedule.DoesNotExist:
-            return Response({"error": "Schedule not found"}, status=status.HTTP_404_NOT_FOUND)
-
-        try:
-            house_member = HouseMember.objects.get(house=schedule.chore.house, user=user)
-        except HouseMember.DoesNotExist:
-            return Response({"error": "You are not a part of this house"}, status=status.HTTP_403_FORBIDDEN)
+        schedule = get_object_or_404(ChoreSchedule, id=schedule_id)
+        house_member = get_object_or_404(HouseMember, house=schedule.chore.house, user=user)
 
         if user.id != int(user_id) and house_member.role != "owner":
             return Response({"error": "Only the owner can perform this action"}, status=status.HTTP_403_FORBIDDEN)
@@ -382,15 +338,7 @@ class ChoreManagementView(APIView):
         if not all([name, house_id, description]):
             return Response({"error": "Missing required fields"}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            house_id = int(house_id)
-        except ValueError:
-            return Response({"error": "House id must be an int"}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            house = House.objects.get(id=house_id)
-        except House.DoesNotExist:
-            return Response({"error": "Invalid house"}, status=status.HTTP_400_BAD_REQUEST)
+        house = get_object_or_404(House, id=house_id)
 
         if not HouseMember.objects.filter(house=house, user=user).exists():
             return Response({"error": "You do not belong to this house"}, status=status.HTTP_403_FORBIDDEN)
@@ -412,10 +360,7 @@ class ChoreManagementView(APIView):
         user = request.user
         data = request.data
 
-        try:
-            chore = Chore.objects.get(id=chore_id)
-        except Chore.DoesNotExist:
-            return Response({"error": "Chore not found"}, status=status.HTTP_404_NOT_FOUND)
+        chore = get_object_or_404(Chore, id=chore_id)
 
         if not HouseMember.objects.filter(house=chore.house, user=user).exists():
             return Response({"error": "You do not belong to this house"},
@@ -434,10 +379,7 @@ class ChoreManagementView(APIView):
     def delete(self, request, chore_id):
         user = request.user
 
-        try:
-            chore = Chore.objects.get(id=chore_id)
-        except Chore.DoesNotExist:
-            return Response({"error": "Chore not found"}, status=status.HTTP_404_NOT_FOUND)
+        chore = get_object_or_404(Chore, id=chore_id)
 
         if not HouseMember.objects.filter(house=chore.house, user=user).exists():
             return Response({"error": "You do not belong to this house"},
