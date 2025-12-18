@@ -26,15 +26,14 @@ export default function CreateChoreModal({
         "Every month": {"months": 1},
         Custom: "custom",
     };
-    const [repeatDeltaLabel, setRepeatDeltaLabel] = useState("Every week"); // Picker
+    const [repeatDeltaLabel, setRepeatDeltaLabel] = useState("Every week");
     const [customNum, setCustomNum] = useState("1");
     const [customUnit, setCustomUnit] = useState("day");
 
     const onChangePicker = (label) => {
         setRepeatDeltaLabel(label);
         if (label === "Custom") {
-            // Keep repeatDelta as is for now; user will update via custom inputs
-            setRepeatDelta(getRepeatValue("1", "day")); // default initial custom value
+            setRepeatDelta(getRepeatValue("1", "day"));
         } else {
             setRepeatDelta(repeatDeltaPresets[label]);
         }
@@ -94,15 +93,11 @@ export default function CreateChoreModal({
                         {members.map((member) => (
                             <Picker.Item
                                 key={member.id}
-                                label={
-                                    member.username +
-                                        (member.is_guest ? " (Guest)" : "")
-                                }
+                                label={member.label}
                                 value={member.id}
                             />
                         ))}
                     </Picker>
-
 
                     <View>
                         <Picker selectedValue={repeatDeltaLabel} onValueChange={onChangePicker}>

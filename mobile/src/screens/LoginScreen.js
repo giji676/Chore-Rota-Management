@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity } from "react-native";
+import { Modal, View, Text, TextInput, Button, StyleSheet, TouchableOpacity } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from "../utils/api";
 import "react-native-get-random-values";
@@ -14,6 +14,10 @@ export default function LoginScreen({ navigation }) {
 
     const [error, setError] = useState("");
     const [isRegistering, setIsRegistering] = useState(false);
+
+    const [guestModalVisible, setGuestModalVisible] = useState(false);
+    const [guestFirstName, setGuestFirstName] = useState("");
+    const [guestLastName, setGuestLastName] = useState("");
 
     const getErrorMessage = (err) => {
         if (!err.response) return "Network error. Please try again.";
@@ -73,8 +77,9 @@ export default function LoginScreen({ navigation }) {
         }
     };
 
-    const handleGuest = async () => {
+    const handleGuest = async (firstName, lastName) => {
         setError("");
+
         let device_id = await AsyncStorage.getItem("device_id");
         if (!device_id) {
             device_id = uuidv4();
@@ -82,13 +87,19 @@ export default function LoginScreen({ navigation }) {
         }
 
         try {
-            const res = await api.post("accounts/guest/", { device_id });
+            const res = await api.post("accounts/guest/", {
+                device_id,
+                first_name: firstName,
+                last_name: lastName,
+            });
 
             await AsyncStorage.setItem("access_token", res.data.access_token);
             await AsyncStorage.setItem("refresh_token", res.data.refresh_token);
+
+            setGuestModalVisible(false);
             navigation.replace("HouseAccess");
         } catch (err) {
-            setResponse(err.response?.data || err.message);
+            setError(getErrorMessage(err));
         }
     };
 
@@ -96,7 +107,7 @@ export default function LoginScreen({ navigation }) {
         <View style={styles.container}>
             <Text style={styles.title}>{isRegistering ? "Create Account" : "Login"}</Text>
 
-            {isRegistering && (
+            {(isRegistering) && (
                 <>
                     <TextInput
                         placeholder="First name"
@@ -151,7 +162,50 @@ export default function LoginScreen({ navigation }) {
 
             <View style={styles.divider} />
 
-            <Button title="Continue as Guest" onPress={handleGuest} color="#777" />
+            <Button
+                title="Continue as Guest"
+                onPress={() => setGuestModalVisible(true)}
+                color="#777"
+            />
+
+            <Modal
+                visible={guestModalVisible}
+                transparent
+                animationType="fade"
+            >
+                <View style={styles.modalBackdrop}>
+                    <View style={styles.modalCard}>
+                        <Text style={styles.modalTitle}>Continue as Guest</Text>
+
+                        <TextInput
+                            placeholder="First name"
+                            value={guestFirstName}
+                            onChangeText={setGuestFirstName}
+                            style={styles.input}
+                        />
+
+                        <TextInput
+                            placeholder="Last name"
+                            value={guestLastName}
+                            onChangeText={setGuestLastName}
+                            style={styles.input}
+                        />
+
+                        <View style={styles.modalButtons}>
+                            <Button
+                                title="Cancel"
+                                onPress={() => setGuestModalVisible(false)}
+                            />
+                            <Button
+                                title="Continue"
+                                onPress={() => handleGuest(guestFirstName, guestLastName)}
+                                disabled={!guestFirstName || !guestLastName}
+                            />
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
 
             {error ? <Text style={styles.error}>{error}</Text> : null}
         </View>
@@ -195,5 +249,28 @@ const styles = StyleSheet.create({
         textAlign: "center",
         fontSize: 14,
         lineHeight: 20,
-    }
+    },
+    modalBackdrop: {
+        flex: 1,
+        backgroundColor: "rgba(0,0,0,0.5)",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    modalCard: {
+        backgroundColor: "#fff",
+        padding: 20,
+        width: "85%",
+        borderRadius: 12,
+    },
+    modalTitle: {
+        fontSize: 20,
+        fontWeight: "bold",
+        marginBottom: 15,
+        textAlign: "center",
+    },
+    modalButtons: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        marginTop: 15,
+    },
 });
