@@ -1,16 +1,20 @@
 import React from "react";
 import { View, Text, Modal, TextInput, Button, StyleSheet } from "react-native";
+import { Picker } from "@react-native-picker/picker";
 
 export default function CreateChoreModal({
     visible,
     onClose,
     onCreate,
     choreName,
+    members,
     setChoreName,
     choreDescription,
     setChoreDescription,
     choreColor,
     setChoreColor,
+    selectedMember,
+    setSelectedMember,
 }) {
     return (
         <Modal
@@ -47,6 +51,24 @@ export default function CreateChoreModal({
                         value={choreColor}
                         onChangeText={setChoreColor}
                     />
+
+                    <Text>Assign to</Text>
+                    <Picker
+                        selectedValue={selectedMember}
+                        onValueChange={setSelectedMember}
+                        style={styles.picker}
+                    >
+                        {members.map((member) => (
+                            <Picker.Item
+                                key={member.id}
+                                label={
+                                    member.username +
+                                        (member.is_guest ? " (Guest)" : "")
+                                }
+                                value={member.id}
+                            />
+                        ))}
+                    </Picker>
 
                     <View style={styles.buttons}>
                         <Button title="Cancel" onPress={onClose} />
@@ -87,5 +109,11 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         justifyContent: "space-between",
         marginTop: 10,
+    },
+    picker: {
+        color: "#444",
+        backgroundColor: "#eee",
+        fontWeight: "bold",
+        marginVertical: 5,
     },
 });

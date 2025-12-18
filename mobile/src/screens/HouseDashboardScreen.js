@@ -10,7 +10,6 @@ import MonthCalendar from "../components/MonthCalendar";
 import CheckBox from "../components/CheckBox";
 import OccurrenceLongPressModal from "../components/modals/OccurrenceLongPressModal";
 import CreateChoreModal from "../components/modals/CreateChoreModal";
-import AssignChoreModal from "../components/modals/AssignChoreModal";
 
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
@@ -128,32 +127,20 @@ export default function HouseDashboardScreen({ navigation, route }) {
             return;
         }
         try {
-            await api.post("chores/create/", {
+            await api.post("chores/schedule/create/", {
                 house_id: house.id,
                 name: newChoreName,
                 description: newChoreDescription,
                 color: newChoreColor,
+                assignee_id: selectedMember,
+                start_date: selectedDate,
+                repeat_delta: repeatDelta
             });
             fetchHouse();
             setChoreModalVisible(false);
             setNewChoreName('');
             setNewChoreDescription('');
             setNewChoreColor('#ffffff');
-        } catch (err) {
-            Alert.alert("Error", err.response?.data?.error || err.message);
-        }
-    };
-
-    const handleAssignChore = async () => {
-        try {
-            await api.post(`schedules/create/`, {
-                chore_id: selectedChore,
-                user_id: selectedMember,
-                start_date: selectedDate,
-                repeat_delta: repeatDelta
-            });
-            fetchHouse();
-            setAssignModalVisible(false);
         } catch (err) {
             Alert.alert("Error", err.response?.data?.error || err.message);
         }
@@ -191,18 +178,14 @@ export default function HouseDashboardScreen({ navigation, route }) {
     return (
         <View style={styles.container}>
             <View>
-                {house?.occurrences?.length > 0 ? (
-                    <MonthCalendar
-                        occurrences={house.occurrences}
-                        selectedDay={displayDayKey}
-                        onDayPress={setDisplayDayKey}
-                        currentMonth={currentMonth}
-                        onPrevMonth={goToPrevMonth}
-                        onNextMonth={goToNextMonth}
-                    />
-                ) : (
-                        <Text>NO OCCS</Text>
-                    )}
+                <MonthCalendar
+                    occurrences={house.occurrences}
+                    selectedDay={displayDayKey}
+                    onDayPress={setDisplayDayKey}
+                    currentMonth={currentMonth}
+                    onPrevMonth={goToPrevMonth}
+                    onNextMonth={goToNextMonth}
+                />
             </View>
 
             <View style={{flex: 1}} />
@@ -259,10 +242,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
                 ))}
 
                 <View style={styles.buttonContainer}>
-                    <Button title="Create Chore" onPress={() => setChoreModalVisible(true)} />
-                </View>
-                <View style={styles.buttonContainer}>
-                    <Button title="Assign Chore" onPress={() => setAssignModalVisible(true)} />
+                    <Button title="Create & Assign Chore" onPress={() => setChoreModalVisible(true)} />
                 </View>
                 <View style={styles.buttonContainer}>
                     <Button title="Delete House" color="red" onPress={handleDeleteHouse} />
@@ -289,17 +269,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
                 setChoreDescription={setNewChoreDescription}
                 choreColor={newChoreColor}
                 setChoreColor={setNewChoreColor}
-            />
-
-            {/* Assign Chore Modal */}
-            <AssignChoreModal
-                visible={assignModalVisible}
-                onClose={() => setAssignModalVisible(false)}
-                onAssign={handleAssignChore}
-                chores={house?.chores || []}
                 members={house?.members || []}
-                selectedChore={selectedChore}
-                setSelectedChore={setSelectedChore}
                 selectedMember={selectedMember}
                 setSelectedMember={setSelectedMember}
             />

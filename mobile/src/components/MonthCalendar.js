@@ -20,7 +20,6 @@ export default function MonthCalendar({
     onPrevMonth,
     onNextMonth,
 }) {
-    if (!currentMonth) return null;
 
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
@@ -72,6 +71,7 @@ export default function MonthCalendar({
     /*  OCCURRENCES MAP  */
     const occByDate = useMemo(() => {
         const map = {};
+        if (!occurrences) return {};
         occurrences.forEach((occ) => {
             const d = new Date(occ.due_date);
             if (d.getMonth() !== month || d.getFullYear() !== year) return;
