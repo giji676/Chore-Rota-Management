@@ -116,16 +116,9 @@ export default function HouseDashboardScreen({ navigation, route }) {
     const handleDeleteOccurrence = async (occ) => {
         try {
             const res = await api.delete(`occurrences/${occ.id}/delete/`);
-            console.log("Deleted:", res.data);
+            apiLogSuccess(res);
         } catch (err) {
-            if (err.response) {
-                // Server responded with 4xx/5xx
-                console.log("Status:", err.response.status);
-                console.log("Error data:", err.response.data);
-            } else {
-                // Network / Axios / JS error
-                console.log("Error message:", err.message);
-            }
+            apiLogError(err);
         } finally {
             fetchHouse();
         }
