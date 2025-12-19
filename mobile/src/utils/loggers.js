@@ -1,3 +1,11 @@
+export function jsonLog(str, data) {
+    if (data === undefined) {
+        console.log(JSON.stringify(str, null, 2));
+    } else {
+        console.log(`${str}: ${JSON.stringify(data, null, 2)}`);
+    }
+}
+
 export function apiLogSuccess(response) {
     console.log("✅ Success:", response.data);
 }

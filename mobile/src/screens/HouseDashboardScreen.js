@@ -6,10 +6,12 @@ import * as Notifications from 'expo-notifications';
 import { registerForPushNotificationsAsync, configureAndroidChannel } from '../utils/notifications';
 
 import api from '../utils/api';
+import { apiLogSuccess, apiLogError, jsonLog } from "../utils/loggers";
 import MonthCalendar from "../components/MonthCalendar";
 import CheckBox from "../components/CheckBox";
-import OccurrenceLongPressModal from "../components/modals/OccurrenceLongPressModal";
 import CreateChoreModal from "../components/modals/CreateChoreModal";
+import OccurrenceLongPressModal from "../components/modals/OccurrenceLongPressModal";
+import OccurrenceEditModal from "../components/modals/OccurrenceEditModal";
 
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
@@ -36,9 +38,12 @@ export default function HouseDashboardScreen({ navigation, route }) {
     const [selectedChore, setSelectedChore] = useState();
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [repeatDelta, setRepeatDelta] = useState({days: 7});
+    const [newUser, setNewUser] = useState();
 
     const [occLongPressModalVisible, setOccLongPressModalVisible] = useState(false);
     const [selectedOcc, setSelectedOcc] = useState();
+
+    const [occurrenceEditModalVisible, setOccurrenceEditModalVisible] = useState(false);
 
     const [expandedOccId, setExpandedOccId] = useState(null);
 
@@ -80,6 +85,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
         try {
             const res = await api.get(`house/${house.id}/details/`);
             setHouse(res.data);
+            // jsonLog(res.data.schedules);
         } catch (err) {
             setError("Failed to fetch house");
         }
@@ -260,7 +266,16 @@ export default function HouseDashboardScreen({ navigation, route }) {
                 visible={occLongPressModalVisible}
                 occurrence={selectedOcc}
                 onClose={() => setOccLongPressModalVisible(false)}
-                onEdit={handleEditOccurrence}
+                onEdit={() => {
+                    setNewChoreName(selectedOcc.chore.name);
+                    setNewChoreDescription(selectedOcc.chore.description);
+                    setNewChoreColor(selectedOcc.chore.color);
+                    setOccurrenceEditModalVisible(true);
+                    const schedule = house.schedules.find(s => s.id === selectedOcc.schedule);
+                    setRepeatDelta(schedule.repeat_delta);
+                    const user = house.members.find(m => m.id === schedule.user);
+                    setSelectedMember(user);
+                }}
                 onDelete={handleDeleteOccurrence}
             />
 
@@ -280,6 +295,26 @@ export default function HouseDashboardScreen({ navigation, route }) {
                 setSelectedMember={setSelectedMember}
                 repeatDelta={repeatDelta}
                 setRepeatDelta={setRepeatDelta}
+            />
+
+            {/* Edit Occurrence Modal */}
+            <OccurrenceEditModal
+                visible={occurrenceEditModalVisible}
+                onClose={() => {setOccurrenceEditModalVisible(false); setChoreModalVisible(false);}}
+                onCreate={handleEditOccurrence}
+                choreName={newChoreName}
+                setChoreName={setNewChoreName}
+                choreDescription={newChoreDescription}
+                setChoreDescription={setNewChoreDescription}
+                choreColor={newChoreColor}
+                setChoreColor={setNewChoreColor}
+                members={house?.members || []}
+                selectedMember={selectedMember}
+                setSelectedMember={setSelectedMember}
+                repeatDelta={repeatDelta}
+                setRepeatDelta={setRepeatDelta}
+                newUser={newUser}
+                setNewUser={setNewUser}
             />
         </View>
     );

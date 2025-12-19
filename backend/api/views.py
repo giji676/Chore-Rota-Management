@@ -143,11 +143,16 @@ class HouseDetailsView(APIView):
             .filter(schedule__chore__house=house)
             .select_related("schedule", "schedule__chore", "schedule__user")
         )
-
         occurrences_data = ChoreOccurrenceSerializer(occurrences, many=True).data
-
-        # Add occurrences to the output
         house_data["occurrences"] = occurrences_data
+
+        schedules = (
+            ChoreSchedule.objects
+            .filter(chore__house=house)
+            .select_related("chore", "user")
+        )
+        schedules_data = ChoreScheduleSerializer(schedules, many=True).data
+        house_data["schedules"] = schedules_data
 
         return Response(house_data, status=status.HTTP_200_OK)
 
