@@ -285,8 +285,11 @@ class ChoreOccurrenceManagementView(APIView):
             house=occurrence.schedule.chore.house,
             user=user)
 
-        if house_member.role != "owner":
-            return Response({"error": "Only the owner can perform this action"}, status=status.HTTP_403_FORBIDDEN)
+        if house_member.role != "owner" and user.id != occurrence.schedule.user.id:
+            return Response(
+                {"error": "Only the owner can perform this action"},
+                status=status.HTTP_403_FORBIDDEN
+            )
 
         allowed_fields = ["due_date", "completed"]
 
@@ -307,7 +310,7 @@ class ChoreOccurrenceManagementView(APIView):
             house=occurrence.schedule.chore.house,
             user=user)
 
-        if house_member.role != "owner":
+        if house_member.role != "owner" and user.id != occurrence.schedule.user.id:
             return Response(
                 {"error": "Only the owner can perform this action"},
                 status=status.HTTP_403_FORBIDDEN

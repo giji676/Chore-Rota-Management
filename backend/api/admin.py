@@ -10,7 +10,7 @@ class HouseAdmin(admin.ModelAdmin):
 class HouseMemberAdmin(admin.ModelAdmin):
     list_display = ("id", "user", "house", "role", "joined_at")
     list_filter = ("role", "house")
-    search_fields = ("user__username",)
+    search_fields = ("user__first_name",)
 
 @admin.register(Chore)
 class ChoreAdmin(admin.ModelAdmin):
@@ -22,7 +22,7 @@ class ChoreAdmin(admin.ModelAdmin):
 class ChoreScheduleAdmin(admin.ModelAdmin):
     list_display = ("id", "chore", "user", "start_date", "repeat_label")
     list_filter = ("chore__house", "user")
-    search_fields = ("chore__name", "user__username")
+    search_fields = ("chore__name", "user__first_name")
     readonly_fields = ("repeat_label",)
 
 @admin.register(ChoreOccurrence)
@@ -37,4 +37,4 @@ class ChoreOccurrenceAdmin(admin.ModelAdmin):
         "notification_sent_at",
     )
     list_filter = ("schedule__chore__house", "schedule__user", "completed", "notification_sent")
-    search_fields = ("schedule__chore__name", "schedule__user__username")
+    search_fields = ("schedule__chore__name", "schedule__user__first_name")

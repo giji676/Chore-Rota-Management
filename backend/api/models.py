@@ -74,7 +74,7 @@ class HouseMember(models.Model):
         unique_together = ("user", "house")
 
     def __str__(self):
-        return f"{self.user.username} in {self.house.name}"
+        return f"{self.user.first_name}.{self.user.last_name[0]} in {self.house.name}"
 
 class Chore(models.Model):
     house = models.ForeignKey(House, on_delete=models.CASCADE, related_name="chores")
@@ -121,7 +121,7 @@ class ChoreSchedule(models.Model):
         return last_datetime + self.delta
 
     def __str__(self):
-        return f"{self.chore.name} for {self.user.username} ({self.repeat_label})"
+        return f"{self.user.first_name}.{self.user.last_name[0]} ({self.repeat_label})"
 
     class Meta:
         unique_together = ("chore", "user")
@@ -159,6 +159,6 @@ class ChoreOccurrence(models.Model):
     def __str__(self):
         return (
             f"{self.schedule.chore.name} "
-                f"for {self.schedule.user.username} "
+                f"for {self.schedule.user.first_name}.{self.schedule.user.last_name[0]} "
                 f"on {self.due_date.date()}"
         )

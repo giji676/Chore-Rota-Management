@@ -114,8 +114,21 @@ export default function HouseDashboardScreen({ navigation, route }) {
     };
 
     const handleDeleteOccurrence = async (occ) => {
-        await api.delete(`occurrences/${occ.id}/delete/`);
-        fetchHouse();
+        try {
+            const res = await api.delete(`occurrences/${occ.id}/delete/`);
+            console.log("Deleted:", res.data);
+        } catch (err) {
+            if (err.response) {
+                // Server responded with 4xx/5xx
+                console.log("Status:", err.response.status);
+                console.log("Error data:", err.response.data);
+            } else {
+                // Network / Axios / JS error
+                console.log("Error message:", err.message);
+            }
+        } finally {
+            fetchHouse();
+        }
     };
 
     const handleEditOccurrence = async (occ) => {
