@@ -55,7 +55,138 @@ def send_push_notification(user, title, body):
         "Content-Type": "application/json"
     })
 
-class ChoreAndScheduleView(APIView):
+class OccurrenceUpdateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @transaction.atomic
+    def post(self, request):
+        user = request.user
+        data = request.data
+
+        # ---- IDs ----
+        house_id = data.get("house_id")
+        chore_id = data.get("chore_id")
+        schedule_id = data.get("schedule_id")
+        occurrence_id = data.get("occurrence_id")
+
+        # ---- Chore fields ----
+        chore_name = data.get("chore_name")
+        chore_description = data.get("chore_description")
+        chore_color = data.get("chore_color")
+
+        # ---- Schedule fields ----
+        assignee_id = data.get("assignee_id")
+        start_date = data.get("start_date")
+        repeat_delta = data.get("repeat_delta")
+
+        # ---- Occurrence fields ----
+        due_date = data.get("due_date")
+        completed = data.get("completed")
+
+        # ---- Load objects (scoped & safe) ----
+        house = get_object_or_404(House, id=house_id)
+        house_member = get_object_or_404(HouseMember, house=house, user=user)
+
+        chore = get_object_or_404(
+            Chore,
+            id=chore_id,
+            house=house
+        )
+
+        schedule = get_object_or_404(
+            ChoreSchedule,
+            id=schedule_id,
+            chore=chore
+        )
+
+        occurrence = get_object_or_404(
+            ChoreOccurrence,
+            id=occurrence_id,
+            schedule=schedule
+        )
+
+        # ---- Permissions ----
+        if schedule.user != user and house_member.role != "owner":
+            return Response(
+                {"error": "Only owner can edit chores assigned to others"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # ======================
+        # Update Chore
+        # ======================
+        if chore_name is not None:
+            chore.name = chore_name
+
+        if chore_description is not None:
+            chore.description = chore_description
+
+        if chore_color is not None:
+            chore.color = chore_color
+
+        chore.save()
+
+        # ======================
+        # Update Schedule
+        # ======================
+        assignee = schedule.user
+        if assignee_id:
+            assignee_member = get_object_or_404(
+                HouseMember,
+                house=house,
+                user_id=assignee_id
+            )
+            assignee = assignee_member.user
+
+        if start_date:
+            start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
+
+        assignee_changed = assignee != schedule.user
+
+        if assignee_changed:
+            # ---- Recreate schedule (identity change) ----
+            new_schedule = ChoreSchedule.objects.create(
+                chore=chore,
+                user=assignee,
+                start_date=start_date or schedule.start_date,
+                repeat_delta=repeat_delta if repeat_delta is not None else schedule.repeat_delta,
+            )
+
+            # move occurrence to new schedule
+            occurrence.schedule = new_schedule
+            schedule.delete()
+            schedule = new_schedule
+        else:
+            # ---- Update schedule in place ----
+            if start_date:
+                schedule.start_date = start_date
+
+            if repeat_delta is not None:
+                schedule.repeat_delta = repeat_delta
+
+            schedule.save()
+
+        # ======================
+        # Update Occurrence
+        # ======================
+        if due_date:
+            occurrence.due_date = due_date
+
+        if completed is not None:
+            occurrence.completed = completed
+
+        occurrence.save()
+
+        return Response(
+            {
+                "chore": ChoreSerializer(chore).data,
+                "schedule": ChoreScheduleSerializer(schedule).data,
+                "occurrence": ChoreOccurrenceSerializer(occurrence).data,
+            },
+            status=status.HTTP_200_OK
+        )
+
+class SheduleCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
     @transaction.atomic

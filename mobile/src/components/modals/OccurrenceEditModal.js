@@ -17,6 +17,10 @@ export default function OccurrenceEditModal({
     setSelectedMember,
     repeatDelta,
     setRepeatDelta,
+    newStartDate,
+    setNewStartDate,
+    newCompleted,
+    setNewCompleted,
 }) {
     const repeatDeltaPresets = {
         "Don't repeat": {},
@@ -39,6 +43,10 @@ export default function OccurrenceEditModal({
             deriveCustomFromRepeatDelta(repeatDelta);
         }
     }, [repeatDelta]);
+
+    useEffect(() => {
+        console.log(selectedMember);
+    }, [selectedMember]);
 
     function findRepeatPresetKey(value, presets) {
         for (const [label, preset] of Object.entries(presets)) {
@@ -153,7 +161,7 @@ export default function OccurrenceEditModal({
                             <Picker.Item
                                 key={member.id}
                                 label={member.label}
-                                value={member.id}
+                                value={member}
                             />
                         ))}
                     </Picker>

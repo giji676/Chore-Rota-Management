@@ -38,7 +38,8 @@ export default function HouseDashboardScreen({ navigation, route }) {
     const [selectedChore, setSelectedChore] = useState();
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [repeatDelta, setRepeatDelta] = useState({days: 7});
-    const [newUser, setNewUser] = useState();
+    const [newStartDate, setNewStartDate] = useState();
+    const [newCompleted, setNewCompleted] = useState();
 
     const [occLongPressModalVisible, setOccLongPressModalVisible] = useState(false);
     const [selectedOcc, setSelectedOcc] = useState();
@@ -131,6 +132,21 @@ export default function HouseDashboardScreen({ navigation, route }) {
     };
 
     const handleEditOccurrence = async (occ) => {
+        console.log(house.id);
+        console.log(occ.chore.id);
+        console.log(occ.schedule);
+        console.log(occ.id);
+
+        console.log(newChoreName);
+        console.log(newChoreDescription);
+        console.log(newChoreColor);
+
+        console.log(selectedMember.id);
+        console.log(newStartDate);
+        console.log(repeatDelta);
+
+        console.log(newCompleted);
+        console.log();
     };
 
     const handleCreateChore = async () => {
@@ -301,7 +317,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
             <OccurrenceEditModal
                 visible={occurrenceEditModalVisible}
                 onClose={() => {setOccurrenceEditModalVisible(false); setChoreModalVisible(false);}}
-                onCreate={handleEditOccurrence}
+                onCreate={() => handleEditOccurrence(selectedOcc)}
                 choreName={newChoreName}
                 setChoreName={setNewChoreName}
                 choreDescription={newChoreDescription}
@@ -313,8 +329,10 @@ export default function HouseDashboardScreen({ navigation, route }) {
                 setSelectedMember={setSelectedMember}
                 repeatDelta={repeatDelta}
                 setRepeatDelta={setRepeatDelta}
-                newUser={newUser}
-                setNewUser={setNewUser}
+                newStartDate={newStartDate}
+                setNewStartDate={setNewStartDate}
+                newCompleted={newCompleted}
+                setNewCompleted={setNewCompleted}
             />
         </View>
     );
