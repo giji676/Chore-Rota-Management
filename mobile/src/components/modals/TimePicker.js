@@ -13,8 +13,6 @@ import {
 import InfiniteScroller from "../InfiniteScroller";
 
 export default function TimePicker({onCancel, onSave, selectedDate, setSelectedDate}) {
-    const [selectedMins, setSelectedMins] = useState(0);
-    const [selectedHours, setSelectedHours] = useState(12);
     const scrollView = true;
 
     const minsArray = Array.from({ length: 60 }, (_, i) =>
@@ -24,13 +22,6 @@ export default function TimePicker({onCancel, onSave, selectedDate, setSelectedD
     const hoursArray = Array.from({ length: 24 }, (_, i) =>
         String(i).padStart(2, "0")
     );
-
-    useEffect(() => {
-        const year = selectedDate.getFullYear();
-        const month = selectedDate.getMonth();
-        const day = selectedDate.getDate();
-        setSelectedDate(new Date(year, month, day, selectedHours, selectedMins));
-    }, [selectedMins, selectedHours]);
 
     return (
         <View style={styles.overlay}>
@@ -53,7 +44,7 @@ export default function TimePicker({onCancel, onSave, selectedDate, setSelectedD
                         <View style={styles.timeRow}>
                             <InfiniteScroller
                                 inputArray={hoursArray}
-                                initialIndex={12 - 1}
+                                initialIndex={selectedDate.getHours()}
                                 visibleCount={3}
                                 onItemChange={(hour) => {
                                     setSelectedDate(prev =>
@@ -72,7 +63,7 @@ export default function TimePicker({onCancel, onSave, selectedDate, setSelectedD
                             </View>
                             <InfiniteScroller
                                 inputArray={minsArray}
-                                initialIndex={1 - 1}
+                                initialIndex={selectedDate.getMinutes()}
                                 visibleCount={3}
                                 onItemChange={(minute) => {
                                     setSelectedDate(prev =>

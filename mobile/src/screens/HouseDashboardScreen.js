@@ -63,7 +63,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
                     await api.post("accounts/push-token/", { token });
                 }
             } catch (err) {
-                console.log("Notification init error:", err);
+                // console.log("Notification init error:", err);
             }
         }
         initNotifications();
@@ -288,6 +288,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
                     setRepeatDelta(schedule.repeat_delta);
                     const user = house.members.find(m => m.id === schedule.user);
                     setSelectedMember(user);
+                    setSelectedDate(new Date(selectedOcc.due_date));
                 }}
                 onDelete={handleDeleteOccurrence}
             />

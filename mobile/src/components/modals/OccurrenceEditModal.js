@@ -48,10 +48,6 @@ export default function OccurrenceEditModal({
         }
     }, [repeatDelta]);
 
-    useEffect(() => {
-        // console.log(selectedMember);
-    }, [selectedMember]);
-
     function findRepeatPresetKey(value, presets) {
         for (const [label, preset] of Object.entries(presets)) {
             if (preset === "custom") continue;
@@ -199,6 +195,19 @@ export default function OccurrenceEditModal({
                             />
                         </View>
                     )}
+                    <View style={styles.displayDateTimeContainer}>
+                        <View style={styles.displayDateTime}>
+                            <Text style={{ textAlign: "center" }}>
+                                {selectedDate.toLocaleString("en-GB", {
+                                    day: "2-digit",
+                                    month: "2-digit",
+                                    year: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                })}
+                            </Text>
+                        </View>
+                    </View>
 
                     <View>
                         <Picker selectedValue={repeatDeltaLabel} onValueChange={onChangePicker}>
@@ -317,5 +326,20 @@ const styles = StyleSheet.create({
     },
     selectDateTimeBtns: {
         flex: 1,
+    },
+    displayDateTimeContainer: {
+        margin: 6,
+        flexShrink: 0,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    displayDateTime: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 50,
+        backgroundColor: "#ccc",
+        borderWidth: 1,
+        borderColor: "#aaa",
+        alignSelf: "center",
     },
 });
