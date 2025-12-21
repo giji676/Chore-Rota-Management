@@ -8,6 +8,7 @@ import { registerForPushNotificationsAsync, configureAndroidChannel } from '../u
 import api from '../utils/api';
 import { apiLogSuccess, apiLogError, jsonLog } from "../utils/loggers";
 import MonthCalendar from "../components/MonthCalendar";
+import DayPicker from "../components/modals/DayPicker";
 import CheckBox from "../components/CheckBox";
 import CreateChoreModal from "../components/modals/CreateChoreModal";
 import OccurrenceLongPressModal from "../components/modals/OccurrenceLongPressModal";
@@ -36,7 +37,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
     const [selectedMinute, setSelectedMinute] = useState(30);
     const [selectedMember, setSelectedMember] = useState('');
     const [selectedChore, setSelectedChore] = useState();
-    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+    const [selectedDate, setSelectedDate] = useState(new Date());
     const [repeatDelta, setRepeatDelta] = useState({days: 7});
     const [newStartDate, setNewStartDate] = useState();
     const [newCompleted, setNewCompleted] = useState();
@@ -131,6 +132,10 @@ export default function HouseDashboardScreen({ navigation, route }) {
         }
     };
 
+    const doStuff = (stuff) => {
+        // console.log("stuff", stuff);
+    };
+
     const handleEditOccurrence = async (occ) => {
         console.log(house.id);
         console.log(occ.chore.id);
@@ -161,7 +166,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
                 description: newChoreDescription,
                 color: newChoreColor,
                 assignee_id: selectedMember,
-                start_date: selectedDate,
+                start_date: selectedDate.toISOString().split('T')[0],
                 repeat_delta: repeatDelta
             });
             fetchHouse();
@@ -205,6 +210,10 @@ export default function HouseDashboardScreen({ navigation, route }) {
 
     return (
         <View style={styles.container}>
+            <DayPicker
+                selectedDate={selectedDate}
+                setSelectedDate={setSelectedDate}
+            />
             <View>
                 <MonthCalendar
                     occurrences={house.occurrences}

@@ -168,7 +168,6 @@ const styles = StyleSheet.create({
         width: 40,
         alignItems: "center",
     },
-
     monthHeader: {
         flex: 1,
         textAlign: "center",
