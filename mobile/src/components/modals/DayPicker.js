@@ -85,13 +85,13 @@ export default function DayPicker({selectedDate, setSelectedDate}) {
                             </TouchableOpacity>
                         </View>
                     </View>
-                    <View>
+                    <View style={styles.body}>
                         {scrollView ? (
                             <View style={{flexDirection: "row", justifyContent: "space-between"}}>
                                 <InfiniteScroller
                                     inputArray={daysArray}
                                     initialIndex={selectedDay - 1}
-                                    // visibleCount={3}
+                                    visibleCount={3}
                                     onItemChange={(value) =>
                                         setSelectedDate(new Date(selectedYear, selectedMonth, value))
                                     }
@@ -99,7 +99,7 @@ export default function DayPicker({selectedDate, setSelectedDate}) {
                                 <InfiniteScroller
                                     inputArray={monthsArray}
                                     initialIndex={selectedMonth}
-                                    // visibleCount={3}
+                                    visibleCount={3}
                                     onItemChange={(value) =>
                                         setSelectedDate(new Date(
                                             selectedYear, monthsArray.indexOf(value), selectedDay))
@@ -108,7 +108,7 @@ export default function DayPicker({selectedDate, setSelectedDate}) {
                                 <InfiniteScroller
                                     inputArray={yearsArray}
                                     initialIndex={yearsArray.indexOf(selectedYear)}
-                                    // visibleCount={3}
+                                    visibleCount={3}
                                     onItemChange={(value) =>
                                         setSelectedDate(new Date(value, selectedMonth, selectedDay))
                                     }
@@ -157,27 +157,6 @@ export default function DayPicker({selectedDate, setSelectedDate}) {
     );
 }
 
-const wheelStyle = StyleSheet.create({
-    container: {
-        height: ITEM_HEIGHT * 5,
-        width: 80,
-        alignItems: "center",
-    },
-    item: {
-        height: ITEM_HEIGHT,
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    indicator: {
-        position: "absolute",
-        top: ITEM_HEIGHT * 2,
-        height: ITEM_HEIGHT,
-        width: "100%",
-        borderTopWidth: 1,
-        borderBottomWidth: 1,
-    },
-});
-
 const styles = StyleSheet.create({
     overlay: {
         flex: 1,
@@ -190,11 +169,13 @@ const styles = StyleSheet.create({
         maxWidth: 400,
         flexShrink: 0,
         backgroundColor: "#fff",
+        borderRadius: 12,
     },
     titleRow: {
         flexDirection: "row",
         alignItems: "center",
         width: "100%",
+        padding: 6,
     },
     title: {
         flex: 1,
@@ -202,19 +183,29 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
         textAlign: "center",
     },
+    body: {
+        padding: 5,
+        marginBottom: 5,
+    },
     weekRow: {
         flexDirection: "row",
     },
     dayCell: {
+        padding: 3,
         width: `${100 / 7}%`,
         alignItems: "center",
+        justifyContent: "center",
     },
     dayText: {
+        padding: 5,
+        aspectRatio: 1,
         borderWidth: 1,
         borderColor: "transparent",
+        borderRadius: 50,
+        textAlign: "center",
     },
     todaysCell: {
-        backgroundColor: "#666",
+        backgroundColor: "#999",
         color: "#fff",
     },
     selectedCell: {
