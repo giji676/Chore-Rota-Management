@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { View, Text, Modal, TextInput, Button, StyleSheet } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 
+import DayPicker from "./DayPicker";
+
 export default function OccurrenceEditModal({
     visible,
     onClose,
@@ -34,6 +36,7 @@ export default function OccurrenceEditModal({
     const [repeatDeltaLabel, setRepeatDeltaLabel] = useState();
     const [customNum, setCustomNum] = useState("1");
     const [customUnit, setCustomUnit] = useState("day");
+    const [selectDate, setSelectDate] = useState(false);
 
     useEffect(() => {
         const label = findRepeatPresetKey(repeatDelta, repeatDeltaPresets);
@@ -45,7 +48,7 @@ export default function OccurrenceEditModal({
     }, [repeatDelta]);
 
     useEffect(() => {
-        console.log(selectedMember);
+        // console.log(selectedMember);
     }, [selectedMember]);
 
     function findRepeatPresetKey(value, presets) {
@@ -114,6 +117,10 @@ export default function OccurrenceEditModal({
         return {};
     };
 
+    const handleSelectDate = () => {
+        setSelectDate(prev => !prev);
+    };
+
     return (
         <Modal
             visible={visible}
@@ -165,6 +172,18 @@ export default function OccurrenceEditModal({
                             />
                         ))}
                     </Picker>
+                    {selectDate ? (
+                        <View style={styles.dayPickerOverlay}>
+                            <DayPicker
+                                selectedDate={newStartDate}
+                                setSelectedDate={setNewStartDate}
+                                onCancel={() => setSelectDate(false)}
+                                onSave={() => setSelectDate(false)}
+                            />
+                        </View>
+                    ) : (
+                            <Button title="Set Date" onPress={handleSelectDate} />
+                        )}
 
                     <View>
                         <Picker selectedValue={repeatDeltaLabel} onValueChange={onChangePicker}>
@@ -273,5 +292,9 @@ const styles = StyleSheet.create({
     },
     unitPicker: {
         flex: 1,
+    },
+    dayPickerOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        zIndex: 100,
     },
 });

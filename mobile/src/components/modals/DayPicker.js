@@ -15,7 +15,8 @@ import InfiniteScroller from "../InfiniteScroller";
 const ITEM_HEIGHT = 40;
 const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
 
-export default function DayPicker({selectedDate, setSelectedDate}) {
+export default function DayPicker({onCancel, onSave, selectedDate, setSelectedDate}) {
+    // if (!selectedDate) setSelectedDate(new Date());
     const todaysDate = new Date();
 
     const selectedYear = selectedDate.getFullYear();
@@ -70,90 +71,96 @@ export default function DayPicker({selectedDate, setSelectedDate}) {
     const daysArray = Array.from({ length: 31 }, (_, i) => i + 1);
 
     return (
-        <Modal>
-            <View style={styles.overlay}>
-                <View style={styles.modal}>
+        <View style={styles.overlay}>
+            <View style={styles.modal}>
+                <View>
                     <View>
-                        <View>
-                            <TouchableOpacity
-                                style={styles.titleRow}
-                                onPress={handleViewToggle}
-                            >
-                                <Text style={styles.title}>
-                                    {selectedMonthStr} {selectedYear}
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
+                        <TouchableOpacity
+                            style={styles.titleRow}
+                            onPress={handleViewToggle}
+                        >
+                            <Text style={styles.title}>
+                                {selectedMonthStr} {selectedYear}
+                            </Text>
+                        </TouchableOpacity>
                     </View>
-                    <View style={styles.body}>
-                        {scrollView ? (
-                            <View style={{flexDirection: "row", justifyContent: "space-between"}}>
-                                <InfiniteScroller
-                                    inputArray={daysArray}
-                                    initialIndex={selectedDay - 1}
-                                    visibleCount={3}
-                                    onItemChange={(value) =>
-                                        setSelectedDate(new Date(selectedYear, selectedMonth, value))
-                                    }
-                                />
-                                <InfiniteScroller
-                                    inputArray={monthsArray}
-                                    initialIndex={selectedMonth}
-                                    visibleCount={3}
-                                    onItemChange={(value) =>
-                                        setSelectedDate(new Date(
-                                            selectedYear, monthsArray.indexOf(value), selectedDay))
-                                    }
-                                />
-                                <InfiniteScroller
-                                    inputArray={yearsArray}
-                                    initialIndex={yearsArray.indexOf(selectedYear)}
-                                    visibleCount={3}
-                                    onItemChange={(value) =>
-                                        setSelectedDate(new Date(value, selectedMonth, selectedDay))
-                                    }
-                                />
-                            </View>
-                        ) : (
-                                rows.map((week, rowIndex) => (
-                                    <View key={rowIndex} style={styles.weekRow}>
-                                        {week.map((date, col) => {
-                                            if (!date) {
-                                                return <View key={col} style={styles.dayCell} />;
-                                            }
-                                            const key = date.toISOString().split("T")[0];
-                                            const isSelected = date.getDate() === selectedDay;
-                                            const isToday = key === todaysDate.toISOString().split("T")[0];
+                </View>
+                <View style={styles.body}>
+                    {scrollView ? (
+                        <View style={{flexDirection: "row", justifyContent: "space-between"}}>
+                            <InfiniteScroller
+                                inputArray={daysArray}
+                                initialIndex={selectedDay - 1}
+                                visibleCount={3}
+                                onItemChange={(value) =>
+                                    setSelectedDate(new Date(selectedYear, selectedMonth, value))
+                                }
+                            />
+                            <InfiniteScroller
+                                inputArray={monthsArray}
+                                initialIndex={selectedMonth}
+                                visibleCount={3}
+                                onItemChange={(value) =>
+                                    setSelectedDate(new Date(
+                                        selectedYear, monthsArray.indexOf(value), selectedDay))
+                                }
+                            />
+                            <InfiniteScroller
+                                inputArray={yearsArray}
+                                initialIndex={yearsArray.indexOf(selectedYear)}
+                                visibleCount={3}
+                                onItemChange={(value) =>
+                                    setSelectedDate(new Date(value, selectedMonth, selectedDay))
+                                }
+                            />
+                        </View>
+                    ) : (
+                            rows.map((week, rowIndex) => (
+                                <View key={rowIndex} style={styles.weekRow}>
+                                    {week.map((date, col) => {
+                                        if (!date) {
+                                            return <View key={col} style={styles.dayCell} />;
+                                        }
+                                        const key = date.toISOString().split("T")[0];
+                                        const isSelected = date.getDate() === selectedDay;
+                                        const isToday = key === todaysDate.toISOString().split("T")[0];
 
-                                            return (
-                                                <TouchableOpacity
-                                                    key={key}
-                                                    onPress={() => {
-                                                        setSelectedDate(date);
-                                                    }}
+                                        return (
+                                            <TouchableOpacity
+                                                key={key}
+                                                onPress={() => {
+                                                    setSelectedDate(date);
+                                                }}
+                                                style={[
+                                                    styles.dayCell,
+                                                ]}
+                                            >
+                                                <Text
                                                     style={[
-                                                        styles.dayCell,
+                                                        styles.dayText,
+                                                        isSelected && styles.selectedCell,
+                                                        isToday && styles.todaysCell,
                                                     ]}
                                                 >
-                                                    <Text
-                                                        style={[
-                                                            styles.dayText,
-                                                            isSelected && styles.selectedCell,
-                                                            isToday && styles.todaysCell,
-                                                        ]}
-                                                    >
-                                                        {date.getDate()}
-                                                    </Text>
-                                                </TouchableOpacity>
-                                            );
-                                        })}
-                                    </View>
-                                ))
-                            )}
+                                                    {date.getDate()}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        );
+                                    })}
+                                </View>
+                            ))
+                        )}
+                    <View style={styles.footerButtons}>
+                        <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={onCancel}>
+                            <Text style={styles.buttonText}>Cancel</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.button, styles.saveButton]} onPress={onSave}>
+                            <Text style={styles.buttonText}>Done</Text>
+                        </TouchableOpacity>
                     </View>
                 </View>
             </View>
-        </Modal>
+        </View>
     );
 }
 
@@ -176,6 +183,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
         width: "100%",
         padding: 6,
+        marginTop: 6,
     },
     title: {
         flex: 1,
@@ -210,5 +218,26 @@ const styles = StyleSheet.create({
     },
     selectedCell: {
         borderColor: "#444",
+    },
+    footerButtons: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        paddingHorizontal: 10,
+    },
+    button: {
+        flex: 1,
+        paddingVertical: 12,
+        borderRadius: 8,
+        alignItems: "center",
+        marginHorizontal: 5,
+    },
+    cancelButton: {
+    },
+    saveButton: {
+    },
+    buttonText: {
+        fontSize: 18,
+        color: "#444",
+        fontWeight: "bold",
     },
 });

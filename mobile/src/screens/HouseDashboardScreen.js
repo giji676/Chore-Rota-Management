@@ -8,7 +8,6 @@ import { registerForPushNotificationsAsync, configureAndroidChannel } from '../u
 import api from '../utils/api';
 import { apiLogSuccess, apiLogError, jsonLog } from "../utils/loggers";
 import MonthCalendar from "../components/MonthCalendar";
-import DayPicker from "../components/modals/DayPicker";
 import CheckBox from "../components/CheckBox";
 import CreateChoreModal from "../components/modals/CreateChoreModal";
 import OccurrenceLongPressModal from "../components/modals/OccurrenceLongPressModal";
@@ -39,7 +38,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
     const [selectedChore, setSelectedChore] = useState();
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [repeatDelta, setRepeatDelta] = useState({days: 7});
-    const [newStartDate, setNewStartDate] = useState();
+    const [newStartDate, setNewStartDate] = useState(new Date());
     const [newCompleted, setNewCompleted] = useState();
 
     const [occLongPressModalVisible, setOccLongPressModalVisible] = useState(false);
@@ -210,10 +209,6 @@ export default function HouseDashboardScreen({ navigation, route }) {
 
     return (
         <View style={styles.container}>
-            <DayPicker
-                selectedDate={selectedDate}
-                setSelectedDate={setSelectedDate}
-            />
             <View>
                 <MonthCalendar
                     occurrences={house.occurrences}
