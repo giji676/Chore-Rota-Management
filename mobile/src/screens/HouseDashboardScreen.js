@@ -38,7 +38,6 @@ export default function HouseDashboardScreen({ navigation, route }) {
     const [selectedChore, setSelectedChore] = useState();
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [repeatDelta, setRepeatDelta] = useState({days: 7});
-    const [newStartDate, setNewStartDate] = useState(new Date());
     const [newCompleted, setNewCompleted] = useState();
 
     const [occLongPressModalVisible, setOccLongPressModalVisible] = useState(false);
@@ -131,10 +130,6 @@ export default function HouseDashboardScreen({ navigation, route }) {
         }
     };
 
-    const doStuff = (stuff) => {
-        // console.log("stuff", stuff);
-    };
-
     const handleEditOccurrence = async (occ) => {
         console.log(house.id);
         console.log(occ.chore.id);
@@ -146,10 +141,8 @@ export default function HouseDashboardScreen({ navigation, route }) {
         console.log(newChoreColor);
 
         console.log(selectedMember.id);
-        console.log(newStartDate);
         console.log(repeatDelta);
-
-        console.log(newCompleted);
+        console.log(selectedDate);
         console.log();
     };
 
@@ -333,8 +326,8 @@ export default function HouseDashboardScreen({ navigation, route }) {
                 setSelectedMember={setSelectedMember}
                 repeatDelta={repeatDelta}
                 setRepeatDelta={setRepeatDelta}
-                newStartDate={newStartDate}
-                setNewStartDate={setNewStartDate}
+                selectedDate={selectedDate}
+                setSelectedDate={setSelectedDate}
                 newCompleted={newCompleted}
                 setNewCompleted={setNewCompleted}
             />

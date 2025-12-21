@@ -1,40 +1,29 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import {
     View,
     Text,
-    Modal,
-    Button,
-    Animated,
-    StyleSheet,
-    PanResponder,
     TouchableOpacity,
+    StyleSheet,
+    Animated,
 } from "react-native";
-
 import InfiniteScroller from "../InfiniteScroller";
 
-const ITEM_HEIGHT = 40;
-const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
-
-export default function DayPicker({onCancel, onSave, selectedDate, setSelectedDate}) {
-    // if (!selectedDate) setSelectedDate(new Date());
+export default function DayPicker({ onCancel, onSave, selectedDate, setSelectedDate }) {
     const todaysDate = new Date();
 
     const selectedYear = selectedDate.getFullYear();
     const selectedMonth = selectedDate.getMonth();
     const selectedDay = selectedDate.getDate();
-    const selectedMonthStr = selectedDate.toLocaleString("default", {
-        month: "long",
-    });
+    const selectedMonthStr = selectedDate.toLocaleString("default", { month: "long" });
 
     const [scrollView, setScrollView] = useState(false);
-
     const scrollY = useRef(new Animated.Value(0)).current;
 
     const monthDays = useMemo(() => {
-        let days = [];
         const firstDate = new Date(selectedYear, selectedMonth, 1);
         const lastDate = new Date(selectedYear, selectedMonth + 1, 0);
 
+        let days = [];
         let startDay = firstDate.getDay();
         if (startDay === 0) startDay = 7;
         const emptyBefore = startDay - 1;
@@ -43,7 +32,6 @@ export default function DayPicker({onCancel, onSave, selectedDate, setSelectedDa
         for (let d = 1; d <= lastDate.getDate(); d++) {
             days.push(new Date(selectedYear, selectedMonth, d));
         }
-
         return days;
     }, [selectedYear, selectedMonth]);
 
@@ -52,9 +40,7 @@ export default function DayPicker({onCancel, onSave, selectedDate, setSelectedDa
         rows.push(monthDays.slice(i, i + 7));
     }
 
-    const handleViewToggle = () => {
-        setScrollView(prev => !prev);
-    }
+    const handleViewToggle = () => setScrollView(prev => !prev);
 
     const currentYear = todaysDate.getFullYear();
     const startYear = currentYear - 100;
@@ -73,18 +59,14 @@ export default function DayPicker({onCancel, onSave, selectedDate, setSelectedDa
     return (
         <View style={styles.overlay}>
             <View style={styles.modal}>
-                <View>
-                    <View>
-                        <TouchableOpacity
-                            style={styles.titleRow}
-                            onPress={handleViewToggle}
-                        >
-                            <Text style={styles.title}>
-                                {selectedMonthStr} {selectedYear}
-                            </Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
+                {/* Title */}
+                <TouchableOpacity style={styles.titleRow} onPress={handleViewToggle}>
+                    <Text style={styles.title}>{selectedMonthStr} {selectedYear}</Text>
+                </TouchableOpacity>
+
+                <View style={styles.div}/>
+
+                {/* Body */}
                 <View style={styles.body}>
                     {scrollView ? (
                         <View style={{flexDirection: "row", justifyContent: "space-between"}}>
@@ -92,35 +74,50 @@ export default function DayPicker({onCancel, onSave, selectedDate, setSelectedDa
                                 inputArray={daysArray}
                                 initialIndex={selectedDay - 1}
                                 visibleCount={3}
-                                onItemChange={(value) =>
-                                    setSelectedDate(new Date(selectedYear, selectedMonth, value))
-                                }
+                                onItemChange={(day) => {
+                                    setSelectedDate(prev => new Date(
+                                        prev.getFullYear(),
+                                        prev.getMonth(),
+                                        day,
+                                        prev.getHours(),
+                                        prev.getMinutes()
+                                    ));
+                                }}
                             />
                             <InfiniteScroller
                                 inputArray={monthsArray}
                                 initialIndex={selectedMonth}
                                 visibleCount={3}
-                                onItemChange={(value) =>
-                                    setSelectedDate(new Date(
-                                        selectedYear, monthsArray.indexOf(value), selectedDay))
-                                }
+                                onItemChange={(_, index) => {
+                                    setSelectedDate(prev => new Date(
+                                        prev.getFullYear(),
+                                        index,
+                                        prev.getDate(),
+                                        prev.getHours(),
+                                        prev.getMinutes()
+                                    ));
+                                }}
                             />
                             <InfiniteScroller
                                 inputArray={yearsArray}
                                 initialIndex={yearsArray.indexOf(selectedYear)}
                                 visibleCount={3}
-                                onItemChange={(value) =>
-                                    setSelectedDate(new Date(value, selectedMonth, selectedDay))
-                                }
+                                onItemChange={(year) => {
+                                    setSelectedDate(prev => new Date(
+                                        year,
+                                        prev.getMonth(),
+                                        prev.getDate(),
+                                        prev.getHours(),
+                                        prev.getMinutes()
+                                    ));
+                                }}
                             />
                         </View>
                     ) : (
                             rows.map((week, rowIndex) => (
                                 <View key={rowIndex} style={styles.weekRow}>
                                     {week.map((date, col) => {
-                                        if (!date) {
-                                            return <View key={col} style={styles.dayCell} />;
-                                        }
+                                        if (!date) return <View key={col} style={styles.dayCell} />;
                                         const key = date.toISOString().split("T")[0];
                                         const isSelected = date.getDate() === selectedDay;
                                         const isToday = key === todaysDate.toISOString().split("T")[0];
@@ -128,20 +125,20 @@ export default function DayPicker({onCancel, onSave, selectedDate, setSelectedDa
                                         return (
                                             <TouchableOpacity
                                                 key={key}
-                                                onPress={() => {
-                                                    setSelectedDate(date);
-                                                }}
-                                                style={[
-                                                    styles.dayCell,
-                                                ]}
+                                                onPress={() => setSelectedDate(prev => new Date(
+                                                    prev.getFullYear(),
+                                                    prev.getMonth(),
+                                                    date.getDate(),
+                                                    prev.getHours(),
+                                                    prev.getMinutes()
+                                                ))}
+                                                style={styles.dayCell}
                                             >
-                                                <Text
-                                                    style={[
-                                                        styles.dayText,
-                                                        isSelected && styles.selectedCell,
-                                                        isToday && styles.todaysCell,
-                                                    ]}
-                                                >
+                                                <Text style={[
+                                                    styles.dayText,
+                                                    isSelected && styles.selectedCell,
+                                                    isToday && styles.todaysCell
+                                                ]}>
                                                     {date.getDate()}
                                                 </Text>
                                             </TouchableOpacity>
@@ -150,20 +147,23 @@ export default function DayPicker({onCancel, onSave, selectedDate, setSelectedDa
                                 </View>
                             ))
                         )}
-                    <View style={styles.footerButtons}>
-                        <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={onCancel}>
-                            <Text style={styles.buttonText}>Cancel</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.button, styles.saveButton]} onPress={onSave}>
-                            <Text style={styles.buttonText}>Done</Text>
-                        </TouchableOpacity>
-                    </View>
+                </View>
+
+                <View style={styles.div}/>
+
+                {/* Footer */}
+                <View style={styles.footerButtons}>
+                    <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={onCancel}>
+                        <Text style={styles.buttonText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.button, styles.saveButton]} onPress={onSave}>
+                        <Text style={styles.buttonText}>Done</Text>
+                    </TouchableOpacity>
                 </View>
             </View>
         </View>
     );
 }
-
 const styles = StyleSheet.create({
     overlay: {
         flex: 1,
@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
         width: "100%",
         padding: 6,
-        marginTop: 6,
+        paddingVertical: 12,
     },
     title: {
         flex: 1,
@@ -193,7 +193,6 @@ const styles = StyleSheet.create({
     },
     body: {
         padding: 5,
-        marginBottom: 5,
     },
     weekRow: {
         flexDirection: "row",
@@ -239,5 +238,11 @@ const styles = StyleSheet.create({
         fontSize: 18,
         color: "#444",
         fontWeight: "bold",
+    },
+    div: {
+        height: StyleSheet.hairlineWidth,
+        alignSelf: "stretch",
+        backgroundColor: "#aaa",
+        marginHorizontal: 10,
     },
 });

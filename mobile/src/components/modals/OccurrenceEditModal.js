@@ -3,6 +3,7 @@ import { View, Text, Modal, TextInput, Button, StyleSheet } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 
 import DayPicker from "./DayPicker";
+import TimePicker from "./TimePicker";
 
 export default function OccurrenceEditModal({
     visible,
@@ -19,8 +20,8 @@ export default function OccurrenceEditModal({
     setSelectedMember,
     repeatDelta,
     setRepeatDelta,
-    newStartDate,
-    setNewStartDate,
+    selectedDate,
+    setSelectedDate,
     newCompleted,
     setNewCompleted,
 }) {
@@ -36,7 +37,7 @@ export default function OccurrenceEditModal({
     const [repeatDeltaLabel, setRepeatDeltaLabel] = useState();
     const [customNum, setCustomNum] = useState("1");
     const [customUnit, setCustomUnit] = useState("day");
-    const [selectDate, setSelectDate] = useState(false);
+    const [pickerMode, setPickerMode] = useState(null);
 
     useEffect(() => {
         const label = findRepeatPresetKey(repeatDelta, repeatDeltaPresets);
@@ -117,10 +118,6 @@ export default function OccurrenceEditModal({
         return {};
     };
 
-    const handleSelectDate = () => {
-        setSelectDate(prev => !prev);
-    };
-
     return (
         <Modal
             visible={visible}
@@ -172,18 +169,36 @@ export default function OccurrenceEditModal({
                             />
                         ))}
                     </Picker>
-                    {selectDate ? (
+                    {pickerMode === null && (
+                        <View style={styles.selectDateTimeRow}>
+                            <View style={styles.selectDateTimeBtns}>
+                                <Button title="Set Date" onPress={() => setPickerMode("date")} />
+                            </View>
+                            <View style={styles.selectDateTimeBtns}>
+                                <Button title="Set Time" onPress={() => setPickerMode("time")} />
+                            </View>
+                        </View>
+                    )}
+                    {pickerMode === "date" && (
                         <View style={styles.dayPickerOverlay}>
                             <DayPicker
-                                selectedDate={newStartDate}
-                                setSelectedDate={setNewStartDate}
-                                onCancel={() => setSelectDate(false)}
-                                onSave={() => setSelectDate(false)}
+                                selectedDate={selectedDate}
+                                setSelectedDate={setSelectedDate}
+                                onCancel={() => setPickerMode(null)}
+                                onSave={() => setPickerMode(null)}
                             />
                         </View>
-                    ) : (
-                            <Button title="Set Date" onPress={handleSelectDate} />
-                        )}
+                    )}
+                    {pickerMode === "time" && (
+                        <View style={styles.dayPickerOverlay}>
+                            <TimePicker
+                                selectedDate={selectedDate}
+                                setSelectedDate={setSelectedDate}
+                                onCancel={() => setPickerMode(null)}
+                                onSave={() => setPickerMode(null)}
+                            />
+                        </View>
+                    )}
 
                     <View>
                         <Picker selectedValue={repeatDeltaLabel} onValueChange={onChangePicker}>
@@ -296,5 +311,11 @@ const styles = StyleSheet.create({
     dayPickerOverlay: {
         ...StyleSheet.absoluteFillObject,
         zIndex: 100,
+    },
+    selectDateTimeRow: {
+        flexDirection: "row",
+    },
+    selectDateTimeBtns: {
+        flex: 1,
     },
 });
