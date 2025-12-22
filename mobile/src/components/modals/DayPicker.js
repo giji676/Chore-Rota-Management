@@ -88,10 +88,10 @@ export default function DayPicker({ onCancel, onSave, selectedDate, setSelectedD
                                 inputArray={monthsArray}
                                 initialIndex={selectedMonth}
                                 visibleCount={3}
-                                onItemChange={(_, index) => {
+                                onItemChange={(month) => {
                                     setSelectedDate(prev => new Date(
                                         prev.getFullYear(),
-                                        index,
+                                        monthsArray.indexOf(month),
                                         prev.getDate(),
                                         prev.getHours(),
                                         prev.getMinutes()
