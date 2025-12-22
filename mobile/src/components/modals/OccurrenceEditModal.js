@@ -40,6 +40,15 @@ export default function OccurrenceEditModal({
     const [customUnit, setCustomUnit] = useState("day");
     const [pickerMode, setPickerMode] = useState(null);
     const [activeFeature, setActiveFeature] = useState(null); 
+    const [customColor, setCustomColor] = useState({ r: 255, g: 0, b: 0 });
+    const [showCustomPicker, setShowCustomPicker] = useState(false);
+
+    const presetColors = [
+        "#ff0000", "#00ff00", "#0000ff",
+        "#ffff00", "#ff00ff", "#00ffff",
+        "#000000", "#ffffff", "#ffa500",
+        "#7600bc", "#a0a0a0", "#1f7d53"
+    ];
 
     useEffect(() => {
         const label = findRepeatPresetKey(repeatDelta, repeatDeltaPresets);
@@ -163,13 +172,40 @@ export default function OccurrenceEditModal({
                     </View>
                     {activeFeature === "palette" && (
                         <View style={styles.expandedContainer}>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Color (Hex)"
-                                placeholderTextColor="gray"
-                                value={choreColor}
-                                onChangeText={setChoreColor}
-                            />
+                            <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+                                {presetColors.map((color) => (
+                                    <TouchableOpacity
+                                        key={color}
+                                        onPress={() => { setChoreColor(color); setShowCustomPicker(false); }}
+                                        style={{
+                                            backgroundColor: color,
+                                            width: 40,
+                                            height: 40,
+                                            borderRadius: 8,
+                                            margin: 4,
+                                            borderWidth: choreColor === color ? 2 : 0,
+                                            borderColor: "#000"
+                                        }}
+                                    />
+                                ))}
+                                {/*
+                                <TouchableOpacity
+                                    onPress={() => setShowCustomPicker(true)}
+                                    style={{
+                                        width: 40,
+                                        height: 40,
+                                        borderRadius: 8,
+                                        margin: 4,
+                                        justifyContent: "center",
+                                        alignItems: "center",
+                                        borderWidth: showCustomPicker ? 2 : 0,
+                                        borderColor: "#000"
+                                    }}
+                                >
+                                    <Text>+</Text>
+                                </TouchableOpacity>
+                                */}
+                            </View>
                         </View>
                     )}
                     {activeFeature === "user" && (
