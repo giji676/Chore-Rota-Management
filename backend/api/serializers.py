@@ -50,6 +50,7 @@ class ChoreScheduleSerializer(serializers.ModelSerializer):
             "user",
             "user_name",
             "start_date",
+            "due_time",
             "repeat_delta",
             "repeat_label",
         ]

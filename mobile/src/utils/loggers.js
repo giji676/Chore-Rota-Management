@@ -7,7 +7,7 @@ export function jsonLog(str, data) {
 }
 
 export function apiLogSuccess(response) {
-    console.log("✅ Success:", response.data);
+    jsonLog("✅ Success:", response.data);
 }
 
 export function apiLogError(error) {

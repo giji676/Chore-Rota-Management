@@ -85,7 +85,6 @@ export default function HouseDashboardScreen({ navigation, route }) {
         try {
             const res = await api.get(`house/${house.id}/details/`);
             setHouse(res.data);
-            // jsonLog(res.data.schedules);
         } catch (err) {
             setError("Failed to fetch house");
         }
@@ -131,19 +130,28 @@ export default function HouseDashboardScreen({ navigation, route }) {
     };
 
     const handleEditOccurrence = async (occ) => {
-        console.log(house.id);
-        console.log(occ.chore.id);
-        console.log(occ.schedule);
-        console.log(occ.id);
+        const data = {
+            house_id: house.id,
+            chore_id: occ.chore.id,
+            schedule_id: occ.schedule,
+            occurrence_id: occ.id,
+            assignee_id: selectedMember.id,
 
-        console.log(newChoreName);
-        console.log(newChoreDescription);
-        console.log(newChoreColor);
+            chore_name: newChoreName,
+            chore_description: newChoreDescription,
+            chore_color: newChoreColor,
+            chore_color: newChoreColor,
 
-        console.log(selectedMember.id);
-        console.log(repeatDelta);
-        console.log(selectedDate);
-        console.log();
+            repeat_delta: repeatDelta,
+            start_date: selectedDate.toISOString().split("T")[0],
+            due_time: selectedDate.toISOString().split("T")[1].replace("Z", ""),
+        }
+        try {
+            const res = await api.post("chores/occurrence/update/", data);
+            // apiLogSuccess(res);
+        } catch (err) {
+            apiLogError(err);
+        }
     };
 
     const handleCreateChore = async () => {

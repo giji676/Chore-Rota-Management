@@ -1,6 +1,6 @@
 import requests
-from time import timezone
 from datetime import datetime
+from django.utils import timezone
 from django.db import transaction
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -68,6 +68,7 @@ class OccurrenceUpdateView(APIView):
         chore_id = data.get("chore_id")
         schedule_id = data.get("schedule_id")
         occurrence_id = data.get("occurrence_id")
+        assignee_id = data.get("assignee_id")
 
         # ---- Chore fields ----
         chore_name = data.get("chore_name")
@@ -75,8 +76,8 @@ class OccurrenceUpdateView(APIView):
         chore_color = data.get("chore_color")
 
         # ---- Schedule fields ----
-        assignee_id = data.get("assignee_id")
         start_date = data.get("start_date")
+        due_time = data.get("due_time")
         repeat_delta = data.get("repeat_delta")
 
         # ---- Occurrence fields ----
@@ -104,8 +105,10 @@ class OccurrenceUpdateView(APIView):
             id=occurrence_id,
             schedule=schedule
         )
+        print("Found chore, schedule, occ")
 
         # ---- Permissions ----
+        print(schedule.user, user, house_member.role)
         if schedule.user != user and house_member.role != "owner":
             return Response(
                 {"error": "Only owner can edit chores assigned to others"},
@@ -125,6 +128,7 @@ class OccurrenceUpdateView(APIView):
             chore.color = chore_color
 
         chore.save()
+        print("Updated chore")
 
         # ======================
         # Update Schedule
@@ -140,6 +144,24 @@ class OccurrenceUpdateView(APIView):
 
         if start_date:
             start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
+        if due_time:
+            try:
+                if "." in due_time:
+                    # HH:MM:SS.mmm
+                    due_time = datetime.strptime(due_time, "%H:%M:%S.%f").time()
+                else:
+                    parts = due_time.split(":")
+                    if len(parts) == 2:
+                        # HH:MM
+                        due_time = datetime.strptime(due_time, "%H:%M").time()
+                    else:
+                        # HH:MM:SS
+                        due_time = datetime.strptime(due_time, "%H:%M:%S").time()
+            except ValueError:
+                return Response(
+                    {"error": "Invalid due_time format"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
         assignee_changed = assignee != schedule.user
 
@@ -149,6 +171,7 @@ class OccurrenceUpdateView(APIView):
                 chore=chore,
                 user=assignee,
                 start_date=start_date or schedule.start_date,
+                due_time=due_time or schedule.due_time,
                 repeat_delta=repeat_delta if repeat_delta is not None else schedule.repeat_delta,
             )
 
@@ -161,21 +184,28 @@ class OccurrenceUpdateView(APIView):
             if start_date:
                 schedule.start_date = start_date
 
+            if due_time:
+                schedule.due_time = due_time
+
             if repeat_delta is not None:
                 schedule.repeat_delta = repeat_delta
 
             schedule.save()
+        print("Updated schedule")
 
         # ======================
         # Update Occurrence
         # ======================
-        if due_date:
-            occurrence.due_date = due_date
+        if start_date and due_time:
+            occurrence.due_date = timezone.make_aware(
+                datetime.combine(start_date, due_time)
+            )
 
         if completed is not None:
             occurrence.completed = completed
 
         occurrence.save()
+        print("Updated occurrence")
 
         return Response(
             {
