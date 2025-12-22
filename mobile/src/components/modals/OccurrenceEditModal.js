@@ -131,6 +131,21 @@ export default function OccurrenceEditModal({
         if (feature === "palette") return activeFeature === feature ? "palette" : "palette-outline";
     };
 
+    const isThisYear = selectedDate.getFullYear() === new Date().getFullYear();
+    const thisYearsString = selectedDate.toLocaleString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+    }).toUpperCase();
+    const selectedDateDisplayText = isThisYear ? thisYearsString : selectedDate.toLocaleString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+    }).toUpperCase();
+
     return (
         <Modal
             visible={visible}
@@ -159,14 +174,9 @@ export default function OccurrenceEditModal({
                     />
                     <View style={styles.displayDateTimeContainer}>
                         <View style={styles.displayDateTime}>
+                            <View style={[styles.colorDot, { backgroundColor: choreColor }]} />
                             <Text style={{ textAlign: "center" }}>
-                                {selectedDate.toLocaleString("en-GB", {
-                                    day: "2-digit",
-                                    month: "2-digit",
-                                    year: "numeric",
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                })}
+                                {selectedDateDisplayText}
                             </Text>
                         </View>
                     </View>
@@ -398,6 +408,12 @@ const styles = StyleSheet.create({
         borderColor: "#aaa",
         backgroundColor: "#ccc",
         alignSelf: "center",
+        flexDirection: "row",
+        gap: 10,
+    },
+    colorDot: {
+        aspectRatio: 1,
+        borderRadius: 50,
     },
     div: {
         height: StyleSheet.hairlineWidth,
