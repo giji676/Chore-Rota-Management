@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, Modal, TextInput, Button, StyleSheet } from "react-native";
+import { View, Text, Modal, TextInput, Button, StyleSheet, TouchableOpacity } from "react-native";
 import { Picker } from "@react-native-picker/picker";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import DayPicker from "./DayPicker";
 import TimePicker from "./TimePicker";
@@ -38,6 +39,7 @@ export default function OccurrenceEditModal({
     const [customNum, setCustomNum] = useState("1");
     const [customUnit, setCustomUnit] = useState("day");
     const [pickerMode, setPickerMode] = useState(null);
+    const [activeFeature, setActiveFeature] = useState(null); 
 
     useEffect(() => {
         const label = findRepeatPresetKey(repeatDelta, repeatDeltaPresets);
@@ -114,6 +116,12 @@ export default function OccurrenceEditModal({
         return {};
     };
 
+    const getIconName = (feature) => {
+        if (feature === "dateTime") return activeFeature === feature ? "calendar-multiselect" : "calendar-multiselect-outline";
+        if (feature === "user") return activeFeature === feature ? "account" : "account-outline";
+        if (feature === "palette") return activeFeature === feature ? "palette" : "palette-outline";
+    };
+
     return (
         <Modal
             visible={visible}
@@ -124,7 +132,6 @@ export default function OccurrenceEditModal({
             <View style={styles.overlay}>
                 <View style={styles.modal}>
                     <Text style={styles.title}>Edit Chore</Text>
-
                     <TextInput
                         style={styles.input}
                         placeholder="Chore Name"
@@ -132,7 +139,6 @@ export default function OccurrenceEditModal({
                         value={choreName}
                         onChangeText={setChoreName}
                     />
-
                     <TextInput
                         style={[styles.input, styles.multiline]}
                         placeholder="Description"
@@ -142,36 +148,92 @@ export default function OccurrenceEditModal({
                         multiline
                         textAlignVertical="top"
                     />
-
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Color (Hex)"
-                        placeholderTextColor="gray"
-                        value={choreColor}
-                        onChangeText={setChoreColor}
-                    />
-
-                    <Text>Assign to</Text>
-                    <Picker
-                        selectedValue={selectedMember}
-                        onValueChange={setSelectedMember}
-                        style={styles.picker}
-                    >
-                        {members.map((member) => (
-                            <Picker.Item
-                                key={member.id}
-                                label={member.label}
-                                value={member}
+                    <View style={styles.displayDateTimeContainer}>
+                        <View style={styles.displayDateTime}>
+                            <Text style={{ textAlign: "center" }}>
+                                {selectedDate.toLocaleString("en-GB", {
+                                    day: "2-digit",
+                                    month: "2-digit",
+                                    year: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                })}
+                            </Text>
+                        </View>
+                    </View>
+                    {activeFeature === "palette" && (
+                        <View style={styles.expandedContainer}>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Color (Hex)"
+                                placeholderTextColor="gray"
+                                value={choreColor}
+                                onChangeText={setChoreColor}
                             />
-                        ))}
-                    </Picker>
-                    {pickerMode === null && (
-                        <View style={styles.selectDateTimeRow}>
-                            <View style={styles.selectDateTimeBtns}>
-                                <Button title="Set Date" onPress={() => setPickerMode("date")} />
-                            </View>
-                            <View style={styles.selectDateTimeBtns}>
-                                <Button title="Set Time" onPress={() => setPickerMode("time")} />
+                        </View>
+                    )}
+                    {activeFeature === "user" && (
+                        <View style={styles.expandedContainer}>
+                            <Text>Assign to</Text>
+                            <Picker
+                                selectedValue={selectedMember}
+                                onValueChange={setSelectedMember}
+                                style={styles.picker}
+                            >
+                                {members.map((member) => (
+                                    <Picker.Item
+                                        key={member.id}
+                                        label={member.label}
+                                        value={member}
+                                    />
+                                ))}
+                            </Picker>
+                        </View>
+                    )}
+                    {activeFeature === "dateTime" && (
+                        <View style={styles.expandedContainer}>
+                            {pickerMode === null && (
+                                <View style={styles.selectDateTimeRow}>
+                                    <View style={styles.selectDateTimeBtns}>
+                                        <Button title="Set Date" onPress={() => setPickerMode("date")} />
+                                    </View>
+                                    <View style={styles.selectDateTimeBtns}>
+                                        <Button title="Set Time" onPress={() => setPickerMode("time")} />
+                                    </View>
+                                </View>
+                            )}
+                            <View>
+                                <Picker selectedValue={repeatDeltaLabel} onValueChange={onChangePicker}>
+                                    {Object.keys(repeatDeltaPresets).map((label) => (
+                                        <Picker.Item key={label} label={label} value={label} />
+                                    ))}
+                                </Picker>
+                                {repeatDeltaLabel === "Custom" && (
+                                    <View style={styles.customContainer}>
+                                        <Text>Every</Text>
+                                        <TextInput
+                                            style={styles.inputCustomNum}
+                                            keyboardType="numeric"
+                                            value={customNum}
+                                            onChangeText={(text) => {
+                                                setCustomNum(text);
+                                                setRepeatDelta(getRepeatValue(text, customUnit));
+                                            }}
+                                        />
+                                        <Picker
+                                            selectedValue={customUnit}
+                                            onValueChange={(unit) => {
+                                                setCustomUnit(unit);
+                                                setRepeatDelta(getRepeatValue(customNum, unit));
+                                            }}
+                                            style={styles.unitPicker}
+                                        >
+                                            <Picker.Item label="day" value="day" />
+                                            <Picker.Item label="week" value="week" />
+                                            <Picker.Item label="month" value="month" />
+                                        </Picker>
+                                    </View>
+                                )}
                             </View>
                         </View>
                     )}
@@ -195,56 +257,19 @@ export default function OccurrenceEditModal({
                             />
                         </View>
                     )}
-                    <View style={styles.displayDateTimeContainer}>
-                        <View style={styles.displayDateTime}>
-                            <Text style={{ textAlign: "center" }}>
-                                {selectedDate.toLocaleString("en-GB", {
-                                    day: "2-digit",
-                                    month: "2-digit",
-                                    year: "numeric",
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                })}
-                            </Text>
-                        </View>
+                    <View style={styles.div}/>
+                    <View style={styles.featureBar}>
+                        <TouchableOpacity onPress={() => setActiveFeature(prev => prev === "dateTime" ? null : "dateTime")}>
+                            <MaterialCommunityIcons name={getIconName("dateTime")} size={30} color="#000" />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => setActiveFeature(prev => prev === "user" ? null : "user")}>
+                            <MaterialCommunityIcons name={getIconName("user")} size={30} color="#000" />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => setActiveFeature(prev => prev === "palette" ? null : "palette")}>
+                            <MaterialCommunityIcons name={getIconName("palette")} size={30} color="#000" />
+                        </TouchableOpacity>
                     </View>
-
-                    <View>
-                        <Picker selectedValue={repeatDeltaLabel} onValueChange={onChangePicker}>
-                            {Object.keys(repeatDeltaPresets).map((label) => (
-                                <Picker.Item key={label} label={label} value={label} />
-                            ))}
-                        </Picker>
-
-                        {repeatDeltaLabel === "Custom" && (
-                            <View style={styles.customContainer}>
-                                <Text>Every</Text>
-                                <TextInput
-                                    style={styles.inputCustomNum}
-                                    keyboardType="numeric"
-                                    value={customNum}
-                                    onChangeText={(text) => {
-                                        setCustomNum(text);
-                                        setRepeatDelta(getRepeatValue(text, customUnit));
-                                    }}
-                                />
-
-                                <Picker
-                                    selectedValue={customUnit}
-                                    onValueChange={(unit) => {
-                                        setCustomUnit(unit);
-                                        setRepeatDelta(getRepeatValue(customNum, unit));
-                                    }}
-                                    style={styles.unitPicker}
-                                >
-                                    <Picker.Item label="day" value="day" />
-                                    <Picker.Item label="week" value="week" />
-                                    <Picker.Item label="month" value="month" />
-                                </Picker>
-                            </View>
-                        )}
-                    </View>
-
+                    <View style={styles.div}/>
                     <View style={styles.buttons}>
                         <Button title="Cancel" onPress={onClose} />
                         <Button title="Create" onPress={onCreate} />
@@ -266,14 +291,15 @@ const styles = StyleSheet.create({
         width: "85%",
         maxWidth: 400,
         backgroundColor: "#fff",
-        padding: 20,
+        paddingHorizontal: 20,
         borderRadius: 16,
         flexShrink: 0,
+        gap: 10,
     },
     title: {
         fontSize: 20,
         fontWeight: "bold",
-        marginBottom: 15,
+        marginTop: 10,
         textAlign: "center",
     },
     input: {
@@ -281,36 +307,33 @@ const styles = StyleSheet.create({
         borderColor: "#ccc",
         borderRadius: 8,
         padding: 10,
-        marginBottom: 15,
+        // marginBottom: 15,
         fontSize: 16,
     },
     buttons: {
         flexDirection: "row",
         justifyContent: "space-between",
-        marginTop: 15,
+        marginBottom: 20,
     },
     picker: {
         color: "#444",
         backgroundColor: "#eee",
         fontWeight: "bold",
-        marginVertical: 10,
         borderRadius: 8,
     },
     customContainer: {
         flexDirection: "row",
         alignItems: "center",
-        marginTop: 10,
         paddingHorizontal: 10,
         backgroundColor: "#f0f0f0",
+        borderRadius: 8,
     },
     inputCustomNum: {
         borderWidth: 1,
         borderColor: "#ccc",
         borderRadius: 8,
-        paddingHorizontal: 10,
-        paddingVertical: 5,
-        width: 60,
-        marginHorizontal: 10,
+        paddingHorizontal: 15,
+        marginHorizontal: 15,
         fontSize: 16,
         textAlign: "center",
     },
@@ -328,18 +351,25 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     displayDateTimeContainer: {
-        margin: 6,
         flexShrink: 0,
         justifyContent: "center",
         alignItems: "center",
     },
     displayDateTime: {
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 50,
-        backgroundColor: "#ccc",
+        padding: 10,
         borderWidth: 1,
+        borderRadius: 50,
         borderColor: "#aaa",
+        backgroundColor: "#ccc",
         alignSelf: "center",
+    },
+    div: {
+        height: StyleSheet.hairlineWidth,
+        alignSelf: "stretch",
+        backgroundColor: "#aaa",
+    },
+    featureBar: {
+        flexDirection: "row",
+        justifyContent: "space-between",
     },
 });
