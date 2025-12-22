@@ -145,6 +145,10 @@ export default function OccurrenceEditModal({
         hour: "2-digit",
         minute: "2-digit",
     }).toUpperCase();
+    const selectedRepeatDeltaText = 
+        repeatDeltaLabel === "Custom" 
+            ? `Every ${customNum} ${customUnit}${customNum > 1 ? "s" : ""}` 
+            : repeatDeltaLabel;
 
     return (
         <Modal
@@ -177,6 +181,10 @@ export default function OccurrenceEditModal({
                             <View style={[styles.colorDot, { backgroundColor: choreColor }]} />
                             <Text style={{ textAlign: "center" }}>
                                 {selectedDateDisplayText}
+                            </Text>
+                            <Text>-</Text>
+                            <Text style={{ textAlign: "center" }}>
+                                {selectedRepeatDeltaText}
                             </Text>
                         </View>
                     </View>

@@ -148,6 +148,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
         }
         try {
             const res = await api.post("chores/occurrence/update/", data);
+            fetchHouse();
             // apiLogSuccess(res);
         } catch (err) {
             apiLogError(err);
@@ -323,7 +324,11 @@ export default function HouseDashboardScreen({ navigation, route }) {
             <OccurrenceEditModal
                 visible={occurrenceEditModalVisible}
                 onClose={() => {setOccurrenceEditModalVisible(false); setChoreModalVisible(false);}}
-                onCreate={() => handleEditOccurrence(selectedOcc)}
+                onCreate={() => {
+                    handleEditOccurrence(selectedOcc);
+                    setOccurrenceEditModalVisible(false);
+                    setChoreModalVisible(false);
+                }}
                 choreName={newChoreName}
                 setChoreName={setNewChoreName}
                 choreDescription={newChoreDescription}

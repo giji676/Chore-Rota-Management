@@ -105,10 +105,8 @@ class OccurrenceUpdateView(APIView):
             id=occurrence_id,
             schedule=schedule
         )
-        print("Found chore, schedule, occ")
 
         # ---- Permissions ----
-        print(schedule.user, user, house_member.role)
         if schedule.user != user and house_member.role != "owner":
             return Response(
                 {"error": "Only owner can edit chores assigned to others"},
@@ -128,7 +126,6 @@ class OccurrenceUpdateView(APIView):
             chore.color = chore_color
 
         chore.save()
-        print("Updated chore")
 
         # ======================
         # Update Schedule
@@ -191,7 +188,6 @@ class OccurrenceUpdateView(APIView):
                 schedule.repeat_delta = repeat_delta
 
             schedule.save()
-        print("Updated schedule")
 
         # ======================
         # Update Occurrence
@@ -205,7 +201,6 @@ class OccurrenceUpdateView(APIView):
             occurrence.completed = completed
 
         occurrence.save()
-        print("Updated occurrence")
 
         return Response(
             {
