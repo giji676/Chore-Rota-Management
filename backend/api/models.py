@@ -105,6 +105,8 @@ class ChoreSchedule(models.Model):
     # JSON with relativedelta fields
     repeat_delta = models.JSONField(default=dict)
 
+    deleted_at = models.DateTimeField(null=True, blank=True)
+
     @property
     def delta(self) -> relativedelta:
         return dict_to_relativedelta(self.repeat_delta)
@@ -135,11 +137,14 @@ class ChoreOccurrence(models.Model):
 
     due_date = models.DateTimeField()
 
+    # Change to only use _at, drop boolean?
     completed = models.BooleanField(default=False)
     completed_at = models.DateTimeField(null=True, blank=True)
 
     notification_sent = models.BooleanField(default=False)
     notification_sent_at = models.DateTimeField(null=True, blank=True)
+
+    deleted_at = models.DateTimeField(null=True, blank=True)
 
     def save(self, *args, **kwargs):
         if self.completed and not self.completed_at:

@@ -111,6 +111,8 @@ class OccurrenceUpdateView(APIView):
             )
             chore = new_chore
 
+        schedule.deleted_at = timezone.now()
+        schedule.save()
         schedule = ChoreSchedule.objects.create(
             chore=chore,
             user_id=assignee_id or schedule.user,
