@@ -1,6 +1,7 @@
 import requests
 from datetime import datetime
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from django.db import transaction
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -25,6 +26,7 @@ from .serializers import (
     ChoreOccurrenceSerializer,
 )
 from accounts.models import PushToken
+from .helpers.occurrence_utils import generate_occurrences_for_schedule
 
 User = get_user_model()
 
@@ -76,140 +78,52 @@ class OccurrenceUpdateView(APIView):
         chore_color = data.get("chore_color")
 
         # ---- Schedule fields ----
-        start_date = data.get("start_date")
-        due_time = data.get("due_time")
+        iso_start_date = data.get("start_date")
         repeat_delta = data.get("repeat_delta")
 
         # ---- Occurrence fields ----
-        due_date = data.get("due_date")
         completed = data.get("completed")
 
-        # ---- Load objects (scoped & safe) ----
         house = get_object_or_404(House, id=house_id)
-        house_member = get_object_or_404(HouseMember, house=house, user=user)
+        chore = get_object_or_404(Chore, id=chore_id)
+        schedule = get_object_or_404(ChoreSchedule, id=schedule_id)
+        occurrence = get_object_or_404(ChoreOccurrence, id=occurrence_id)
 
-        chore = get_object_or_404(
-            Chore,
-            id=chore_id,
-            house=house
-        )
+        start_date = parse_datetime(iso_start_date)
+        if timezone.is_naive(start_date):
+            start_date = timezone.make_aware(start_date, timezone.utc)
 
-        schedule = get_object_or_404(
-            ChoreSchedule,
-            id=schedule_id,
-            chore=chore
-        )
+        ChoreOccurrence.objects.filter(
+            schedule=schedule_id,
+            due_date__gte=occurrence.due_date,
+        ).delete()
 
-        occurrence = get_object_or_404(
-            ChoreOccurrence,
-            id=occurrence_id,
-            schedule=schedule
-        )
+        chore_changed = (chore_name and chore_name != chore.name) or \
+            (chore_description and chore_description != chore.description) or \
+            (chore_color and chore_color != chore.color)
 
-        # ---- Permissions ----
-        if schedule.user != user and house_member.role != "owner":
-            return Response(
-                {"error": "Only owner can edit chores assigned to others"},
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-        # ======================
-        # Update Chore
-        # ======================
-        if chore_name is not None:
-            chore.name = chore_name
-
-        if chore_description is not None:
-            chore.description = chore_description
-
-        if chore_color is not None:
-            chore.color = chore_color
-
-        chore.save()
-
-        # ======================
-        # Update Schedule
-        # ======================
-        assignee = schedule.user
-        if assignee_id:
-            assignee_member = get_object_or_404(
-                HouseMember,
+        if chore_changed:
+            new_chore = Chore.objects.create(
                 house=house,
-                user_id=assignee_id
+                name=chore_name or chore.name,
+                description=chore_description or chore.description,
+                color=chore_color or chore.color,
             )
-            assignee = assignee_member.user
+            chore = new_chore
 
-        if start_date:
-            start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
-        if due_time:
-            try:
-                if "." in due_time:
-                    # HH:MM:SS.mmm
-                    due_time = datetime.strptime(due_time, "%H:%M:%S.%f").time()
-                else:
-                    parts = due_time.split(":")
-                    if len(parts) == 2:
-                        # HH:MM
-                        due_time = datetime.strptime(due_time, "%H:%M").time()
-                    else:
-                        # HH:MM:SS
-                        due_time = datetime.strptime(due_time, "%H:%M:%S").time()
-            except ValueError:
-                return Response(
-                    {"error": "Invalid due_time format"},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
-        assignee_changed = assignee != schedule.user
-
-        if assignee_changed:
-            # ---- Recreate schedule (identity change) ----
-            new_schedule = ChoreSchedule.objects.create(
-                chore=chore,
-                user=assignee,
-                start_date=start_date or schedule.start_date,
-                due_time=due_time or schedule.due_time,
-                repeat_delta=repeat_delta if repeat_delta is not None else schedule.repeat_delta,
-            )
-
-            # move occurrence to new schedule
-            occurrence.schedule = new_schedule
-            schedule.delete()
-            schedule = new_schedule
-        else:
-            # ---- Update schedule in place ----
-            if start_date:
-                schedule.start_date = start_date
-
-            if due_time:
-                schedule.due_time = due_time
-
-            if repeat_delta is not None:
-                schedule.repeat_delta = repeat_delta
-
-            schedule.save()
-
-        # ======================
-        # Update Occurrence
-        # ======================
-        if start_date and due_time:
-            occurrence.due_date = timezone.make_aware(
-                datetime.combine(start_date, due_time)
-            )
-
-        if completed is not None:
-            occurrence.completed = completed
-
-        occurrence.save()
-
-        return Response(
-            {
-                "chore": ChoreSerializer(chore).data,
-                "schedule": ChoreScheduleSerializer(schedule).data,
-                "occurrence": ChoreOccurrenceSerializer(occurrence).data,
-            },
-            status=status.HTTP_200_OK
+        schedule = ChoreSchedule.objects.create(
+            chore=chore,
+            user_id=assignee_id or schedule.user,
+            start_date=start_date.date(),
+            repeat_delta=repeat_delta or schedule.repeat_delta,
         )
+
+        generate_occurrences_for_schedule(schedule)
+
+        return Response({
+            "chore": ChoreSerializer(chore).data,
+            "schedule": ChoreScheduleSerializer(schedule).data,
+        }, status=status.HTTP_200_OK)
 
 class SheduleCreateView(APIView):
     permission_classes = [IsAuthenticated]

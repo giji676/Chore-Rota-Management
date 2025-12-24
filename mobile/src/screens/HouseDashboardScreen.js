@@ -143,8 +143,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
             chore_color: newChoreColor,
 
             repeat_delta: repeatDelta,
-            start_date: selectedDate.toISOString().split("T")[0],
-            due_time: selectedDate.toISOString().split("T")[1].replace("Z", ""),
+            start_date: selectedDate.toISOString(),
         }
         try {
             const res = await api.post("chores/occurrence/update/", data);
