@@ -1,18 +1,20 @@
-from datetime import date, timedelta
 from unittest.mock import patch, MagicMock
 from rest_framework import status
 from rest_framework.test import APITestCase, APIClient
-from django.urls import reverse
+from datetime import timezone as dt_timezone
 from django.utils import timezone
+from django.urls import reverse
 from django.contrib.auth import get_user_model
 from api.models import House, HouseMember, Chore, ChoreSchedule, ChoreOccurrence
 
 User = get_user_model()
+now = timezone.now().astimezone(dt_timezone.utc)
+START_DATE = now.isoformat().replace("+00:00", "Z")
 
 class CreateChoreAndScheduleTest(APITestCase):
     def setUp(self):
-        self.owner = User.objects.create_user(username="owner", password="password123")
-        self.guest = User.objects.create_user(username="guest", password="password123")
+        self.owner = User.objects.create_user(email="owner", password="password123")
+        self.guest = User.objects.create_user(email="guest", password="password123")
         self.client = APIClient()
         self.client.force_authenticate(user=self.owner)
 
@@ -23,16 +25,16 @@ class CreateChoreAndScheduleTest(APITestCase):
             max_members=6
         )
         self.house.add_member(user=self.owner, role="owner")
-        self.url = reverse("create-chore-and-schedule")
+        self.url = reverse("create-schedule-full")
 
     def test_create_successfully(self):
         data = {
             "house_id": self.house.id,
-            "name": "clean kitchen",
-            "description": "wipe and mop",
-            "color": "#ff0000",
+            "chore_name": "clean kitchen",
+            "chore_description": "wipe and mop",
+            "chore_color": "#ff0000",
             "assignee_id": self.owner.id,
-            "start_date": "2025-12-12",
+            "start_date": START_DATE,
             "repeat_delta": {"weeks": 1},
         }
         response = self.client.post(self.url, data, format="json")
@@ -40,8 +42,8 @@ class CreateChoreAndScheduleTest(APITestCase):
 
 class DeleteChoreScheduleTest(APITestCase):
     def setUp(self):
-        self.owner = User.objects.create_user(username="owner", password="password123")
-        self.guest = User.objects.create_user(username="guest", password="password123")
+        self.owner = User.objects.create_user(email="owner", password="password123")
+        self.guest = User.objects.create_user(email="guest", password="password123")
         self.client = APIClient()
         self.client.force_authenticate(user=self.owner)
 
@@ -65,7 +67,7 @@ class DeleteChoreScheduleTest(APITestCase):
         self.schedule = ChoreSchedule.objects.create(
             chore=self.chore,
             user=self.guest,
-            start_date="2025-12-20",
+            start_date=START_DATE,
             repeat_delta={"days": 1},
         )
 
@@ -90,8 +92,8 @@ class DeleteChoreScheduleTest(APITestCase):
 
 class UpdateChoreScheduleTest(APITestCase):
     def setUp(self):
-        self.owner = User.objects.create_user(username="owner", password="password123")
-        self.guest = User.objects.create_user(username="guest", password="password123")
+        self.owner = User.objects.create_user(email="owner", password="password123")
+        self.guest = User.objects.create_user(email="guest", password="password123")
         self.client = APIClient()
         self.client.force_authenticate(user=self.owner)
 
@@ -115,7 +117,7 @@ class UpdateChoreScheduleTest(APITestCase):
         self.schedule = ChoreSchedule.objects.create(
             chore=self.chore,
             user=self.guest,
-            start_date="2025-12-20",
+            start_date=START_DATE,
             repeat_delta={"days": 1},
         )
 
@@ -141,7 +143,7 @@ class UpdateChoreScheduleTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_user_not_in_house(self):
-        outsider = User.objects.create_user(username="outsider", password="123")
+        outsider = User.objects.create_user(email="outsider", password="123")
         client = APIClient()
         client.force_authenticate(outsider)
         data = {"repeat_delta": {"days": 5}}
@@ -150,8 +152,8 @@ class UpdateChoreScheduleTest(APITestCase):
 
 class CreateChoreScheduleTest(APITestCase):
     def setUp(self):
-        self.owner = User.objects.create_user(username="owner", password="password123")
-        self.guest = User.objects.create_user(username="guest", password="password123")
+        self.owner = User.objects.create_user(email="owner", password="password123")
+        self.guest = User.objects.create_user(email="guest", password="password123")
 
         self.client = APIClient()
         self.client.force_authenticate(user=self.owner)
@@ -179,7 +181,7 @@ class CreateChoreScheduleTest(APITestCase):
         data = {
             "chore_id": self.chore.id,
             "user_id": self.guest.id,
-            "start_date": "2025-12-20",
+            "start_date": START_DATE,
             "repeat_delta": {"days": 1},
         }
         response = self.client.post(self.url, data, format="json")
@@ -199,7 +201,7 @@ class CreateChoreScheduleTest(APITestCase):
         data = {
             "chore_id": self.chore.id,
             "user_id": self.owner.id,
-            "start_date": "2025-12-20",
+            "start_date": START_DATE,
             "repeat_delta": {"days": 1},
         }
         response = client.post(self.url, data, format="json")
@@ -210,18 +212,18 @@ class CreateChoreScheduleTest(APITestCase):
         data = {
             "chore_id": 999,
             "user_id": self.guest.id,
-            "start_date": "2025-12-20",
+            "start_date": START_DATE,
             "repeat_delta": {"days": 1},
         }
         response = self.client.post(self.url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_user_not_in_house(self):
-        outsider = User.objects.create_user(username="outsider", password="123")
+        outsider = User.objects.create_user(email="outsider", password="123")
         data = {
             "chore_id": self.chore.id,
             "user_id": outsider.id,
-            "start_date": "2025-12-20",
+            "start_date": START_DATE,
             "repeat_delta": {"days": 1},
         }
         response = self.client.post(self.url, data, format="json")
@@ -229,8 +231,8 @@ class CreateChoreScheduleTest(APITestCase):
 
 class DeleteChoreOccurrenceTest(APITestCase):
     def setUp(self):
-        self.owner = User.objects.create_user(username="owner", password="password123")
-        self.guest = User.objects.create_user(username="guest", password="password123")
+        self.owner = User.objects.create_user(email="owner", password="password123")
+        self.guest = User.objects.create_user(email="guest", password="password123")
 
         self.client = APIClient()
         self.client.force_authenticate(user=self.owner)
@@ -293,8 +295,8 @@ class DeleteChoreOccurrenceTest(APITestCase):
 
 class UpdateChoreOccurrenceTest(APITestCase):
     def setUp(self):
-        self.owner = User.objects.create_user(username="owner", password="password123")
-        self.guest = User.objects.create_user(username="guest", password="password123")
+        self.owner = User.objects.create_user(email="owner", password="password123")
+        self.guest = User.objects.create_user(email="guest", password="password123")
 
         self.client = APIClient()
         self.client.force_authenticate(user=self.owner)
@@ -355,8 +357,8 @@ class UpdateChoreOccurrenceTest(APITestCase):
 
 class CreateChoreOccurrenceTest(APITestCase):
     def setUp(self):
-        self.owner = User.objects.create_user(username="owner", password="password123")
-        self.guest = User.objects.create_user(username="guest", password="password123")
+        self.owner = User.objects.create_user(email="owner", password="password123")
+        self.guest = User.objects.create_user(email="guest", password="password123")
 
         self.client = APIClient()
         self.client.force_authenticate(user=self.owner)
@@ -406,8 +408,8 @@ class CreateChoreOccurrenceTest(APITestCase):
 
 class UpdateHouseTest(APITestCase):
     def setUp(self):
-        self.owner = User.objects.create_user(username="owner", password="password123")
-        self.guest = User.objects.create_user(username="guest", password="password123")
+        self.owner = User.objects.create_user(email="owner", password="password123")
+        self.guest = User.objects.create_user(email="guest", password="password123")
 
         self.client = APIClient()
         self.client.force_authenticate(user=self.owner)
@@ -451,8 +453,8 @@ class UpdateHouseTest(APITestCase):
 
 class UsersHousesTest(APITestCase):
     def setUp(self):
-        self.owner = User.objects.create_user(username="owner", password="password123")
-        self.guest = User.objects.create_user(username="guest", password="password123")
+        self.owner = User.objects.create_user(email="owner", password="password123")
+        self.guest = User.objects.create_user(email="guest", password="password123")
 
         self.client = APIClient()
         self.client.force_authenticate(user=self.owner)
@@ -502,15 +504,15 @@ class UsersHousesTest(APITestCase):
         member = members[0]
         self.assertEqual(
             set(member.keys()),
-            {"id", "username", "is_guest", "role", "joined_at"}
+            {"id", "email", "first_name", "last_name", "label", "is_guest", "role", "joined_at"}
         )
         self.assertEqual(member["id"], self.owner.id)
         self.assertEqual(member["role"], "owner")
 
 class HouseGetTest(APITestCase):
     def setUp(self):
-        self.owner = User.objects.create_user(username="owner", password="password123")
-        self.guest = User.objects.create_user(username="guest", password="password123")
+        self.owner = User.objects.create_user(email="owner", password="password123")
+        self.guest = User.objects.create_user(email="guest", password="password123")
 
         self.client = APIClient()
         self.client.force_authenticate(user=self.owner)
@@ -545,8 +547,8 @@ class HouseGetTest(APITestCase):
 
 class HouseDeleteTest(APITestCase):
     def setUp(self):
-        self.owner = User.objects.create_user(username="owner", password="password123")
-        self.guest = User.objects.create_user(username="guest", password="password123")
+        self.owner = User.objects.create_user(email="owner", password="password123")
+        self.guest = User.objects.create_user(email="guest", password="password123")
 
         self.client = APIClient()
         self.client.force_authenticate(user=self.owner)
@@ -588,8 +590,8 @@ class HouseDeleteTest(APITestCase):
 
 class UpdateChoreTest(APITestCase):
     def setUp(self):
-        self.owner = User.objects.create_user(username="owner", password="password123")
-        self.guest = User.objects.create_user(username="guest", password="password123")
+        self.owner = User.objects.create_user(email="owner", password="password123")
+        self.guest = User.objects.create_user(email="guest", password="password123")
 
         self.client = APIClient()
         self.client.force_authenticate(user=self.owner)
@@ -629,8 +631,8 @@ class UpdateChoreTest(APITestCase):
 
 class DeleteChoreTest(APITestCase):
     def setUp(self):
-        self.owner = User.objects.create_user(username="owner", password="password123")
-        self.guest = User.objects.create_user(username="guest", password="password123")
+        self.owner = User.objects.create_user(email="owner", password="password123")
+        self.guest = User.objects.create_user(email="guest", password="password123")
 
         self.client = APIClient()
         self.client.force_authenticate(user=self.owner)
@@ -669,8 +671,8 @@ class DeleteChoreTest(APITestCase):
 
 class CreateChoreTest(APITestCase):
     def setUp(self):
-        self.owner = User.objects.create_user(username="owner", password="password123")
-        self.guest = User.objects.create_user(username="guest", password="password123")
+        self.owner = User.objects.create_user(email="owner", password="password123")
+        self.guest = User.objects.create_user(email="guest", password="password123")
 
         self.client = APIClient()
         self.client.force_authenticate(user=self.owner)
@@ -770,8 +772,8 @@ class AddressAutocompleteTest(APITestCase):
 
 class JoinHouseTest(APITestCase):
     def setUp(self):
-        self.owner = User.objects.create_user(username="owner", password="password123")
-        self.guest = User.objects.create_user(username="guest", password="password123")
+        self.owner = User.objects.create_user(email="owner", password="password123")
+        self.guest = User.objects.create_user(email="guest", password="password123")
 
         self.client = APIClient()
         self.client.force_authenticate(user=self.guest)
@@ -821,7 +823,7 @@ class JoinHouseTest(APITestCase):
 
 class HouseFlowTest(APITestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username="owner", password="password123")
+        self.user = User.objects.create_user(email="owner", password="password123")
         self.client = APIClient()
         self.client.force_authenticate(user=self.user)
 

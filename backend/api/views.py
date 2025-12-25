@@ -1,7 +1,6 @@
 import requests
 from datetime import datetime
 from django.utils import timezone
-from django.utils.dateparse import parse_datetime
 from django.db import transaction
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -27,6 +26,7 @@ from .serializers import (
 )
 from accounts.models import PushToken
 from .helpers.occurrence_utils import generate_occurrences_for_schedule
+from .helpers.parse_datetime import parse_datetime
 
 User = get_user_model()
 
@@ -37,7 +37,6 @@ EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send"
 # TODO: Add patch to HouseMember for changing role
 # TODO: HouseManagementView.patch should get house_id as input and update only that house
 # TODO: Valudate all inputs and input types to all patch methods
-# TODO: Accept mostly the same inputs in SheduleCreateView as in OccurrenceUpdateView
 
 def send_push_notification(user, title, body):
     tokens = PushToken.objects.filter(user=user).values_list('token', flat=True)
@@ -82,17 +81,14 @@ class OccurrenceUpdateView(APIView):
         iso_start_date = data.get("start_date")
         repeat_delta = data.get("repeat_delta")
 
-        # ---- Occurrence fields ----
-        completed = data.get("completed")
-
         house = get_object_or_404(House, id=house_id)
         chore = get_object_or_404(Chore, id=chore_id)
         schedule = get_object_or_404(ChoreSchedule, id=schedule_id)
         occurrence = get_object_or_404(ChoreOccurrence, id=occurrence_id)
 
-        start_date = parse_datetime(iso_start_date)
-        if timezone.is_naive(start_date):
-            start_date = timezone.make_aware(start_date, timezone.utc)
+        start_date = iso_start_date
+        if start_date:
+            start_date = parse_datetime(iso_start_date)
 
         ChoreOccurrence.objects.filter(
             schedule=schedule_id,
@@ -117,7 +113,7 @@ class OccurrenceUpdateView(APIView):
         schedule = ChoreSchedule.objects.create(
             chore=chore,
             user_id=assignee_id or schedule.user,
-            start_date=start_date.date(),
+            start_date=start_date,
             repeat_delta=repeat_delta or schedule.repeat_delta,
         )
 
@@ -138,16 +134,20 @@ class SheduleCreateView(APIView):
 
         # ---- Chore fields ----
         house_id = data.get("house_id")
-        name = data.get("name")
-        description = data.get("description")
-        color = data.get("color")
+        chore_name = data.get("chore_name")
+        chore_description = data.get("chore_description")
+        chore_color = data.get("chore_color")
 
         # ---- Schedule fields ----
         assignee_id = data.get("assignee_id")
-        start_date = data.get("start_date")
         repeat_delta = data.get("repeat_delta")
+        iso_start_date = data.get("start_date")
 
-        if not all([house_id, name, assignee_id]):
+        start_date = iso_start_date
+        if start_date:
+            start_date = parse_datetime(iso_start_date)
+
+        if not all([house_id, chore_name, assignee_id]):
             return Response(
                 {"error": "Missing required fields"},
                 status=status.HTTP_400_BAD_REQUEST
@@ -167,23 +167,19 @@ class SheduleCreateView(APIView):
         # ---- Create Chore ----
         chore_kwargs = {
             "house": house,
-            "name": name,
-            "description": description,
+            "name": chore_name,
+            "description": chore_description,
         }
 
-        if color:
-            chore_kwargs["color"] = color
+        if chore_color:
+            chore_kwargs["color"] = chore_color
 
         chore = Chore.objects.create(**chore_kwargs)
-
-        # ---- Create Schedule ----
-        if start_date:
-            start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
 
         schedule = ChoreSchedule.objects.create(
             chore=chore,
             user=assignee.user,
-            start_date=start_date or timezone.now().date(),
+            start_date=start_date or timezone.now(),
             repeat_delta=repeat_delta or {},
         )
 
@@ -406,8 +402,12 @@ class ChoreScheduleManagementView(APIView):
 
         chore_id = data.get("chore_id")
         user_id = data.get("user_id")
-        start_date = data.get("start_date")
         repeat_delta = data.get("repeat_delta")
+        iso_start_date = data.get("start_date")
+
+        start_date = iso_start_date
+        if start_date:
+            start_date = parse_datetime(iso_start_date)
 
         if not all([chore_id, user_id]):
             return Response(
@@ -421,9 +421,6 @@ class ChoreScheduleManagementView(APIView):
 
         if user.id != int(user_id) and house_member.role != "owner":
             return Response({"error": "Only the owner can perform this action"}, status=status.HTTP_403_FORBIDDEN)
-
-        if start_date:
-            start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
 
         schedule_kwargs = {
             "chore": chore,

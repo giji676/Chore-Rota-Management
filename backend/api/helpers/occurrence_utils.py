@@ -1,5 +1,6 @@
 from datetime import datetime, date, time as dt_time, timedelta
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from dateutil.relativedelta import relativedelta
 
 from ..models import ChoreOccurrence
@@ -8,24 +9,15 @@ from ..helpers.repeat import dict_to_relativedelta
 def _start_datetime_for_schedule(schedule):
     """
     Return a timezone-aware datetime for the schedule's start.
-    Uses schedule.start_date and schedule.due_time if present, otherwise midnight.
+    Uses schedule.start_date if present, otherwise midnight.
     Handles start_date as either a date object or a string.
     """
     tz = timezone.get_current_timezone()
     start_date = schedule.start_date
-
-    # Convert string to date if needed
     if isinstance(start_date, str):
-        start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
+        start_date = parse_datetime(start_date)
 
-    # if schedule has due_time field use it; else default to midnight
-    due_time = getattr(schedule, "due_time", None)
-    if due_time is None:
-        dt = datetime.combine(start_date, dt_time(0, 0))
-    else:
-        dt = datetime.combine(start_date, due_time)
-
-    return timezone.make_aware(dt, tz) if timezone.is_naive(dt) else dt
+    return timezone.make_aware(start_date, tz) if timezone.is_naive(start_date) else start_date
 
 def generate_occurrences_for_schedule(schedule, days_ahead=30):
     """

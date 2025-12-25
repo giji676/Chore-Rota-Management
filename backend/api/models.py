@@ -99,8 +99,7 @@ class ChoreSchedule(models.Model):
         related_name="chore_schedules"
     )
 
-    start_date = models.DateField(default=timezone.now)
-    due_time = models.TimeField(default=time(hour=19, minute=0))
+    start_date = models.DateTimeField(default=timezone.now)
 
     # JSON with relativedelta fields
     repeat_delta = models.JSONField(default=dict)
@@ -162,5 +161,5 @@ class ChoreOccurrence(models.Model):
         return (
             f"{self.schedule.chore.name} "
                 f"for {self.schedule.user.first_name}.{self.schedule.user.last_name[0]} "
-                f"on {self.due_date.date()}"
+                f"on {self.due_date}"
         )
