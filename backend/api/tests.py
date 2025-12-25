@@ -2,6 +2,7 @@ from unittest.mock import patch, MagicMock
 from rest_framework import status
 from rest_framework.test import APITestCase, APIClient
 from datetime import timezone as dt_timezone
+import factory
 from django.utils import timezone
 from django.urls import reverse
 from django.contrib.auth import get_user_model
@@ -11,20 +12,58 @@ User = get_user_model()
 now = timezone.now().astimezone(dt_timezone.utc)
 START_DATE = now.isoformat().replace("+00:00", "Z")
 
+User = get_user_model()
+
+class UserFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = User
+
+    email = factory.Sequence(lambda n: f"user{n}@example.com")
+    password = factory.PostGenerationMethodCall("set_password", "password123")
+
+class HouseFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = House
+
+    name = "Crescent"
+    address = "10A the crescent"
+    place_id = factory.Sequence(lambda n: f"PLACE{n}")
+    max_members = 6
+    password = factory.PostGenerationMethodCall("set_password", "housepassword")
+
+class ChoreFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Chore
+
+    house = factory.SubFactory(HouseFactory)
+    name = "dishes"
+    description = "wash dishes"
+    color = "#ff0000"
+
+class ScheduleFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = ChoreSchedule
+    chore = factory.SubFactory(ChoreFactory)
+    user = factory.SubFactory(UserFactory)
+    start_date = START_DATE
+    repeat_delta = {"days": 7}
+
+class OccurrenceFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = ChoreOccurrence
+    schedule = factory.SubFactory(ScheduleFactory)
+    due_date = timezone.now()
+
 class CreateChoreAndScheduleTest(APITestCase):
     def setUp(self):
-        self.owner = User.objects.create_user(email="owner", password="password123")
-        self.guest = User.objects.create_user(email="guest", password="password123")
+        self.owner = UserFactory()
+        self.guest = UserFactory()
+        self.house = HouseFactory()
+        self.house.add_member(user=self.owner, role="owner")
+
         self.client = APIClient()
         self.client.force_authenticate(user=self.owner)
 
-        self.house = House.objects.create(
-            name="Crescent",
-            address="10A the crescent",
-            place_id="TEST_PLACE_ID",
-            max_members=6
-        )
-        self.house.add_member(user=self.owner, role="owner")
         self.url = reverse("create-schedule-full")
 
     def test_create_successfully(self):
@@ -42,34 +81,17 @@ class CreateChoreAndScheduleTest(APITestCase):
 
 class DeleteChoreScheduleTest(APITestCase):
     def setUp(self):
-        self.owner = User.objects.create_user(email="owner", password="password123")
-        self.guest = User.objects.create_user(email="guest", password="password123")
-        self.client = APIClient()
-        self.client.force_authenticate(user=self.owner)
-
-        self.house = House.objects.create(
-            name="Crescent",
-            address="10A the crescent",
-            place_id="TEST_PLACE_ID",
-            max_members=6
-        )
+        self.owner = UserFactory()
+        self.guest = UserFactory()
+        self.house = HouseFactory()
         self.house.set_password("housepassword")
         self.house.save()
         self.house.add_member(user=self.owner, role="owner")
         self.house.add_member(user=self.guest, role="member")
-
-        self.chore = Chore.objects.create(
-            house=self.house,
-            name="dishes",
-            description="wash and dry dishes"
-        )
-
-        self.schedule = ChoreSchedule.objects.create(
-            chore=self.chore,
-            user=self.guest,
-            start_date=START_DATE,
-            repeat_delta={"days": 1},
-        )
+        self.chore = ChoreFactory(house=self.house)
+        self.schedule = ScheduleFactory(chore=self.chore, user=self.guest)
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.owner)
 
         self.url = reverse("delete-schedule", kwargs={"schedule_id": self.schedule.id})
 
@@ -92,34 +114,17 @@ class DeleteChoreScheduleTest(APITestCase):
 
 class UpdateChoreScheduleTest(APITestCase):
     def setUp(self):
-        self.owner = User.objects.create_user(email="owner", password="password123")
-        self.guest = User.objects.create_user(email="guest", password="password123")
-        self.client = APIClient()
-        self.client.force_authenticate(user=self.owner)
-
-        self.house = House.objects.create(
-            name="Crescent",
-            address="10A the crescent",
-            place_id="TEST_PLACE_ID",
-            max_members=6
-        )
+        self.owner = UserFactory()
+        self.guest = UserFactory()
+        self.house = HouseFactory()
         self.house.set_password("housepassword")
         self.house.save()
         self.house.add_member(user=self.owner, role="owner")
         self.house.add_member(user=self.guest, role="member")
-
-        self.chore = Chore.objects.create(
-            house=self.house,
-            name="dishes",
-            description="wash and dry dishes"
-        )
-
-        self.schedule = ChoreSchedule.objects.create(
-            chore=self.chore,
-            user=self.guest,
-            start_date=START_DATE,
-            repeat_delta={"days": 1},
-        )
+        self.chore = ChoreFactory(house=self.house)
+        self.schedule = ScheduleFactory(chore=self.chore, user=self.guest)
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.owner)
 
         self.url = reverse("update-schedule", kwargs={"schedule_id": self.schedule.id})
 
@@ -152,28 +157,16 @@ class UpdateChoreScheduleTest(APITestCase):
 
 class CreateChoreScheduleTest(APITestCase):
     def setUp(self):
-        self.owner = User.objects.create_user(email="owner", password="password123")
-        self.guest = User.objects.create_user(email="guest", password="password123")
-
-        self.client = APIClient()
-        self.client.force_authenticate(user=self.owner)
-
-        self.house = House.objects.create(
-            name="Crescent",
-            address="10A the crescent",
-            place_id="TEST_PLACE_ID",
-            max_members=6
-        )
+        self.owner = UserFactory()
+        self.guest = UserFactory()
+        self.house = HouseFactory()
         self.house.set_password("housepassword")
         self.house.save()
         self.house.add_member(user=self.owner, role="owner")
         self.house.add_member(user=self.guest, role="member")
-
-        self.chore = Chore.objects.create(
-            house=self.house,
-            name="dishes",
-            description="wash and dry dishes"
-        )
+        self.chore = ChoreFactory(house=self.house)
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.owner)
 
         self.url = reverse("create-schedule")
 
@@ -231,38 +224,17 @@ class CreateChoreScheduleTest(APITestCase):
 
 class DeleteChoreOccurrenceTest(APITestCase):
     def setUp(self):
-        self.owner = User.objects.create_user(email="owner", password="password123")
-        self.guest = User.objects.create_user(email="guest", password="password123")
-
-        self.client = APIClient()
-        self.client.force_authenticate(user=self.owner)
-
-        self.house = House.objects.create(
-            name="Crescent",
-            address="10A the crescent",
-            place_id="TEST_PLACE_ID",
-            max_members=6
-        )
+        self.owner = UserFactory()
+        self.guest = UserFactory()
+        self.house = HouseFactory()
         self.house.set_password("housepassword")
         self.house.save()
         self.house.add_member(user=self.owner, role="owner")
-
-        self.chore = Chore.objects.create(
-            house=self.house,
-            name="dishes",
-            description="wash dishes",
-        )
-
-        self.schedule = ChoreSchedule.objects.create(
-            chore=self.chore,
-            user=self.owner,
-            repeat_delta={}
-        )
-
-        self.occurrence = ChoreOccurrence.objects.create(
-            schedule=self.schedule,
-            due_date=timezone.now()
-        )
+        self.chore = ChoreFactory(house=self.house)
+        self.schedule = ScheduleFactory(chore=self.chore, user=self.owner)
+        self.occurrence = OccurrenceFactory(schedule=self.schedule)
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.owner)
 
         self.url = reverse("delete-occurrence", kwargs={
             "occurrence_id": self.occurrence.id
@@ -295,38 +267,17 @@ class DeleteChoreOccurrenceTest(APITestCase):
 
 class UpdateChoreOccurrenceTest(APITestCase):
     def setUp(self):
-        self.owner = User.objects.create_user(email="owner", password="password123")
-        self.guest = User.objects.create_user(email="guest", password="password123")
-
-        self.client = APIClient()
-        self.client.force_authenticate(user=self.owner)
-
-        self.house = House.objects.create(
-            name="Crescent",
-            address="10A the crescent",
-            place_id="TEST_PLACE_ID",
-            max_members=6
-        )
+        self.owner = UserFactory()
+        self.guest = UserFactory()
+        self.house = HouseFactory()
         self.house.set_password("housepassword")
         self.house.save()
         self.house.add_member(user=self.owner, role="owner")
-
-        self.chore = Chore.objects.create(
-            house=self.house,
-            name="dishes",
-            description="wash dishes",
-        )
-
-        self.schedule = ChoreSchedule.objects.create(
-            chore=self.chore,
-            user=self.owner,
-            repeat_delta={}
-        )
-
-        self.occurrence = ChoreOccurrence.objects.create(
-            schedule=self.schedule,
-            due_date=timezone.now()
-        )
+        self.chore = ChoreFactory(house=self.house)
+        self.schedule = ScheduleFactory(chore=self.chore, user=self.owner)
+        self.occurrence = OccurrenceFactory(schedule=self.schedule)
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.owner)
 
         self.url = reverse("update-occurrence", kwargs={
             "occurrence_id": self.occurrence.id
@@ -357,33 +308,16 @@ class UpdateChoreOccurrenceTest(APITestCase):
 
 class CreateChoreOccurrenceTest(APITestCase):
     def setUp(self):
-        self.owner = User.objects.create_user(email="owner", password="password123")
-        self.guest = User.objects.create_user(email="guest", password="password123")
-
-        self.client = APIClient()
-        self.client.force_authenticate(user=self.owner)
-
-        self.house = House.objects.create(
-            name="Crescent",
-            address="10A the crescent",
-            place_id="TEST_PLACE_ID",
-            max_members=6
-        )
+        self.owner = UserFactory()
+        self.guest = UserFactory()
+        self.house = HouseFactory()
         self.house.set_password("housepassword")
         self.house.save()
         self.house.add_member(user=self.owner, role="owner")
-
-        self.chore = Chore.objects.create(
-            house=self.house,
-            name="dishes",
-            description="wash dishes",
-        )
-
-        self.schedule = ChoreSchedule.objects.create(
-            chore=self.chore,
-            user=self.owner,
-            repeat_delta={}
-        )
+        self.chore = ChoreFactory(house=self.house)
+        self.schedule = ScheduleFactory(chore=self.chore, user=self.owner)
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.owner)
 
         self.url = reverse("create-occurrence")
 
@@ -408,21 +342,14 @@ class CreateChoreOccurrenceTest(APITestCase):
 
 class UpdateHouseTest(APITestCase):
     def setUp(self):
-        self.owner = User.objects.create_user(email="owner", password="password123")
-        self.guest = User.objects.create_user(email="guest", password="password123")
-
-        self.client = APIClient()
-        self.client.force_authenticate(user=self.owner)
-
-        self.house = House.objects.create(
-            name="Crescent",
-            address= "10A the crescent",
-            place_id= "TEST_PLACE_ID",
-            max_members=6
-        )
+        self.owner = UserFactory()
+        self.guest = UserFactory()
+        self.house = HouseFactory()
         self.house.set_password("housepassword")
         self.house.save()
         self.house.add_member(user=self.owner, role="owner")
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.owner)
 
         self.url = reverse("update-house", kwargs={"house_id": self.house.id})
 
@@ -453,21 +380,14 @@ class UpdateHouseTest(APITestCase):
 
 class UsersHousesTest(APITestCase):
     def setUp(self):
-        self.owner = User.objects.create_user(email="owner", password="password123")
-        self.guest = User.objects.create_user(email="guest", password="password123")
-
-        self.client = APIClient()
-        self.client.force_authenticate(user=self.owner)
-
-        self.house = House.objects.create(
-            name="Crescent",
-            address= "10A the crescent",
-            place_id= "TEST_PLACE_ID",
-            max_members=6
-        )
+        self.owner = UserFactory()
+        self.guest = UserFactory()
+        self.house = HouseFactory()
         self.house.set_password("housepassword")
         self.house.save()
         self.house.add_member(user=self.owner, role="owner")
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.owner)
 
         self.url = reverse("user-houses")
 
@@ -511,21 +431,14 @@ class UsersHousesTest(APITestCase):
 
 class HouseGetTest(APITestCase):
     def setUp(self):
-        self.owner = User.objects.create_user(email="owner", password="password123")
-        self.guest = User.objects.create_user(email="guest", password="password123")
-
-        self.client = APIClient()
-        self.client.force_authenticate(user=self.owner)
-
-        self.house = House.objects.create(
-            name="Crescent",
-            address= "10A the crescent",
-            place_id= "TEST_PLACE_ID",
-            max_members=6
-        )
+        self.owner = UserFactory()
+        self.guest = UserFactory()
+        self.house = HouseFactory()
         self.house.set_password("housepassword")
         self.house.save()
         self.house.add_member(user=self.owner, role="owner")
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.owner)
 
         self.url = reverse("house-details", kwargs={"house_id": self.house.id})
 
@@ -547,21 +460,14 @@ class HouseGetTest(APITestCase):
 
 class HouseDeleteTest(APITestCase):
     def setUp(self):
-        self.owner = User.objects.create_user(email="owner", password="password123")
-        self.guest = User.objects.create_user(email="guest", password="password123")
-
-        self.client = APIClient()
-        self.client.force_authenticate(user=self.owner)
-
-        self.house = House.objects.create(
-            name="Crescent",
-            address= "10A the crescent",
-            place_id= "TEST_PLACE_ID",
-            max_members=6
-        )
+        self.owner = UserFactory()
+        self.guest = UserFactory()
+        self.house = HouseFactory()
         self.house.set_password("housepassword")
         self.house.save()
         self.house.add_member(user=self.owner, role="owner")
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.owner)
 
         self.url = reverse("delete-house", kwargs={"house_id": self.house.id})
 
@@ -590,27 +496,16 @@ class HouseDeleteTest(APITestCase):
 
 class UpdateChoreTest(APITestCase):
     def setUp(self):
-        self.owner = User.objects.create_user(email="owner", password="password123")
-        self.guest = User.objects.create_user(email="guest", password="password123")
-
-        self.client = APIClient()
-        self.client.force_authenticate(user=self.owner)
-
-        self.house = House.objects.create(
-            name="Crescent",
-            address="10A the crescent",
-            place_id="TEST_PLACE_ID",
-            max_members=6
-        )
+        self.owner = UserFactory()
+        self.guest = UserFactory()
+        self.house = HouseFactory()
         self.house.set_password("housepassword")
         self.house.save()
         self.house.add_member(user=self.owner, role="owner")
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.owner)
+        self.chore = ChoreFactory(house=self.house)
 
-        self.chore = Chore.objects.create(
-            house=self.house,
-            name="dishes",
-            description="wash and dry dishes",
-        )
         self.url = reverse("update-chore", kwargs={"chore_id": self.chore.id})
 
     def test_update_chore(self):
@@ -631,27 +526,16 @@ class UpdateChoreTest(APITestCase):
 
 class DeleteChoreTest(APITestCase):
     def setUp(self):
-        self.owner = User.objects.create_user(email="owner", password="password123")
-        self.guest = User.objects.create_user(email="guest", password="password123")
-
-        self.client = APIClient()
-        self.client.force_authenticate(user=self.owner)
-
-        self.house = House.objects.create(
-            name="Crescent",
-            address= "10A the crescent",
-            place_id= "TEST_PLACE_ID",
-            max_members=6
-        )
+        self.owner = UserFactory()
+        self.guest = UserFactory()
+        self.house = HouseFactory()
         self.house.set_password("housepassword")
         self.house.save()
         self.house.add_member(user=self.owner, role="owner")
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.owner)
+        self.chore = ChoreFactory(house=self.house)
 
-        self.chore = Chore.objects.create(
-            house=self.house,
-            name="dishes",
-            description="wash and dry dishes",
-        )
         self.url = reverse("delete-chore", kwargs={"chore_id": self.chore.id})
 
     def test_delete_chore(self):
@@ -671,22 +555,14 @@ class DeleteChoreTest(APITestCase):
 
 class CreateChoreTest(APITestCase):
     def setUp(self):
-        self.owner = User.objects.create_user(email="owner", password="password123")
-        self.guest = User.objects.create_user(email="guest", password="password123")
-
-        self.client = APIClient()
-        self.client.force_authenticate(user=self.owner)
-
-        self.house = House.objects.create(
-            name="Crescent",
-            address= "10A the crescent",
-            place_id= "TEST_PLACE_ID",
-            max_members=6
-        )
+        self.owner = UserFactory()
+        self.guest = UserFactory()
+        self.house = HouseFactory()
         self.house.set_password("housepassword")
         self.house.save()
         self.house.add_member(user=self.owner, role="owner")
-        self.url = reverse("create-chore")
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.owner)
 
         self.chore_data = {
             "house_id": self.house.id,
@@ -694,6 +570,8 @@ class CreateChoreTest(APITestCase):
             "description": "wash and dry dishes",
             "color": "#ff0000",
         }
+
+        self.url = reverse("create-chore")
 
     def test_create_chore(self):
         response = self.client.post(self.url, self.chore_data)
@@ -772,8 +650,8 @@ class AddressAutocompleteTest(APITestCase):
 
 class JoinHouseTest(APITestCase):
     def setUp(self):
-        self.owner = User.objects.create_user(email="owner", password="password123")
-        self.guest = User.objects.create_user(email="guest", password="password123")
+        self.owner = UserFactory()
+        self.guest = UserFactory()
 
         self.client = APIClient()
         self.client.force_authenticate(user=self.guest)
@@ -823,7 +701,8 @@ class JoinHouseTest(APITestCase):
 
 class HouseFlowTest(APITestCase):
     def setUp(self):
-        self.user = User.objects.create_user(email="owner", password="password123")
+        self.user = UserFactory()
+
         self.client = APIClient()
         self.client.force_authenticate(user=self.user)
 
