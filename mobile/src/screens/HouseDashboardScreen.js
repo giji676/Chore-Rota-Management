@@ -9,9 +9,8 @@ import api from '../utils/api';
 import { apiLogSuccess, apiLogError, jsonLog } from "../utils/loggers";
 import MonthCalendar from "../components/MonthCalendar";
 import CheckBox from "../components/CheckBox";
-import CreateChoreModal from "../components/modals/CreateChoreModal";
 import OccurrenceLongPressModal from "../components/modals/OccurrenceLongPressModal";
-import OccurrenceEditModal from "../components/modals/OccurrenceEditModal";
+import ChoreModal from "../components/modals/ChoreModal";
 
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
@@ -22,13 +21,20 @@ Notifications.setNotificationHandler({
 });
 
 export default function HouseDashboardScreen({ navigation, route }) {
+    const presetColors = [
+        "#ff0000", "#00ff00", "#0000ff",
+        "#ffff00", "#ff00ff", "#00ffff",
+        "#000000", "#ffffff", "#ffa500",
+        "#7600bc", "#a0a0a0", "#1f7d53"
+    ];
+
     const [house, setHouse] = useState(route.params.house);
     const [error, setError] = useState('');
     const [displayDayKey, setDisplayDayKey] = useState();
     const [choreModalVisible, setChoreModalVisible] = useState(false);
     const [newChoreName, setNewChoreName] = useState('');
     const [newChoreDescription, setNewChoreDescription] = useState('');
-    const [newChoreColor, setNewChoreColor] = useState('#ffffff');
+    const [newChoreColor, setNewChoreColor] = useState(presetColors[0]);
 
     const [assignModalVisible, setAssignModalVisible] = useState(false);
     const [selectedDay, setSelectedDay] = useState('mon');
@@ -148,6 +154,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
         try {
             const res = await api.post("chores/occurrence/update/", data);
             fetchHouse();
+            setOccurrenceEditModalVisible(false);
             // apiLogSuccess(res);
         } catch (err) {
             apiLogError(err);
@@ -159,21 +166,19 @@ export default function HouseDashboardScreen({ navigation, route }) {
             Alert.alert("Error", "Chore name is required");
             return;
         }
+        const data = {
+            house_id: house.id,
+            name: newChoreName,
+            description: newChoreDescription,
+            color: newChoreColor,
+            assignee_id: selectedMember.id,
+            start_date: selectedDate.toISOString().split('T')[0],
+            repeat_delta: repeatDelta
+        };
         try {
-            await api.post("chores/schedule/create/", {
-                house_id: house.id,
-                name: newChoreName,
-                description: newChoreDescription,
-                color: newChoreColor,
-                assignee_id: selectedMember,
-                start_date: selectedDate.toISOString().split('T')[0],
-                repeat_delta: repeatDelta
-            });
+            await api.post("chores/schedule/create/", data);
             fetchHouse();
             setChoreModalVisible(false);
-            setNewChoreName('');
-            setNewChoreDescription('');
-            setNewChoreColor('#ffffff');
         } catch (err) {
             Alert.alert("Error", err.response?.data?.error || err.message);
         }
@@ -302,10 +307,12 @@ export default function HouseDashboardScreen({ navigation, route }) {
             />
 
             {/* Create Chore Modal */}
-            <CreateChoreModal
+            <ChoreModal
                 visible={choreModalVisible}
                 onClose={() => setChoreModalVisible(false)}
-                onCreate={handleCreateChore}
+                onSave={() => handleCreateChore()}
+                action={"create"}
+                presetColors={presetColors}
                 choreName={newChoreName}
                 setChoreName={setNewChoreName}
                 choreDescription={newChoreDescription}
@@ -317,17 +324,19 @@ export default function HouseDashboardScreen({ navigation, route }) {
                 setSelectedMember={setSelectedMember}
                 repeatDelta={repeatDelta}
                 setRepeatDelta={setRepeatDelta}
+                selectedDate={selectedDate}
+                setSelectedDate={setSelectedDate}
+                newCompleted={newCompleted}
+                setNewCompleted={setNewCompleted}
             />
 
             {/* Edit Occurrence Modal */}
-            <OccurrenceEditModal
+            <ChoreModal
                 visible={occurrenceEditModalVisible}
-                onClose={() => {setOccurrenceEditModalVisible(false); setChoreModalVisible(false);}}
-                onCreate={() => {
-                    handleEditOccurrence(selectedOcc);
-                    setOccurrenceEditModalVisible(false);
-                    setChoreModalVisible(false);
-                }}
+                onClose={() => setOccurrenceEditModalVisible(false)}
+                onSave={() => handleEditOccurrence(selectedOcc)}
+                action={"edit"}
+                presetColors={presetColors}
                 choreName={newChoreName}
                 setChoreName={setNewChoreName}
                 choreDescription={newChoreDescription}

@@ -37,6 +37,7 @@ EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send"
 # TODO: Add patch to HouseMember for changing role
 # TODO: HouseManagementView.patch should get house_id as input and update only that house
 # TODO: Valudate all inputs and input types to all patch methods
+# TODO: Accept mostly the same inputs in SheduleCreateView as in OccurrenceUpdateView
 
 def send_push_notification(user, title, body):
     tokens = PushToken.objects.filter(user=user).values_list('token', flat=True)

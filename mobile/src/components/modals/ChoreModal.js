@@ -6,12 +6,14 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import DayPicker from "./DayPicker";
 import TimePicker from "./TimePicker";
 
-export default function OccurrenceEditModal({
+export default function ChoreModal({
     visible,
     onClose,
-    onCreate,
-    choreName,
+    onSave,
+    action,
     members,
+    presetColors,
+    choreName,
     setChoreName,
     choreDescription,
     setChoreDescription,
@@ -40,15 +42,7 @@ export default function OccurrenceEditModal({
     const [customUnit, setCustomUnit] = useState("day");
     const [pickerMode, setPickerMode] = useState(null);
     const [activeFeature, setActiveFeature] = useState(null); 
-    const [customColor, setCustomColor] = useState({ r: 255, g: 0, b: 0 });
     const [showCustomPicker, setShowCustomPicker] = useState(false);
-
-    const presetColors = [
-        "#ff0000", "#00ff00", "#0000ff",
-        "#ffff00", "#ff00ff", "#00ffff",
-        "#000000", "#ffffff", "#ffa500",
-        "#7600bc", "#a0a0a0", "#1f7d53"
-    ];
 
     useEffect(() => {
         const label = findRepeatPresetKey(repeatDelta, repeatDeltaPresets);
@@ -159,7 +153,7 @@ export default function OccurrenceEditModal({
         >
             <View style={styles.overlay}>
                 <View style={styles.modal}>
-                    <Text style={styles.title}>Edit Chore</Text>
+                    <Text style={styles.title}>{`${action === "create" ? "Create New" : "Edit"} Chore`}</Text>
                     <TextInput
                         style={styles.input}
                         placeholder="Chore Name"
@@ -206,23 +200,6 @@ export default function OccurrenceEditModal({
                                         }}
                                     />
                                 ))}
-                                {/*
-                                <TouchableOpacity
-                                    onPress={() => setShowCustomPicker(true)}
-                                    style={{
-                                        width: 40,
-                                        height: 40,
-                                        borderRadius: 8,
-                                        margin: 4,
-                                        justifyContent: "center",
-                                        alignItems: "center",
-                                        borderWidth: showCustomPicker ? 2 : 0,
-                                        borderColor: "#000"
-                                    }}
-                                >
-                                    <Text>+</Text>
-                                </TouchableOpacity>
-                                */}
                             </View>
                         </View>
                     )}
@@ -326,7 +303,7 @@ export default function OccurrenceEditModal({
                     <View style={styles.div}/>
                     <View style={styles.buttons}>
                         <Button title="Cancel" onPress={onClose} />
-                        <Button title="Create" onPress={onCreate} />
+                        <Button title="Save" onPress={onSave} />
                     </View>
                 </View>
             </View>

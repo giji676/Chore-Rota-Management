@@ -125,9 +125,6 @@ class ChoreSchedule(models.Model):
     def __str__(self):
         return f"{self.user.first_name}.{self.user.last_name[0]} ({self.repeat_label})"
 
-    class Meta:
-        unique_together = ("chore", "user")
-
 class ChoreOccurrence(models.Model):
     schedule = models.ForeignKey(
         ChoreSchedule,
