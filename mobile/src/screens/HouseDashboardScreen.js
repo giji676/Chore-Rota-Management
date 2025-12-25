@@ -168,9 +168,9 @@ export default function HouseDashboardScreen({ navigation, route }) {
         }
         const data = {
             house_id: house.id,
-            name: newChoreName,
-            description: newChoreDescription,
-            color: newChoreColor,
+            chore_name: newChoreName,
+            chore_description: newChoreDescription,
+            chore_color: newChoreColor,
             assignee_id: selectedMember.id,
             start_date: selectedDate.toISOString().split('T')[0],
             repeat_delta: repeatDelta
