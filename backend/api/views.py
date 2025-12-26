@@ -273,6 +273,15 @@ class HouseDetailsView(APIView):
 
         house_data = HouseSerializer(house).data
 
+        schedules = (
+            ChoreSchedule.objects
+            .filter(chore__house=house)
+            .select_related("chore", "user")
+        )
+        schedules_data = ChoreScheduleSerializer(schedules, many=True).data
+        [generate_occurrences_for_schedule(schedule) for schedule in schedules]
+        house_data["schedules"] = schedules_data
+
         occurrences = (
             ChoreOccurrence.objects
             .filter(schedule__chore__house=house)
@@ -281,13 +290,6 @@ class HouseDetailsView(APIView):
         occurrences_data = ChoreOccurrenceSerializer(occurrences, many=True).data
         house_data["occurrences"] = occurrences_data
 
-        schedules = (
-            ChoreSchedule.objects
-            .filter(chore__house=house)
-            .select_related("chore", "user")
-        )
-        schedules_data = ChoreScheduleSerializer(schedules, many=True).data
-        house_data["schedules"] = schedules_data
 
         return Response(house_data, status=status.HTTP_200_OK)
 
