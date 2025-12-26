@@ -127,9 +127,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
     const handleDeleteOccurrence = async (occ) => {
         try {
             const res = await api.delete(`occurrences/${occ.id}/delete/`);
-            apiLogSuccess(res);
         } catch (err) {
-            apiLogError(err);
         } finally {
             fetchHouse();
         }

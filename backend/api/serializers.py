@@ -101,13 +101,21 @@ class HouseSerializer(serializers.ModelSerializer):
         ]
 
     def get_members(self, obj):
-        house_members = obj.housemember_set.select_related("user")
+        house_members = (
+            obj.housemember_set
+            .select_related("user")
+            .filter(deleted_at__isnull=True)
+        )
         return HouseMemberSerializer(house_members, many=True).data
 
     def get_chores(self, obj):
-        chores = obj.chores.all()
+        chores = (obj.chores.filter(deleted_at__isnull=True))
         return ChoreSerializer(chores, many=True).data
 
     def get_schedules(self, obj):
-        schedules = ChoreSchedule.objects.filter(chore__house=obj).select_related("chore", "user")
+        schedules = (
+            ChoreSchedule.objects
+            .filter(chore__house=obj, deleted_at__isnull=True)
+            .select_related("chore", "user")
+        )
         return ChoreScheduleSerializer(schedules, many=True).data

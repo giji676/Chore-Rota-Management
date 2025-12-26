@@ -22,6 +22,10 @@ HEX_COLOR_VALIDATOR = RegexValidator(
 def generate_join_code(length=6):
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
 
+class ActiveManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(deleted_at__isnull=True)
+
 class House(models.Model):
     name = models.CharField(max_length=100)
     address = models.CharField(max_length=255)
@@ -35,6 +39,9 @@ class House(models.Model):
         through="HouseMember",
         related_name="houses"
     )
+
+    objects = ActiveManager()
+    all_objects = models.Manager()
     
     def add_member(self, user, role="member"):
         if HouseMember.objects.filter(house=self, user=user).exists():
@@ -71,6 +78,9 @@ class HouseMember(models.Model):
     joined_at = models.DateTimeField(auto_now_add=True)
     version = models.IntegerField(default=0)
 
+    objects = ActiveManager()
+    all_objects = models.Manager()
+
     class Meta:
         unique_together = ("user", "house")
 
@@ -83,6 +93,9 @@ class Chore(models.Model):
     description = models.TextField(blank=True)
     color = models.CharField(max_length=7, validators=[HEX_COLOR_VALIDATOR], default="#3498db")
     version = models.IntegerField(default=0)
+
+    objects = ActiveManager()        # default: only active
+    all_objects = models.Manager()   # raw access to everything
 
     def __str__(self):
         return f"{self.name} ({self.house.name})"
@@ -104,6 +117,9 @@ class ChoreSchedule(models.Model):
     repeat_delta = models.JSONField(default=dict)
     deleted_at = models.DateTimeField(null=True, blank=True)
     version = models.IntegerField(default=0)
+
+    objects = ActiveManager()
+    all_objects = models.Manager()
 
     @property
     def delta(self) -> relativedelta:
@@ -137,6 +153,9 @@ class ChoreOccurrence(models.Model):
     notification_sent_at = models.DateTimeField(null=True, blank=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
     version = models.IntegerField(default=0)
+
+    objects = ActiveManager()
+    all_objects = models.Manager()
 
     def save(self, *args, **kwargs):
         if self.completed and not self.completed_at:
