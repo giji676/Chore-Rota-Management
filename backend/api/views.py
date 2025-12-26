@@ -1,5 +1,4 @@
 import requests
-from datetime import datetime
 from django.utils import timezone
 from django.db import transaction
 from django.db.models import F
@@ -93,9 +92,6 @@ class OccurrenceUpdateView(APIView):
         chore = get_object_or_404(Chore.objects.select_for_update(), id=chore_id)
         schedule = get_object_or_404(ChoreSchedule.objects.select_for_update(),id=schedule_id,)
         occurrence = get_object_or_404(ChoreOccurrence.objects.select_for_update(), id=occurrence_id)
-
-        print(house_version, chore_version, schedule_version, occurrence_version)
-        print(house.version, chore.version, schedule.version, occurrence.version)
 
         # ---- Version checks ----
         if house_version is not None and house.version != house_version:

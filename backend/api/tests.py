@@ -4,6 +4,7 @@ from rest_framework.test import APITestCase, APIClient
 from datetime import timezone as dt_timezone
 import factory
 from django.utils import timezone
+from django.db.models import F
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 from api.models import House, HouseMember, Chore, ChoreSchedule, ChoreOccurrence
@@ -54,6 +55,203 @@ class OccurrenceFactory(factory.django.DjangoModelFactory):
     schedule = factory.SubFactory(ScheduleFactory)
     due_date = timezone.now()
 
+class OccurrenceUpdateViewTest(APITestCase):
+    def setUp(self):
+        self.owner = UserFactory()
+        self.house = HouseFactory()
+        self.house.add_member(user=self.owner, role="owner")
+        self.chore = ChoreFactory(house=self.house)
+        self.schedule = ScheduleFactory(chore=self.chore, user=self.owner)
+        self.occurrence = OccurrenceFactory(schedule=self.schedule)
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.owner)
+
+        self.url = reverse("update-occurence-full")
+
+    def _base_payload(self):
+        return {
+            "house_id": self.house.id,
+            "chore_id": self.chore.id,
+            "schedule_id": self.schedule.id,
+            "occurrence_id": self.occurrence.id,
+            "house_version": self.house.version,
+            "chore_version": self.chore.version,
+            "schedule_version": self.schedule.version,
+            "occurrence_version": self.occurrence.version,
+        }
+
+    def test_update_shedule_start_date(self):
+        new_start_date = (timezone.now() + timezone.timedelta(days=1)).isoformat().replace("+00:00", "Z")
+        data = {
+            "house_id": self.house.id,
+            "chore_id": self.chore.id,
+            "schedule_id": self.schedule.id,
+            "occurrence_id": self.occurrence.id,
+            "house_version": self.house.version,
+            "chore_version": self.chore.version,
+            "schedule_version": self.schedule.version,
+            "occurrence_version": self.occurrence.version,
+            "start_date": new_start_date,
+        }
+        response = self.client.post(self.url, data, format="json")
+        new_schedule_id = response.data["schedule"]["id"]
+        schedule = ChoreSchedule.objects.get(id=new_schedule_id)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["schedule"]["start_date"], new_start_date)
+        self.assertEqual(
+            schedule.start_date.isoformat().replace("+00:00", "Z"),
+            new_start_date,
+        )
+
+    def test_update_schedule_regenerates_occurrences_with_correct_dates(self):
+        # Arrange: new start date tomorrow
+        new_start_date = (
+            timezone.now() + timezone.timedelta(days=1)
+        ).replace(microsecond=0)
+
+        iso_new_start = new_start_date.isoformat().replace("+00:00", "Z")
+
+        data = {
+            "house_id": self.house.id,
+            "chore_id": self.chore.id,
+            "schedule_id": self.schedule.id,
+            "occurrence_id": self.occurrence.id,
+            "house_version": self.house.version,
+            "chore_version": self.chore.version,
+            "schedule_version": self.schedule.version,
+            "occurrence_version": self.occurrence.version,
+            "start_date": iso_new_start,
+            "repeat_delta": {"days": 7},
+        }
+
+        response = self.client.post(self.url, data, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        new_schedule_id = response.data["schedule"]["id"]
+        schedule = ChoreSchedule.objects.get(id=new_schedule_id)
+        # --- get occurrences created for new schedule ---
+        occs = (
+            ChoreOccurrence.objects
+            .filter(schedule=schedule)
+            .order_by("due_date")
+        )
+
+        self.assertTrue(occs.exists(), "No occurrences were generated")
+
+        # ---- first occurrence = start_date ----
+        self.assertEqual(
+            occs[0].due_date.replace(microsecond=0, tzinfo=dt_timezone.utc),
+            new_start_date.replace(tzinfo=dt_timezone.utc),
+        )
+
+        # ---- second occurrence offset by repeat_delta ----
+        if len(occs) > 1:
+            expected_second_due = new_start_date + timezone.timedelta(days=7)
+
+            self.assertEqual(
+                occs[1].due_date.replace(microsecond=0, tzinfo=dt_timezone.utc),
+                expected_second_due.replace(tzinfo=dt_timezone.utc),
+            )
+
+    def test_updating_schedule_deletes_only_future_occurrences(self):
+        """
+        When schedule is changed:
+        - past occurrences should remain
+        - future occurrences should be deleted
+        """
+
+        old_schedule = self.schedule
+
+        # sanity check – there should be occurrences to start with
+        all_occs = ChoreOccurrence.objects.filter(schedule=old_schedule)
+        self.assertTrue(all_occs.exists(), "Test precondition failed: no occurrences exist")
+
+        # pick the occurrence that are being edited (cutoff point)
+        cutoff_occurrence = self.occurrence
+        cutoff_due_date = cutoff_occurrence.due_date
+
+        # prepare a schedule change (new start date tomorrow)
+        new_start_date = (
+            timezone.now() + timezone.timedelta(days=1)
+        ).isoformat().replace("+00:00", "Z")
+
+        data = {
+            "house_id": self.house.id,
+            "chore_id": self.chore.id,
+            "schedule_id": self.schedule.id,
+            "occurrence_id": cutoff_occurrence.id,
+            "house_version": self.house.version,
+            "chore_version": self.chore.version,
+            "schedule_version": self.schedule.version,
+            "occurrence_version": self.occurrence.version,
+            "start_date": new_start_date,
+        }
+
+        # Act
+        response = self.client.post(self.url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # past occurrences of OLD schedule must remain
+        self.assertTrue(
+            ChoreOccurrence.objects.filter(
+                schedule=old_schedule,
+                due_date__lt=cutoff_due_date,
+            ).exists(),
+            "Past occurrences should not be deleted",
+        )
+
+        # future occurrences of OLD schedule must be deleted
+        self.assertFalse(
+            ChoreOccurrence.objects.filter(
+                schedule=old_schedule,
+                due_date__gte=cutoff_due_date,
+            ).exists(),
+            "Future occurrences of old schedule should be deleted",
+        )
+
+    def test_conflict_when_house_version_stale(self):
+        data = self._base_payload()
+
+        # Simulate concurrent update
+        House.objects.filter(id=self.house.id).update(version=F("version") + 1)
+
+        # keep stale value in payload
+        response = self.client.post(self.url, data, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertIn("House has been modified", str(response.data))
+
+    def test_conflict_when_chore_version_stale(self):
+        data = self._base_payload()
+
+        Chore.objects.filter(id=self.chore.id).update(version=F("version") + 1)
+
+        response = self.client.post(self.url, data, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertIn("Chore has been modified", str(response.data))
+
+    def test_conflict_when_schedule_version_stale(self):
+        data = self._base_payload()
+
+        ChoreSchedule.objects.filter(id=self.schedule.id).update(version=F("version") + 1)
+
+        response = self.client.post(self.url, data, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertIn("Schedule has been modified", str(response.data))
+
+    def test_conflict_when_occurrence_version_stale(self):
+        data = self._base_payload()
+
+        ChoreOccurrence.objects.filter(id=self.occurrence.id).update(version=F("version") + 1)
+
+        response = self.client.post(self.url, data, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertIn("Occurrence has been modified", str(response.data))
+
 class CreateChoreAndScheduleTest(APITestCase):
     def setUp(self):
         self.owner = UserFactory()
@@ -78,6 +276,70 @@ class CreateChoreAndScheduleTest(APITestCase):
         }
         response = self.client.post(self.url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_missing_fields(self):
+        data1 = {
+            "house_id": self.house.id,
+            "chore_name": "clean kitchen",
+            "chore_description": "wipe and mop",
+            "chore_color": "#ff0000",
+            # "assignee_id": self.owner.id,
+            "start_date": START_DATE,
+            "repeat_delta": {"weeks": 1},
+        }
+        response = self.client.post(self.url, data1, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        data2 = {
+            # "house_id": self.house.id,
+            "chore_name": "clean kitchen",
+            "chore_description": "wipe and mop",
+            "chore_color": "#ff0000",
+            "assignee_id": self.owner.id,
+            "start_date": START_DATE,
+            "repeat_delta": {"weeks": 1},
+        }
+        response = self.client.post(self.url, data2, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        data3 = {
+            "house_id": self.house.id,
+            # "chore_name": "clean kitchen",
+            "chore_description": "wipe and mop",
+            "chore_color": "#ff0000",
+            "assignee_id": self.owner.id,
+            "start_date": START_DATE,
+            "repeat_delta": {"weeks": 1},
+        }
+        response = self.client.post(self.url, data3, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_user_not_in_house(self):
+        data = {
+            "house_id": self.house.id,
+            "chore_name": "clean kitchen",
+            "chore_description": "wipe and mop",
+            "chore_color": "#ff0000",
+            "assignee_id": self.guest.id,  # guest not in house
+            "start_date": START_DATE,
+            "repeat_delta": {"weeks": 1},
+        }
+        response = self.client.post(self.url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_not_owner_cannot_assign_other(self):
+        self.house.add_member(user=self.guest, role="member")
+        client = APIClient()
+        client.force_authenticate(user=self.guest)
+        data = {
+            "house_id": self.house.id,
+            "chore_name": "clean kitchen",
+            "chore_description": "wipe and mop",
+            "chore_color": "#ff0000",
+            "assignee_id": self.owner.id,  # guest trying to assign to owner
+            "start_date": START_DATE,
+            "repeat_delta": {"weeks": 1},
+        }
+        response = client.post(self.url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
 class DeleteChoreScheduleTest(APITestCase):
     def setUp(self):
