@@ -29,7 +29,7 @@ class House(models.Model):
     join_code = models.CharField(max_length=8, unique=True, default=generate_join_code)
     password = models.CharField(max_length=128)
     max_members = models.PositiveIntegerField(default=6)
-
+    version = models.IntegerField(default=0)
     users = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
         through="HouseMember",
@@ -69,6 +69,7 @@ class HouseMember(models.Model):
     house = models.ForeignKey(House, on_delete=models.CASCADE)
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default="member")
     joined_at = models.DateTimeField(auto_now_add=True)
+    version = models.IntegerField(default=0)
 
     class Meta:
         unique_together = ("user", "house")
@@ -81,6 +82,7 @@ class Chore(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True)
     color = models.CharField(max_length=7, validators=[HEX_COLOR_VALIDATOR], default="#3498db")
+    version = models.IntegerField(default=0)
 
     def __str__(self):
         return f"{self.name} ({self.house.name})"
@@ -91,20 +93,17 @@ class ChoreSchedule(models.Model):
         on_delete=models.CASCADE,
         related_name="schedules"
     )
-
     # assignee for this chore schedule
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="chore_schedules"
     )
-
     start_date = models.DateTimeField(default=timezone.now)
-
     # JSON with relativedelta fields
     repeat_delta = models.JSONField(default=dict)
-
     deleted_at = models.DateTimeField(null=True, blank=True)
+    version = models.IntegerField(default=0)
 
     @property
     def delta(self) -> relativedelta:
@@ -130,17 +129,14 @@ class ChoreOccurrence(models.Model):
         on_delete=models.CASCADE,
         related_name="occurrences"
     )
-
     due_date = models.DateTimeField()
-
     # Change to only use _at, drop boolean?
     completed = models.BooleanField(default=False)
     completed_at = models.DateTimeField(null=True, blank=True)
-
     notification_sent = models.BooleanField(default=False)
     notification_sent_at = models.DateTimeField(null=True, blank=True)
-
     deleted_at = models.DateTimeField(null=True, blank=True)
+    version = models.IntegerField(default=0)
 
     def save(self, *args, **kwargs):
         if self.completed and not self.completed_at:

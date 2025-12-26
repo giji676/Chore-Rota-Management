@@ -136,12 +136,18 @@ export default function HouseDashboardScreen({ navigation, route }) {
     };
 
     const handleEditOccurrence = async (occ) => {
+        const schedule = house.schedules.find(s => s.id === occ.schedule);
         const data = {
             house_id: house.id,
             chore_id: occ.chore.id,
             schedule_id: occ.schedule,
             occurrence_id: occ.id,
             assignee_id: selectedMember.id,
+
+            house_version: house.version,
+            chore_version: occ.chore.version,
+            schedule_version: schedule.version,
+            occurrence_version: occ.version,
 
             chore_name: newChoreName,
             chore_description: newChoreDescription,

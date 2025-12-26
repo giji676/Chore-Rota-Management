@@ -2,6 +2,7 @@ import requests
 from datetime import datetime
 from django.utils import timezone
 from django.db import transaction
+from django.db.models import F
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
@@ -27,6 +28,7 @@ from .serializers import (
 from accounts.models import PushToken
 from .helpers.occurrence_utils import generate_occurrences_for_schedule
 from .helpers.parse_datetime import parse_datetime
+from .exceptions import Conflict
 
 User = get_user_model()
 
@@ -72,6 +74,12 @@ class OccurrenceUpdateView(APIView):
         occurrence_id = data.get("occurrence_id")
         assignee_id = data.get("assignee_id")
 
+        # ---- Versions ----
+        house_version = data.get("house_version")
+        chore_version = data.get("chore_version")
+        schedule_version = data.get("schedule_version")
+        occurrence_version = data.get("occurrence_version")
+
         # ---- Chore fields ----
         chore_name = data.get("chore_name")
         chore_description = data.get("chore_description")
@@ -82,22 +90,52 @@ class OccurrenceUpdateView(APIView):
         repeat_delta = data.get("repeat_delta")
 
         house = get_object_or_404(House, id=house_id)
-        chore = get_object_or_404(Chore, id=chore_id)
-        schedule = get_object_or_404(ChoreSchedule, id=schedule_id)
-        occurrence = get_object_or_404(ChoreOccurrence, id=occurrence_id)
+        chore = get_object_or_404(Chore.objects.select_for_update(), id=chore_id)
+        schedule = get_object_or_404(ChoreSchedule.objects.select_for_update(),id=schedule_id,)
+        occurrence = get_object_or_404(ChoreOccurrence.objects.select_for_update(), id=occurrence_id)
+
+        print(house_version, chore_version, schedule_version, occurrence_version)
+        print(house.version, chore.version, schedule.version, occurrence.version)
+
+        # ---- Version checks ----
+        if house_version is not None and house.version != house_version:
+            raise Conflict("House has been modified.")
+
+        if chore_version is not None and chore.version != chore_version:
+            raise Conflict("Chore has been modified.")
+
+        if schedule_version is not None and schedule.version != schedule_version:
+            raise Conflict("Schedule has been modified.")
+
+        if occurrence_version is not None and occurrence.version != occurrence_version:
+            raise Conflict("Occurrence has been modified.")
 
         start_date = iso_start_date
         if start_date:
             start_date = parse_datetime(iso_start_date)
 
-        ChoreOccurrence.objects.filter(
-            schedule=schedule_id,
-            due_date__gte=occurrence.due_date,
-        ).delete()
+        schedule_changed = (
+            (start_date and start_date != schedule.start_date)
+            or
+            (repeat_delta and repeat_delta != schedule.repeat_delta)
+        )
 
-        chore_changed = (chore_name and chore_name != chore.name) or \
-            (chore_description and chore_description != chore.description) or \
+        if schedule_changed:
+            ChoreOccurrence.objects.select_for_update().filter(
+                schedule=schedule_id,
+                due_date__gte=occurrence.due_date,
+            ).delete()
+
+        # ---------------------------------------
+        # Chore changes
+        # ---------------------------------------
+        chore_changed = (
+            (chore_name and chore_name != chore.name)
+            or
+            (chore_description and chore_description != chore.description)
+            or
             (chore_color and chore_color != chore.color)
+        )
 
         if chore_changed:
             new_chore = Chore.objects.create(
@@ -107,17 +145,49 @@ class OccurrenceUpdateView(APIView):
                 color=chore_color or chore.color,
             )
             chore = new_chore
+        else:
+            updated = (
+                Chore.objects
+                .filter(id=chore.id, version=chore_version)
+                .update(
+                    name=chore_name or chore.name,
+                    description=chore_description or chore.description,
+                    color=chore_color or chore.color,
+                    version=F("version") + 1,
+                )
+            )
 
-        schedule.deleted_at = timezone.now()
-        schedule.save()
-        schedule = ChoreSchedule.objects.create(
-            chore=chore,
-            user_id=assignee_id or schedule.user,
-            start_date=start_date,
-            repeat_delta=repeat_delta or schedule.repeat_delta,
-        )
+            if updated == 0:
+                raise Conflict("Chore was modified by another user.")
 
-        generate_occurrences_for_schedule(schedule)
+        # ---------------------------------------
+        # Only now update & close old schedule ONCE
+        # ---------------------------------------
+        if schedule_changed:
+            updated = (
+                ChoreSchedule.objects
+                .filter(id=schedule.id, version=schedule_version)
+                .update(
+                    deleted_at=timezone.now(),
+                    version=F("version") + 1,
+                )
+            )
+            if updated == 0:
+                raise Conflict("Schedule was modified by another user.")
+
+            # create replacement schedule
+            schedule = ChoreSchedule.objects.create(
+                chore=chore,
+                user_id=assignee_id or schedule.user_id,
+                start_date=start_date or schedule.start_date,
+                repeat_delta=repeat_delta or schedule.repeat_delta,
+            )
+
+            generate_occurrences_for_schedule(schedule)
+
+        else:
+            # no schedule change, just return current schedule
+            schedule.refresh_from_db()
 
         return Response({
             "chore": ChoreSerializer(chore).data,

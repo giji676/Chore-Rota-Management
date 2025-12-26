@@ -24,6 +24,7 @@ class HouseMemberSerializer(serializers.ModelSerializer):
             "role",
             "joined_at",
             "label",
+            "version",
         ]
 
     def get_label(self, obj):
@@ -52,6 +53,7 @@ class ChoreScheduleSerializer(serializers.ModelSerializer):
             "start_date",
             "repeat_delta",
             "repeat_label",
+            "version",
         ]
 
 class ChoreOccurrenceSerializer(serializers.ModelSerializer):
@@ -72,6 +74,7 @@ class ChoreOccurrenceSerializer(serializers.ModelSerializer):
             "completed_at",
             "notification_sent",
             "notification_sent_at",
+            "version",
         ]
 
     def get_chore(self, obj):
@@ -85,7 +88,17 @@ class HouseSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = House
-        fields = ["id", "name", "address", "join_code", "max_members", "members", "chores", "schedules"]
+        fields = [
+            "id",
+            "name",
+            "address",
+            "join_code",
+            "max_members",
+            "members",
+            "chores",
+            "schedules",
+            "version",
+        ]
 
     def get_members(self, obj):
         house_members = obj.housemember_set.select_related("user")
