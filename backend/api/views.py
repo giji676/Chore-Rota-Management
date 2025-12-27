@@ -58,6 +58,22 @@ def send_push_notification(user, title, body):
         "Content-Type": "application/json"
     })
 
+def check_version(obj, client_version, name=None):
+    """
+    Raises Conflict if:
+      1. client_version is not provided
+      2. client_version does not match obj.version
+    """
+    name = name or obj.__class__.__name__
+    if client_version is None:
+        raise Conflict(f"{name} version is required for concurrency check.")
+    try:
+        client_version = int(client_version)
+    except (ValueError, TypeError):
+        raise Conflict("Invalid version value.")
+    if obj.version != client_version:
+        raise Conflict(f"{name} has been modified.")
+
 class OccurrenceUpdateView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -94,17 +110,11 @@ class OccurrenceUpdateView(APIView):
         occurrence = get_object_or_404(ChoreOccurrence, id=occurrence_id)
 
         # ---- Version checks ----
-        if house_version is not None and house.version != house_version:
-            raise Conflict("House has been modified.")
 
-        if chore_version is not None and chore.version != chore_version:
-            raise Conflict("Chore has been modified.")
-
-        if schedule_version is not None and schedule.version != schedule_version:
-            raise Conflict("Schedule has been modified.")
-
-        if occurrence_version is not None and occurrence.version != occurrence_version:
-            raise Conflict("Occurrence has been modified.")
+        check_version(house, house_version)
+        check_version(chore, chore_version)
+        check_version(schedule, schedule_version)
+        check_version(occurrence, occurrence_version)
 
         start_date = iso_start_date
         if start_date:
@@ -373,8 +383,12 @@ class HouseManagementView(APIView):
         user = request.user
         data = request.data
 
+        house_version = data.get("house_version")
+
         member = get_object_or_404(HouseMember, user=user)
         house = get_object_or_404(House.objects.select_for_update(), id=house_id)
+
+        check_version(house, house_version)
 
         if member.role != "owner":
             return Response({"error": "Only the owner can update the house"}, status=403)
@@ -399,8 +413,13 @@ class HouseManagementView(APIView):
 
     @transaction.atomic
     def delete(self, request, house_id):
+        data = request.data
+        house_version = data.get("house_version")
+
         house = get_object_or_404(House.objects.select_for_update(), id=house_id)
         house_member = get_object_or_404(HouseMember, house=house, user=request.user)
+
+        check_version(house, house_version)
 
         if house_member.role != "owner":
             return Response({"error": "Only the owner can delete this house"}, status=status.HTTP_403_FORBIDDEN)
@@ -420,6 +439,7 @@ class ChoreOccurrenceManagementView(APIView):
 
         schedule_id = data.get("schedule_id")
         due_date = data.get("due_date")
+        schedule_version = data.get("schedule_version")
 
         if not all([schedule_id, due_date]):
             return Response(
@@ -428,6 +448,8 @@ class ChoreOccurrenceManagementView(APIView):
             )
 
         schedule = get_object_or_404(ChoreSchedule, id=schedule_id)
+
+        check_version(schedule, schedule_version)
 
         occurrence = ChoreOccurrence.objects.create(
             schedule=schedule,
@@ -441,8 +463,12 @@ class ChoreOccurrenceManagementView(APIView):
     def patch(self, request, occurrence_id):
         user = request.user
         data = request.data
+        occurrence_version = data.get("occurrence_version")
 
         occurrence = get_object_or_404(ChoreOccurrence.objects.select_for_update(), id=occurrence_id)
+
+        check_version(occurrence, occurrence_version)
+
         house_member = get_object_or_404(
             HouseMember,
             house=occurrence.schedule.chore.house,
@@ -469,8 +495,13 @@ class ChoreOccurrenceManagementView(APIView):
     @transaction.atomic
     def delete(self, request, occurrence_id):
         user = request.user
+        data = request.data
+        occurrence_version = data.get("occurrence_version")
 
         occurrence = get_object_or_404(ChoreOccurrence.objects.select_for_update(), id=occurrence_id)
+
+        check_version(occurrence, occurrence_version)
+
         house_member = get_object_or_404(
             HouseMember,
             house=occurrence.schedule.chore.house,
@@ -500,6 +531,8 @@ class ChoreScheduleManagementView(APIView):
         repeat_delta = data.get("repeat_delta")
         iso_start_date = data.get("start_date")
 
+        chore_version = data.get("chore_version")
+
         start_date = iso_start_date
         if start_date:
             start_date = parse_datetime(iso_start_date)
@@ -511,6 +544,8 @@ class ChoreScheduleManagementView(APIView):
             )
 
         chore = get_object_or_404(Chore, id=chore_id)
+        check_version(chore, chore_version)
+
         house_member = get_object_or_404(HouseMember, house=chore.house, user=user)
         target_house_member  = get_object_or_404(HouseMember, house=chore.house, user=user_id)
 
@@ -536,18 +571,25 @@ class ChoreScheduleManagementView(APIView):
         data = request.data
 
         user_id = data.get("user_id")
+        schedule_version = data.get("schedule_version")
 
         schedule = get_object_or_404(ChoreSchedule.objects.select_for_update(), id=schedule_id)
+        check_version(schedule, schedule_version)
+
         house_member = get_object_or_404(HouseMember, house=schedule.chore.house, user=user)
 
         if user_id and user.id != int(user_id) and house_member.role != "owner":
             return Response({"error": "Only the owner can perform this action"}, status=status.HTTP_403_FORBIDDEN)
 
+        allowed_fields = ["chore", "repeat_delta", "user_id", "start_date"]
+
         for field, value in data.items():
-            setattr(schedule, field, value)
+            if field in allowed_fields:
+                setattr(schedule, field, value)
+
 
         schedule.version = F("version") + 1
-        schedule.save(update_fields=list(data.keys()) + ["version"])
+        schedule.save(update_fields=allowed_fields + ["version"])
         schedule.refresh_from_db()
 
         return Response(ChoreScheduleSerializer(schedule).data, status=status.HTTP_200_OK)
@@ -558,8 +600,11 @@ class ChoreScheduleManagementView(APIView):
         data = request.data
 
         user_id = data.get("user_id")
+        schedule_version = data.get("schedule_version")
 
         schedule = get_object_or_404(ChoreSchedule.objects.select_for_update(), id=schedule_id)
+        check_version(schedule, schedule_version)
+
         house_member = get_object_or_404(HouseMember, house=schedule.chore.house, user=user)
 
         if user.id != int(user_id) and house_member.role != "owner":
@@ -610,7 +655,10 @@ class ChoreManagementView(APIView):
         user = request.user
         data = request.data
 
+        chore_version = data.get("chore_version")
+
         chore = get_object_or_404(Chore.objects.select_for_update(), id=chore_id)
+        check_version(chore, chore_version)
 
         if not HouseMember.objects.filter(house=chore.house, user=user).exists():
             return Response({"error": "You do not belong to this house"},
@@ -630,8 +678,12 @@ class ChoreManagementView(APIView):
     @transaction.atomic
     def delete(self, request, chore_id):
         user = request.user
+        data = request.data
+
+        chore_version = data.get("chore_version")
 
         chore = get_object_or_404(Chore.objects.select_for_update(), id=chore_id)
+        check_version(chore, chore_version)
 
         if not HouseMember.objects.filter(house=chore.house, user=user).exists():
             return Response({"error": "You do not belong to this house"},

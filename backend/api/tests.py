@@ -358,7 +358,10 @@ class DeleteChoreScheduleTest(APITestCase):
         self.url = reverse("delete-schedule", kwargs={"schedule_id": self.schedule.id})
 
     def test_delete_schedule(self):
-        response = self.client.delete(self.url, {"user_id": self.guest.id})
+        response = self.client.delete(self.url, {
+            "user_id": self.guest.id,
+            "schedule_version": self.schedule.version,
+        })
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(ChoreSchedule.objects.filter(id=self.schedule.id).exists())
 
@@ -366,12 +369,18 @@ class DeleteChoreScheduleTest(APITestCase):
         client = APIClient()
         client.force_authenticate(self.guest)
         # authed as guest (member), tries to delete someone elses (owners)
-        response = client.delete(self.url, {"user_id": self.owner.id})
+        response = client.delete(self.url, {
+            "user_id": self.owner.id,
+            "schedule_version": self.schedule.version,
+        })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_invalid_schedule(self):
         url = reverse("delete-schedule", kwargs={"schedule_id": 999})
-        response = self.client.delete(url, {"user_id": self.guest.id})
+        response = self.client.delete(url, {
+            "user_id": self.guest.id,
+            "schedule_version": self.schedule.version,
+        })
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
 class UpdateChoreScheduleTest(APITestCase):
@@ -391,7 +400,10 @@ class UpdateChoreScheduleTest(APITestCase):
         self.url = reverse("update-schedule", kwargs={"schedule_id": self.schedule.id})
 
     def test_update_schedule(self):
-        data = {"repeat_delta": {"days": 2}}
+        data = {
+            "repeat_delta": {"days": 2},
+            "schedule_version": self.schedule.version,
+        }
         response = self.client.patch(self.url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["repeat_delta"], {"days": 2})
@@ -399,21 +411,31 @@ class UpdateChoreScheduleTest(APITestCase):
     def test_non_owner_cannot_update_other(self):
         client = APIClient()
         client.force_authenticate(self.guest)
-        data = {"repeat_delta": {"days": 3}, "user_id": self.owner.id}
+        data = {
+            "repeat_delta": {"days": 3},
+            "user_id": self.owner.id,
+            "schedule_version": self.schedule.version,
+        }
         response = client.patch(self.url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertIn("only the owner", response.data["error"].lower())
 
     def test_invalid_schedule(self):
         url = reverse("update-schedule", kwargs={"schedule_id": 999})
-        response = self.client.patch(url, {"repeat_delta": {"days": 2}}, format="json")
+        response = self.client.patch(url, {
+            "repeat_delta": {"days": 2},
+            "schedule_version": self.schedule.version,
+        }, format="json")
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_user_not_in_house(self):
         outsider = User.objects.create_user(email="outsider", password="123")
         client = APIClient()
         client.force_authenticate(outsider)
-        data = {"repeat_delta": {"days": 5}}
+        data = {
+            "repeat_delta": {"days": 5},
+            "schedule_version": self.schedule.version,
+        }
         response = client.patch(self.url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
@@ -438,6 +460,7 @@ class CreateChoreScheduleTest(APITestCase):
             "user_id": self.guest.id,
             "start_date": START_DATE,
             "repeat_delta": {"days": 1},
+            "chore_version": self.chore.version,
         }
         response = self.client.post(self.url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -458,6 +481,7 @@ class CreateChoreScheduleTest(APITestCase):
             "user_id": self.owner.id,
             "start_date": START_DATE,
             "repeat_delta": {"days": 1},
+            "chore_version": self.chore.version,
         }
         response = client.post(self.url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -469,6 +493,7 @@ class CreateChoreScheduleTest(APITestCase):
             "user_id": self.guest.id,
             "start_date": START_DATE,
             "repeat_delta": {"days": 1},
+            "chore_version": self.chore.version,
         }
         response = self.client.post(self.url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
@@ -480,6 +505,7 @@ class CreateChoreScheduleTest(APITestCase):
             "user_id": outsider.id,
             "start_date": START_DATE,
             "repeat_delta": {"days": 1},
+            "chore_version": self.chore.version,
         }
         response = self.client.post(self.url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
@@ -503,7 +529,7 @@ class DeleteChoreOccurrenceTest(APITestCase):
         })
 
     def test_delete_occurrence(self):
-        response = self.client.delete(self.url)
+        response = self.client.delete(self.url, {"occurrence_version": self.occurrence.version})
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(
             ChoreOccurrence.objects.filter(id=self.occurrence.id).exists()
@@ -512,19 +538,19 @@ class DeleteChoreOccurrenceTest(APITestCase):
     def test_not_part_of_house(self):
         client = APIClient()
         client.force_authenticate(user=self.guest)
-        response = client.delete(self.url)
+        response = client.delete(self.url, {"occurrence_version": self.occurrence.version})
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_invalid_occurrence(self):
         url = reverse("delete-occurrence", kwargs={"occurrence_id": 999})
-        response = self.client.delete(url)
+        response = self.client.delete(url, {"occurrence_version": self.occurrence.version})
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_as_member(self):
         self.house.add_member(user=self.guest, role="guest")
         client = APIClient()
         client.force_authenticate(self.guest)
-        response = client.delete(self.url)
+        response = client.delete(self.url, {"occurrence_version": self.occurrence.version})
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
 class UpdateChoreOccurrenceTest(APITestCase):
@@ -546,14 +572,20 @@ class UpdateChoreOccurrenceTest(APITestCase):
         })
 
     def test_update_occurrence(self):
-        response = self.client.patch(self.url, {"completed": True})
+        response = self.client.patch(self.url, {
+            "completed": True,
+            "occurrence_version": self.occurrence.version,
+        })
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data["completed"])
 
     def test_not_part_of_house(self):
         client = APIClient()
         client.force_authenticate(user=self.guest)
-        response = client.patch(self.url, {"completed": True})
+        response = client.patch(self.url, {
+            "completed": True,
+            "occurrence_version": self.occurrence.version,
+        })
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_invalid_occurrence(self):
@@ -565,7 +597,10 @@ class UpdateChoreOccurrenceTest(APITestCase):
         self.house.add_member(user=self.guest, role="guest")
         client = APIClient()
         client.force_authenticate(self.guest)
-        response = client.patch(self.url, {"completed": True})
+        response = client.patch(self.url, {
+            "completed": True,
+            "occurrence_version": self.occurrence.version,
+        })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
 class CreateChoreOccurrenceTest(APITestCase):
@@ -586,7 +621,8 @@ class CreateChoreOccurrenceTest(APITestCase):
     def test_create_occurrence(self):
         response = self.client.post(self.url, {
             "schedule_id": self.schedule.id,
-            "due_date": timezone.now()
+            "due_date": timezone.now(),
+            "schedule_version": self.schedule.version,
         })
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
@@ -598,7 +634,8 @@ class CreateChoreOccurrenceTest(APITestCase):
     def test_invalid_schedule(self):
         response = self.client.post(self.url, {
             "schedule_id": 999,
-            "due_date": timezone.now()
+            "due_date": timezone.now(),
+            "schedule_version": self.schedule.version,
         })
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
@@ -616,7 +653,11 @@ class UpdateHouseTest(APITestCase):
         self.url = reverse("update-house", kwargs={"house_id": self.house.id})
 
     def test_update_house(self):
-        response = self.client.patch(self.url, {"max_members": 8, "password": "new_password_123"})
+        response = self.client.patch(self.url, {
+            "max_members": 8,
+            "password": "new_password_123",
+            "house_version": self.house.version,
+        })
         self.house.refresh_from_db()
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["max_members"], 8)
@@ -631,13 +672,13 @@ class UpdateHouseTest(APITestCase):
         self.house.add_member(user=self.guest, role="guest")
         client = APIClient()
         client.force_authenticate(self.guest)
-        response = client.patch(self.url, {"max_members": 8})
+        response = client.patch(self.url, {"max_members": 8, "house_version": self.house.version})
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_not_part_of_house(self):
         client = APIClient()
         client.force_authenticate(self.guest)
-        response = client.patch(self.url, {"max_members": 8})
+        response = client.patch(self.url, {"max_members": 8, "house_version": self.house.version})
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
 class UsersHousesTest(APITestCase):
@@ -734,26 +775,26 @@ class HouseDeleteTest(APITestCase):
         self.url = reverse("delete-house", kwargs={"house_id": self.house.id})
 
     def test_delete_house(self):
-        response = self.client.delete(self.url)
+        response = self.client.delete(self.url, {"house_version": self.house.version})
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(House.objects.filter(id=self.house.id).exists())
 
     def test_not_authorised(self):
         client = APIClient()
         client.force_authenticate(user=self.guest)
-        response = client.delete(self.url)
+        response = client.delete(self.url, {"house_version": self.house.version})
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_not_owner(self):
         self.house.add_member(user=self.guest, role="member")
         client = APIClient()
         client.force_authenticate(user=self.guest)
-        response = client.delete(self.url)
+        response = client.delete(self.url, {"house_version": self.house.version})
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_invalid_house(self):
         url = reverse("delete-house", kwargs={"house_id": 999})
-        response = self.client.delete(url)
+        response = self.client.delete(url, {"house_version": self.house.version})
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
 class UpdateChoreTest(APITestCase):
@@ -771,19 +812,28 @@ class UpdateChoreTest(APITestCase):
         self.url = reverse("update-chore", kwargs={"chore_id": self.chore.id})
 
     def test_update_chore(self):
-        response = self.client.patch(self.url, {"description": "only wash"})
+        response = self.client.patch(self.url, {
+            "description": "only wash",
+            "chore_version": self.chore.version,
+        })
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["description"], "only wash")
 
     def test_not_authorised(self):
         client = APIClient()
         client.force_authenticate(user=self.guest)
-        response = client.patch(self.url, {"description": "only wash"})
+        response = client.patch(self.url, {
+            "description": "only wash",
+            "chore_version": self.chore.version,
+        })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_invalid_chore(self):
         url = reverse("update-chore", kwargs={"chore_id": 999})
-        response = self.client.patch(url, {"description": "only wash"})
+        response = self.client.patch(url, {
+            "description": "only wash",
+            "chore_version": self.chore.version,
+        })
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
 class DeleteChoreTest(APITestCase):
@@ -801,18 +851,18 @@ class DeleteChoreTest(APITestCase):
         self.url = reverse("delete-chore", kwargs={"chore_id": self.chore.id})
 
     def test_delete_chore(self):
-        response = self.client.delete(self.url)
+        response = self.client.delete(self.url, {"chore_version": self.chore.version})
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
     def test_not_authorised(self):
         client = APIClient()
         client.force_authenticate(user=self.guest)
-        response = client.delete(self.url)
+        response = client.delete(self.url, {"chore_version": self.chore.version})
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_invalid_chore(self):
         url = reverse("delete-chore", kwargs={"chore_id": 999})
-        response = self.client.delete(url)
+        response = self.client.delete(url, {"chore_version": self.chore.version})
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
 class CreateChoreTest(APITestCase):
