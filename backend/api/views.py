@@ -89,9 +89,9 @@ class OccurrenceUpdateView(APIView):
         repeat_delta = data.get("repeat_delta")
 
         house = get_object_or_404(House, id=house_id)
-        chore = get_object_or_404(Chore.objects.select_for_update(), id=chore_id)
-        schedule = get_object_or_404(ChoreSchedule.objects.select_for_update(),id=schedule_id,)
-        occurrence = get_object_or_404(ChoreOccurrence.objects.select_for_update(), id=occurrence_id)
+        chore = get_object_or_404(Chore, id=chore_id)
+        schedule = get_object_or_404(ChoreSchedule, id=schedule_id,)
+        occurrence = get_object_or_404(ChoreOccurrence, id=occurrence_id)
 
         # ---- Version checks ----
         if house_version is not None and house.version != house_version:
@@ -119,8 +119,11 @@ class OccurrenceUpdateView(APIView):
         if schedule_changed:
             ChoreOccurrence.objects.select_for_update().filter(
                 schedule=schedule_id,
-                due_date__gte=occurrence.due_date,
-            ).delete()
+                due_date__gte=occurrence.due_date
+            ).update(
+                deleted_at=timezone.now(),
+                version=F("version") + 1
+            )
 
         # ---------------------------------------
         # Chore changes
@@ -143,7 +146,7 @@ class OccurrenceUpdateView(APIView):
             chore = new_chore
         else:
             updated = (
-                Chore.objects
+                Chore.objects.select_for_update()
                 .filter(id=chore.id, version=chore_version)
                 .update(
                     name=chore_name or chore.name,
@@ -161,7 +164,7 @@ class OccurrenceUpdateView(APIView):
         # ---------------------------------------
         if schedule_changed:
             updated = (
-                ChoreSchedule.objects
+                ChoreSchedule.objects.select_for_update()
                 .filter(id=schedule.id, version=schedule_version)
                 .update(
                     deleted_at=timezone.now(),
