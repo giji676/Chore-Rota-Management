@@ -33,6 +33,7 @@ class House(models.Model):
     join_code = models.CharField(max_length=8, unique=True, default=generate_join_code)
     password = models.CharField(max_length=128)
     max_members = models.PositiveIntegerField(default=6)
+    deleted_at = models.DateTimeField(null=True, blank=True)
     version = models.IntegerField(default=0)
     users = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
@@ -76,6 +77,7 @@ class HouseMember(models.Model):
     house = models.ForeignKey(House, on_delete=models.CASCADE)
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default="member")
     joined_at = models.DateTimeField(auto_now_add=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
     version = models.IntegerField(default=0)
 
     objects = ActiveManager()
@@ -92,6 +94,7 @@ class Chore(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True)
     color = models.CharField(max_length=7, validators=[HEX_COLOR_VALIDATOR], default="#3498db")
+    deleted_at = models.DateTimeField(null=True, blank=True)
     version = models.IntegerField(default=0)
 
     objects = ActiveManager()        # default: only active

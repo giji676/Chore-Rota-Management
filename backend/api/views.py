@@ -310,6 +310,7 @@ class UsersHousesView(APIView):
 class JoinHouseView(APIView):
     permission_classes  = [IsAuthenticated]
 
+    @transaction.atomic
     def post(self, request, join_code):
         user = request.user
         data = request.data
@@ -318,7 +319,10 @@ class JoinHouseView(APIView):
         if not password:
             return Response({"error": "Password required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        house = get_object_or_404(House, join_code=join_code)
+        try:
+            house = House.objects.select_for_update().get(join_code=join_code)
+        except House.DoesNotExist:
+            return Response({"error": "Invalid join code"}, status=status.HTTP_404_NOT_FOUND)
 
         if not house.check_password(password):
             return Response({"error": "Wrong password"}, status=status.HTTP_403_FORBIDDEN)
@@ -328,12 +332,15 @@ class JoinHouseView(APIView):
         except ValidationError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+        House.objects.filter(id=house.id).update(version=F('version') + 1)
+
         member_data = HouseMemberSerializer(member).data
         return Response(member_data, status=status.HTTP_200_OK)
 
 class HouseManagementView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @transaction.atomic
     def post(self, request):
         user = request.user
         data = request.data
@@ -361,12 +368,13 @@ class HouseManagementView(APIView):
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+    @transaction.atomic
     def patch(self, request, house_id):
         user = request.user
         data = request.data
 
         member = get_object_or_404(HouseMember, user=user)
-        house = get_object_or_404(House, id=house_id)
+        house = get_object_or_404(House.objects.select_for_update(), id=house_id)
 
         if member.role != "owner":
             return Response({"error": "Only the owner can update the house"}, status=403)
@@ -380,24 +388,33 @@ class HouseManagementView(APIView):
         if "password" in data and data["password"]:
             house.set_password(data["password"])
 
-        house.save()
+        house.version = F("version") + 1
+        house.save(update_fields=allowed_fields + ["version", "password"])
+
+        # Refresh from DB to get actual incremented version
+        house.refresh_from_db()
 
         serializer = HouseSerializer(house)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    @transaction.atomic
     def delete(self, request, house_id):
-        house = get_object_or_404(House, id=house_id)
+        house = get_object_or_404(House.objects.select_for_update(), id=house_id)
         house_member = get_object_or_404(HouseMember, house=house, user=request.user)
 
         if house_member.role != "owner":
             return Response({"error": "Only the owner can delete this house"}, status=status.HTTP_403_FORBIDDEN)
 
-        house.delete()
+        house.deleted_at = timezone.now()
+        house.version = F("version") + 1
+        house.save(update_fields=["deleted_at", "version"])
+        
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 class ChoreOccurrenceManagementView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @transaction.atomic
     def post(self, request):
         data = request.data
 
@@ -420,11 +437,12 @@ class ChoreOccurrenceManagementView(APIView):
         serializer = ChoreOccurrenceSerializer(occurrence)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+    @transaction.atomic
     def patch(self, request, occurrence_id):
         user = request.user
         data = request.data
 
-        occurrence = get_object_or_404(ChoreOccurrence, id=occurrence_id)
+        occurrence = get_object_or_404(ChoreOccurrence.objects.select_for_update(), id=occurrence_id)
         house_member = get_object_or_404(
             HouseMember,
             house=occurrence.schedule.chore.house,
@@ -442,14 +460,17 @@ class ChoreOccurrenceManagementView(APIView):
             if field in allowed_fields:
                 setattr(occurrence, field, value)
 
-        occurrence.save()
+        occurrence.version = F("version") + 1
+        occurrence.save(update_fields=allowed_fields + ["version"])
+        occurrence.refresh_from_db()
 
         return Response(ChoreOccurrenceSerializer(occurrence).data, status=status.HTTP_200_OK)
 
+    @transaction.atomic
     def delete(self, request, occurrence_id):
         user = request.user
 
-        occurrence = get_object_or_404(ChoreOccurrence, id=occurrence_id)
+        occurrence = get_object_or_404(ChoreOccurrence.objects.select_for_update(), id=occurrence_id)
         house_member = get_object_or_404(
             HouseMember,
             house=occurrence.schedule.chore.house,
@@ -461,12 +482,15 @@ class ChoreOccurrenceManagementView(APIView):
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        occurrence.delete()
+        occurrence.deleted_at = timezone.now()
+        occurrence.version = F("version") + 1
+        occurrence.save(update_fields=["deleted_at", "version"])
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 class ChoreScheduleManagementView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @transaction.atomic
     def post(self, request):
         user = request.user
         data = request.data
@@ -506,13 +530,14 @@ class ChoreScheduleManagementView(APIView):
         serializer = ChoreScheduleSerializer(schedule)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+    @transaction.atomic
     def patch(self, request, schedule_id):
         user = request.user
         data = request.data
 
         user_id = data.get("user_id")
 
-        schedule = get_object_or_404(ChoreSchedule, id=schedule_id)
+        schedule = get_object_or_404(ChoreSchedule.objects.select_for_update(), id=schedule_id)
         house_member = get_object_or_404(HouseMember, house=schedule.chore.house, user=user)
 
         if user_id and user.id != int(user_id) and house_member.role != "owner":
@@ -521,29 +546,35 @@ class ChoreScheduleManagementView(APIView):
         for field, value in data.items():
             setattr(schedule, field, value)
 
-        schedule.save()
+        schedule.version = F("version") + 1
+        schedule.save(update_fields=list(data.keys()) + ["version"])
+        schedule.refresh_from_db()
 
         return Response(ChoreScheduleSerializer(schedule).data, status=status.HTTP_200_OK)
 
+    @transaction.atomic
     def delete(self, request, schedule_id):
         user = request.user
         data = request.data
 
         user_id = data.get("user_id")
 
-        schedule = get_object_or_404(ChoreSchedule, id=schedule_id)
+        schedule = get_object_or_404(ChoreSchedule.objects.select_for_update(), id=schedule_id)
         house_member = get_object_or_404(HouseMember, house=schedule.chore.house, user=user)
 
         if user.id != int(user_id) and house_member.role != "owner":
             return Response({"error": "Only the owner can perform this action"}, status=status.HTTP_403_FORBIDDEN)
 
-        schedule.delete()
+        schedule.deleted_at = timezone.now()
+        schedule.version = F("version") + 1
+        schedule.save(update_fields=["deleted_at", "version"])
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 class ChoreManagementView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @transaction.atomic
     def post(self, request):
         user = request.user
         data = request.data
@@ -574,11 +605,12 @@ class ChoreManagementView(APIView):
 
         return Response(ChoreSerializer(chore).data, status=status.HTTP_201_CREATED)
 
+    @transaction.atomic
     def patch(self, request, chore_id):
         user = request.user
         data = request.data
 
-        chore = get_object_or_404(Chore, id=chore_id)
+        chore = get_object_or_404(Chore.objects.select_for_update(), id=chore_id)
 
         if not HouseMember.objects.filter(house=chore.house, user=user).exists():
             return Response({"error": "You do not belong to this house"},
@@ -589,21 +621,25 @@ class ChoreManagementView(APIView):
         for field, value in data.items():
             if field in allowed_fields:
                 setattr(chore, field, value)
-
-        chore.save()
+        chore.version = F("version") + 1
+        chore.save(update_fields=allowed_fields + ["version"])
+        chore.refresh_from_db()
 
         return Response(ChoreSerializer(chore).data, status=status.HTTP_200_OK)
 
+    @transaction.atomic
     def delete(self, request, chore_id):
         user = request.user
 
-        chore = get_object_or_404(Chore, id=chore_id)
+        chore = get_object_or_404(Chore.objects.select_for_update(), id=chore_id)
 
         if not HouseMember.objects.filter(house=chore.house, user=user).exists():
             return Response({"error": "You do not belong to this house"},
                             status=status.HTTP_403_FORBIDDEN)
 
-        chore.delete()
+        chore.deleted_at = timezone.now()
+        chore.version = F("version") + 1
+        chore.save(update_fields=["deleted_at", "version"])
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
