@@ -107,7 +107,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
                     style: "destructive",
                     onPress: async () => {
                         try {
-                            await api.delete(`house/${house.id}/`);
+                            await api.delete(`house/${house.id}/`, {"house_version": house.version});
                             Alert.alert("House deleted successfully");
                             navigation.goBack();
                         } catch (err) {
@@ -120,13 +120,18 @@ export default function HouseDashboardScreen({ navigation, route }) {
     };
 
     const handleCheckOccurrence = async (occ) => {
-        await api.patch(`occurrences/${occ.id}/update/`, { completed: !occ.completed });
+        await api.patch(`occurrences/${occ.id}/update/`, {
+            "occurrence_version": occ.version,
+            completed: !occ.completed 
+        });
         fetchHouse();
     };
 
     const handleDeleteOccurrence = async (occ) => {
         try {
-            const res = await api.delete(`occurrences/${occ.id}/delete/`);
+            const res = await api.delete(`occurrences/${occ.id}/delete/`, {
+                "occurrence_version": occ.version
+            });
         } catch (err) {
         } finally {
             fetchHouse();

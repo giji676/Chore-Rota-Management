@@ -188,9 +188,10 @@ const styles = StyleSheet.create({
         minHeight: 36,
         padding: 4,
         alignItems: "center",
+        borderWidth: 1,
+        borderColor: "transparent",
     },
     dayCellSelected: {
-        borderWidth: 1,
         borderColor: "#aaa",
         backgroundColor: "#eee",
         borderRadius: 6,
