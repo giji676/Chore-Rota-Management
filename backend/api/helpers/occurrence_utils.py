@@ -31,6 +31,8 @@ def generate_occurrences_for_schedule(schedule, days_ahead=30):
     now = timezone.now()
     horizon = now + timedelta(days=days_ahead)
     delta = dict_to_relativedelta(schedule.repeat_delta)
+    if schedule.generate_occurrences is False:
+        return created
 
     # Find last existing occurrence for this schedule
     last_occ = (
@@ -62,13 +64,15 @@ def generate_occurrences_for_schedule(schedule, days_ahead=30):
     while next_dt <= horizon:
         # use microsecond trimming for equality comparison
         due_dt = next_dt.replace(microsecond=0)
-        occ, created_flag = ChoreOccurrence.objects.get_or_create(
-            schedule=schedule,
-            due_date=due_dt,
-            defaults={}
-        )
-        if created_flag:
-            created.append(occ)
+        occs = ChoreOccurrence.all_objects.filter(schedule=schedule, due_date=due_dt)
+        if occs.count() == 0:
+            occ, created_flag = ChoreOccurrence.objects.get_or_create(
+                schedule=schedule,
+                due_date=due_dt,
+                defaults={}
+            )
+            if created_flag:
+                created.append(occ)
         # increment
         next_dt = next_dt + delta
 

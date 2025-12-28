@@ -17,9 +17,17 @@ def chore_occurrence_pre_save(sender, instance, **kwargs):
 
 @receiver(post_save, sender=ChoreOccurrence)
 def chore_occurrence_post_save(sender, instance, created, **kwargs):
-    if not getattr(instance, "_was_completed", False) and \
-        instance.completed and not instance.schedule.deleted_at:
-        generate_next_occurrence_after(instance)
+    # don't generate next occurrences for deleted ones
+    if instance.deleted_at is not None:
+        return
+
+    if (
+        not getattr(instance, "_was_completed", False)
+        and instance.completed
+        and not instance.schedule.deleted_at
+    ):
+        if (instance.schedule.generate_occurrences):
+            generate_next_occurrence_after(instance)
 
 @receiver(post_save, sender=ChoreSchedule)
 def schedule_post_save(sender, instance, created, **kwargs):

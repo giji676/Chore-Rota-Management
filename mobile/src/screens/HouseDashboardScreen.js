@@ -128,14 +128,45 @@ export default function HouseDashboardScreen({ navigation, route }) {
     };
 
     const handleDeleteOccurrence = async (occ) => {
-        try {
-            const res = await api.delete(`occurrences/${occ.id}/delete/`, {
-                "occurrence_version": occ.version
-            });
-        } catch (err) {
-        } finally {
-            fetchHouse();
-        }
+        Alert.alert(
+            "Confirm Delete",
+            "Confirm aciton",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Delete Only This",
+                    style: "destructive",
+                    onPress: async () => {
+                        const data = {
+                            "occurrence_version": occ.version,
+                            "generate_occurrences": true
+                        };
+                        try {
+                            const res = await api.delete(`occurrences/${occ.id}/delete/`, {data: data});
+                        } catch (err) {
+                        } finally {
+                            fetchHouse();
+                        }
+                    }
+                },
+                {
+                    text: "Delete All Futures",
+                    style: "destructive",
+                    onPress: async () => {
+                        const data = {
+                            "occurrence_version": occ.version,
+                            "generate_occurrences": false
+                        };
+                        try {
+                            const res = await api.delete(`occurrences/${occ.id}/delete/`, {data: data});
+                        } catch (err) {
+                        } finally {
+                            fetchHouse();
+                        }
+                    }
+                }
+            ]
+        );
     };
 
     const handleEditOccurrence = async (occ) => {

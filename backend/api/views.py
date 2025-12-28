@@ -103,6 +103,7 @@ class OccurrenceUpdateView(APIView):
         # ---- Schedule fields ----
         iso_start_date = data.get("start_date")
         repeat_delta = data.get("repeat_delta")
+        generate_occurrences = data.get("generate_occurrences")
 
         house = get_object_or_404(House, id=house_id)
         chore = get_object_or_404(Chore, id=chore_id)
@@ -124,6 +125,8 @@ class OccurrenceUpdateView(APIView):
             (start_date and start_date != schedule.start_date)
             or
             (repeat_delta and repeat_delta != schedule.repeat_delta)
+            or
+            (generate_occurrences is not None and generate_occurrences != schedule.generate_occurrences)
         )
 
         if schedule_changed:
@@ -173,17 +176,18 @@ class OccurrenceUpdateView(APIView):
         # Only now update & close old schedule ONCE
         # ---------------------------------------
         if schedule_changed:
+            if generate_occurrences is None:
+                generate_occurrences = schedule.generate_occurrences
             updated = (
                 ChoreSchedule.objects.select_for_update()
                 .filter(id=schedule.id, version=schedule_version)
                 .update(
-                    deleted_at=timezone.now(),
+                    generate_occurrences=generate_occurrences,
                     version=F("version") + 1,
                 )
             )
             if updated == 0:
                 raise Conflict("Schedule was modified by another user.")
-
             # create replacement schedule
             schedule = ChoreSchedule.objects.create(
                 chore=chore,
@@ -302,7 +306,6 @@ class HouseDetailsView(APIView):
         )
         occurrences_data = ChoreOccurrenceSerializer(occurrences, many=True).data
         house_data["occurrences"] = occurrences_data
-
 
         return Response(house_data, status=status.HTTP_200_OK)
 
@@ -497,6 +500,7 @@ class ChoreOccurrenceManagementView(APIView):
         user = request.user
         data = request.data
         occurrence_version = data.get("occurrence_version")
+        generate_occurrences = data.get("generate_occurrences")
 
         occurrence = get_object_or_404(ChoreOccurrence.objects.select_for_update(), id=occurrence_id)
 
@@ -512,10 +516,23 @@ class ChoreOccurrenceManagementView(APIView):
                 {"error": "Only the owner can perform this action"},
                 status=status.HTTP_403_FORBIDDEN
             )
+        if generate_occurrences is not None and not generate_occurrences:
+            ChoreSchedule.objects.select_for_update().filter(
+                id=occurrence.schedule.id
+            ).update(generate_occurrences=generate_occurrences, version=F("version") + 1)
+            ChoreOccurrence.objects.filter(
+                schedule_id=occurrence.schedule.id,
+                due_date__gte=occurrence.due_date,
+                deleted_at__isnull=True
+            ).update(
+                deleted_at=timezone.now(),
+                version=F("version") + 1
+            )
+        else:
+            occurrence.deleted_at = timezone.now()
+            occurrence.version = F("version") + 1
+            occurrence.save(update_fields=["deleted_at", "version"])
 
-        occurrence.deleted_at = timezone.now()
-        occurrence.version = F("version") + 1
-        occurrence.save(update_fields=["deleted_at", "version"])
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 class ChoreScheduleManagementView(APIView):

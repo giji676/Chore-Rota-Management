@@ -2,6 +2,7 @@ import string
 import random
 from datetime import date, time
 from django.db import models
+from django.db.models.fields import return_None
 from django.utils import timezone
 from django.conf import settings
 from django.contrib.auth.hashers import make_password, check_password
@@ -118,6 +119,7 @@ class ChoreSchedule(models.Model):
     start_date = models.DateTimeField(default=timezone.now)
     # JSON with relativedelta fields
     repeat_delta = models.JSONField(default=dict)
+    generate_occurrences = models.BooleanField(default=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
     version = models.IntegerField(default=0)
 
@@ -176,8 +178,16 @@ class ChoreOccurrence(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return (
-            f"{self.schedule.chore.name} "
-                f"for {self.schedule.user.first_name}.{self.schedule.user.last_name[0]} "
-                f"on {self.due_date}"
-        )
+        try:
+            string = (
+                f"{self.schedule.chore.name} "
+                    f"for {self.schedule.user.first_name}.{self.schedule.user.last_name[0]} "
+                    f"on {self.due_date}"
+            )
+        except:
+            string = (
+                f"{self.schedule.chore.name} "
+                    f"for {self.schedule.user.first_name}.{self.schedule.user.last_name} "
+                    f"on {self.due_date}"
+            )
+        return string

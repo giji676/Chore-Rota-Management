@@ -55,6 +55,32 @@ class OccurrenceFactory(factory.django.DjangoModelFactory):
     schedule = factory.SubFactory(ScheduleFactory)
     due_date = timezone.now()
 
+class DeleteOccurrenceWithoutRegeneratingTest(APITestCase):
+    def setUp(self):
+        self.owner = UserFactory()
+        self.house = HouseFactory()
+        self.house.add_member(user=self.owner, role="owner")
+        self.chore = ChoreFactory(house=self.house)
+        self.schedule = ScheduleFactory(
+            chore=self.chore,
+            user=self.owner,
+            repeat_delta={"days": 0}
+        )
+        self.occurrence = ChoreOccurrence.all_objects.filter(schedule=self.schedule).first()
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.owner)
+
+        self.delete_occurrence = reverse("delete-occurrence", kwargs={"occurrence_id": self.occurrence.id})
+
+    def test_delete_occurrence_without_regenerating(self):
+        response1 = self.client.delete(self.delete_occurrence, {
+            "occurrence_version": self.occurrence.version,
+            "generate_occurrences": False,
+        })
+        self.assertEqual(response1.status_code, status.HTTP_204_NO_CONTENT)
+        occs = ChoreOccurrence.objects.filter(schedule=self.schedule, deleted_at__isnull=True)
+        self.assertEqual(occs.count(), 0, "No occurrences should exist after deletion")
+
 class OccurrenceUpdateViewTest(APITestCase):
     def setUp(self):
         self.owner = UserFactory()
@@ -534,6 +560,8 @@ class DeleteChoreOccurrenceTest(APITestCase):
         self.assertFalse(
             ChoreOccurrence.objects.filter(id=self.occurrence.id).exists()
         )
+        self.occurrence.refresh_from_db()
+        self.assertIsNotNone(self.occurrence.deleted_at)
 
     def test_not_part_of_house(self):
         client = APIClient()
