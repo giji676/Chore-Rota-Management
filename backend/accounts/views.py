@@ -79,32 +79,31 @@ class GuestView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        serializer = GuestSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        data = request.data
+        device_id = data.get("device_id")
 
-        device_id = serializer.validated_data["device_id"]
-        first_name = serializer.validated_data["first_name"]
-        last_name = serializer.validated_data["last_name"]
-
-        user, created = User.objects.get_or_create(
-            device_id=device_id,
-            defaults={
-                "email": f"guest_{device_id[:8]}@example.com",
-                "first_name": first_name,
-                "last_name": last_name,
-                "is_guest": True,
-            }
-        )
-
-        # If the guest already exists, update their name (important)
-        if not created:
-            user.first_name = first_name
-            user.last_name = last_name
-            user.is_guest = True
-            user.save(update_fields=["first_name", "last_name", "is_guest"])
+        # Try to find an existing user with this device_id
+        try:
+            user = User.objects.get(device_id=device_id)
+        except User.DoesNotExist:
+            # Only create a new guest if name is provided
+            first_name = data.get("first_name")
+            last_name = data.get("last_name")
+            if first_name and last_name:
+                user = User.objects.create(
+                    device_id=device_id,
+                    email=f"guest_{device_id[:8]}@example.com",
+                    first_name=first_name,
+                    last_name=last_name,
+                    is_guest=True,
+                )
+            else:
+                return Response(
+                    {"detail": "User not found and name not provided"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
         refresh = RefreshToken.for_user(user)
-
         return Response({
             "access_token": str(refresh.access_token),
             "refresh_token": str(refresh)

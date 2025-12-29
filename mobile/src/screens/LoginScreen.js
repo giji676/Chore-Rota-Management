@@ -1,9 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Modal, View, Text, TextInput, Button, StyleSheet, TouchableOpacity } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from "../utils/api";
 import "react-native-get-random-values";
 import { v4 as uuidv4 } from "uuid";
+
+import { dumpAsyncStorage } from "../utils/asyncDump";
 
 export default function LoginScreen({ navigation }) {
     const [email, setEmail] = useState("");
@@ -47,6 +49,7 @@ export default function LoginScreen({ navigation }) {
             const res = await api.post("accounts/login/", { email, password });
             await AsyncStorage.setItem("access_token", res.data.access_token);
             await AsyncStorage.setItem("refresh_token", res.data.refresh_token);
+            await AsyncStorage.setItem("last_login", "registered");
             navigation.replace("HouseAccess");
         } catch (err) {
             setError(getErrorMessage(err));
@@ -71,6 +74,7 @@ export default function LoginScreen({ navigation }) {
 
             await AsyncStorage.setItem("access_token", res.data.access_token);
             await AsyncStorage.setItem("refresh_token", res.data.refresh_token);
+            await AsyncStorage.setItem("last_login", "registered");
             navigation.replace("HouseAccess");
         } catch (err) {
             setError(getErrorMessage(err));
@@ -95,6 +99,7 @@ export default function LoginScreen({ navigation }) {
 
             await AsyncStorage.setItem("access_token", res.data.access_token);
             await AsyncStorage.setItem("refresh_token", res.data.refresh_token);
+            await AsyncStorage.setItem("last_login", "guest");
 
             setGuestModalVisible(false);
             navigation.replace("HouseAccess");

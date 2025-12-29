@@ -1,5 +1,5 @@
 import axios from "axios";
-import jwtDecode from "jwt-decode";
+import { jwtDecode } from "jwt-decode";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { navigate } from "../navigation/NavigationService";
 
@@ -11,17 +11,22 @@ export const isTokenExpired = (token) => {
     if (!token) return true;
 
     try {
-        const { exp } = jwtDecode(token);
+        const decoded = jwtDecode(token);
         const now = Math.floor(Date.now() / 1000);
-        return exp < now;
+        return decoded.exp < now;
     } catch (e) {
         return true;
     }
 };
 
-const guestLogin = async () => {
-    const device_id = await AsyncStorage.getItem("device_id");
-    if (!device_id) return null;
+export const guestLogin = async (device_id) => {
+    if (!device_id) {
+        const _device_id = await AsyncStorage.getItem("device_id");
+        if (!_device_id) {
+            return null;
+        }
+        device_id = _device_id;
+    }
 
     try {
         const res = await authApi.post("accounts/guest/", { device_id });
@@ -30,8 +35,9 @@ const guestLogin = async () => {
 
         await AsyncStorage.setItem("access_token", accessToken);
         await AsyncStorage.setItem("refresh_token", refreshToken);
+        await AsyncStorage.setItem("last_login", "guest");
 
-        return accessToken; // return new access token
+        return accessToken;
     } catch (err) {
         console.log("Guest login failed:", err.response?.data || err.message);
         return null;
@@ -56,7 +62,9 @@ export const refreshAccessToken = async () => {
         });
 
         const newAccessToken = res.data.access_token;
+        const newRefreshToken = res.data.refresh_token;
         await AsyncStorage.setItem("access_token", newAccessToken);
+        await AsyncStorage.setItem("refresh_token", newRefreshToken);
 
         return newAccessToken;
     } catch (err) {

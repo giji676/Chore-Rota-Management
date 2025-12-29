@@ -58,6 +58,9 @@ export default function HouseAccessScreen({ navigation }) {
         logout();
         navigation.navigate("Login");
     };
+    const temp_login_redirect = () => {
+        navigation.navigate("Login");
+    };
 
     return (
         <View style={styles.container}>
@@ -111,6 +114,9 @@ export default function HouseAccessScreen({ navigation }) {
 
             <TouchableOpacity style={styles.button} onPress={temp_logout}>
                 <Text style={styles.buttonText}>Logout</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.button} onPress={temp_login_redirect}>
+                <Text style={styles.buttonText}>LoginRedirect</Text>
             </TouchableOpacity>
         </View>
     );

@@ -1,14 +1,15 @@
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { NavigationContainer } from '@react-navigation/native';
-import { navigationRef } from './NavigationService';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, View } from "react-native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { NavigationContainer } from "@react-navigation/native";
+import { navigationRef } from "./NavigationService";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import LoginScreen from '../screens/LoginScreen';
-import HouseAccessScreen from '../screens/HouseAccessScreen';
-import CreateHouseScreen from '../screens/CreateHouseScreen';
-import HouseDashboardScreen from '../screens/HouseDashboardScreen';
+import LoginScreen from "../screens/LoginScreen";
+import HouseAccessScreen from "../screens/HouseAccessScreen";
+import CreateHouseScreen from "../screens/CreateHouseScreen";
+import HouseDashboardScreen from "../screens/HouseDashboardScreen";
+import { isTokenExpired, refreshAccessToken, guestLogin } from "../utils/auth";
 
 const Stack = createNativeStackNavigator();
 
@@ -17,11 +18,30 @@ export default function MainStack() {
 
     useEffect(() => {
         const checkLogin = async () => {
-            const access = await AsyncStorage.getItem('access_token');
-            if (access) {
-                setInitialRoute('HouseAccess');
+            const lastLogin = await AsyncStorage.getItem("last_login");
+            if (lastLogin === "registered") {
+                const access = await AsyncStorage.getItem("access_token");
+                const refresh = await AsyncStorage.getItem("refresh_token");
+                if (access && !isTokenExpired(access)) {
+                    setInitialRoute("HouseAccess");
+                } else if (refresh && !isTokenExpired(refresh)) {
+                    const newAccess = await refreshAccessToken();
+                    if (newAccess) {
+                        setInitialRoute("HouseAccess");
+                    } else {
+                        setInitialRoute("Login");
+                    }
+                } else {
+                    setInitialRoute("Login");
+                }
+            } else if (lastLogin === "guest") {
+                const deviceId = await AsyncStorage.getItem("device_id");
+                const token = await guestLogin(deviceId);
+
+                setInitialRoute("HouseAccess");
             } else {
-                setInitialRoute('Login');
+                console.log("no last_login");
+                setInitialRoute("Login");
             }
         };
 
@@ -30,7 +50,7 @@ export default function MainStack() {
 
     if (!initialRoute) {
         return (
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
                 <ActivityIndicator size="large" />
             </View>
         );
