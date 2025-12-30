@@ -24,55 +24,19 @@ from .serializers import (
     ChoreScheduleSerializer,
     ChoreOccurrenceSerializer,
 )
-from accounts.models import PushToken
 from .helpers.occurrence_utils import generate_occurrences_for_schedule
 from .helpers.parse_datetime import parse_datetime
+from .helpers.generic_utils import check_version
 from .exceptions import Conflict
 
 User = get_user_model()
 
 GOOGLE_PLACES_URL = "https://maps.googleapis.com/maps/api/place/autocomplete/json"
 GOOGLE_DETAILS_URL = "https://maps.googleapis.com/maps/api/place/details/json"
-EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send"
 
 # TODO: Add patch to HouseMember for changing role
 # TODO: HouseManagementView.patch should get house_id as input and update only that house
 # TODO: Valudate all inputs and input types to all patch methods
-
-def send_push_notification(user, title, body):
-    tokens = PushToken.objects.filter(user=user).values_list('token', flat=True)
-
-    messages = []
-    for token in tokens:
-        messages.append({
-            "to": token,
-            "sound": "default",
-            "title": title,
-            "body": body,
-            "data": {"extraData": "Optional data"},
-        })
-
-    # Expo API supports sending multiple messages at once
-    response = requests.post(EXPO_PUSH_URL, json=messages, headers={
-        "Accept": "application/json",
-        "Content-Type": "application/json"
-    })
-
-def check_version(obj, client_version, name=None):
-    """
-    Raises Conflict if:
-      1. client_version is not provided
-      2. client_version does not match obj.version
-    """
-    name = name or obj.__class__.__name__
-    if client_version is None:
-        raise Conflict(f"{name} version is required for concurrency check.")
-    try:
-        client_version = int(client_version)
-    except (ValueError, TypeError):
-        raise Conflict("Invalid version value.")
-    if obj.version != client_version:
-        raise Conflict(f"{name} has been modified.")
 
 class OccurrenceUpdateView(APIView):
     permission_classes = [IsAuthenticated]
