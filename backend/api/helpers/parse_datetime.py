@@ -21,5 +21,5 @@ def parse_client_datetime(value: str):
     if timezone.is_naive(dt):
         dt = timezone.make_aware(dt, dt_timezone.utc)
 
-    # Normalize to UTC (safe for DB storage)
+    # Normalize to UTC
     return dt.astimezone(dt_timezone.utc)

@@ -39,14 +39,3 @@ class TestCheckVersion(TestCase):
         obj = VersionedObject(version=3)
         # should not raise
         check_version(obj, client_version=3)
-
-from django.utils import timezone
-import datetime
-
-class TestParseDateTime(TestCase):
-    def test_(self):
-        print(timezone.now())
-        print(datetime.datetime.now())
-        # dt_str = "2024-06-01T12:00:00Z"
-        # dt = parse_client_datetime(dt_str)
-        # self.assertEqual(dt.isoformat(), "2024-06-01T12:00:00+00:00")
