@@ -9,7 +9,7 @@ from django.contrib.auth.hashers import make_password, check_password
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from dateutil.relativedelta import relativedelta
-from .helpers.repeat import (
+from .helpers.repeat_utils import (
     relativedelta_to_dict,
     dict_to_relativedelta,
     generate_repeat_label,

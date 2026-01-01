@@ -4,7 +4,7 @@ from django.utils.dateparse import parse_datetime
 from dateutil.relativedelta import relativedelta
 
 from ..models import ChoreOccurrence
-from ..helpers.repeat import dict_to_relativedelta
+from ..helpers.repeat_utils import dict_to_relativedelta
 
 def _start_datetime_for_schedule(schedule):
     """
