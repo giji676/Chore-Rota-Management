@@ -19,3 +19,17 @@ class GuestSerializer(serializers.Serializer):
     device_id = serializers.CharField(max_length=255)
     first_name = serializers.CharField(max_length=150)
     last_name = serializers.CharField(max_length=150)
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "email",
+            "first_name",
+            "last_name",
+            "is_guest",
+            "device_id",
+            "is_active",
+            "is_staff"
+        ]

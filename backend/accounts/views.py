@@ -2,12 +2,21 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import get_user_model, authenticate
-from .serializers import RegisterSerializer, GuestSerializer
+from django.db import IntegrityError
+from .serializers import RegisterSerializer, GuestSerializer, UserSerializer
 from .models import PushToken
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from rest_framework.permissions import IsAuthenticated, AllowAny
 
+
 User = get_user_model()
+
+class UserView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        user = request.user
+        serialized = UserSerializer(user)
+        return Response(serialized.data, status=status.HTTP_200_OK)
 
 class LoginView(APIView):
     permission_classes = [AllowAny]
@@ -40,12 +49,25 @@ class SavePushTokenView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        token = request.data.get("token")
-        if not token:
+        token_value = request.data.get("token")
+
+        if not token_value:
             return Response({"error": "Token missing"}, status=400)
 
-        PushToken.objects.update_or_create(user=request.user, defaults={"token": token})
-        return Response(status=status.HTTP_200_OK)
+        # Upsert based on (user, token)
+        token_obj, created = PushToken.objects.update_or_create(
+            user=request.user,
+            token=token_value,
+        )
+
+        return Response(
+            {
+                "created": created,
+                "token": token_obj.token,
+                "created_at": token_obj.created_at,
+            },
+            status=200,
+        )
 
 class RefreshTokenView(APIView):
     permission_classes = [AllowAny]

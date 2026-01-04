@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, ActivityIndicator } from "react-native";
 import api from "../utils/api";
 import logout from "../utils/logout";
+import { apiLogError, apiLogSuccess, jsonLog } from "../utils/loggers";
 
 export default function HouseAccessScreen({ navigation }) {
     const [joinCode, setJoinCode] = useState("");
@@ -9,6 +10,18 @@ export default function HouseAccessScreen({ navigation }) {
     const [result, setResult] = useState("");
     const [houses, setHouses] = useState([]);
     const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchUser = async () => {
+            try {
+                const res = await api.get("accounts/user/");
+                apiLogSuccess(res);
+            } catch (err) {
+                apiLogError(err);
+            }
+        }
+        fetchUser();
+    }, []);
 
     useEffect(() => {
         const fetchUserHouses = async () => {

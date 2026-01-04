@@ -7,4 +7,5 @@ urlpatterns = [
     path("guest/", views.GuestView.as_view(), name="guest"),
     path("refresh/", views.RefreshTokenView.as_view(), name="refresh"),
     path("push-token/", views.SavePushTokenView.as_view(), name="push-token"),
+    path("user/", views.UserView.as_view(), name="user"),
 ]

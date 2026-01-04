@@ -66,10 +66,10 @@ export default function HouseDashboardScreen({ navigation, route }) {
                 await configureAndroidChannel();
                 const token = await registerForPushNotificationsAsync();
                 if (token) {
-                    await api.post("accounts/push-token/", { token });
+                    const res = await api.post("accounts/push-token/", { token });
                 }
             } catch (err) {
-                // console.log("Notification init error:", err);
+                apiLogError(err);
             }
         }
         initNotifications();
