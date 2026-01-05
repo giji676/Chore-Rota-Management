@@ -23,8 +23,28 @@ class DeletedListFilter(admin.SimpleListFilter):
 
 @admin.register(House)
 class HouseAdmin(admin.ModelAdmin):
-    list_display = ("id", "name", "address", "join_code", "max_members")
+    list_display = (
+        "id",
+        "name",
+        "address",
+        "join_code",
+        "deleted_at_display",
+        "max_members",
+    )
     search_fields = ("name", "address", "join_code")
+    list_filter = (
+        DeletedListFilter,
+    )
+
+    def deleted_at_display(self, obj):
+        return obj.deleted_at is not None
+    deleted_at_display.boolean = True
+    deleted_at_display.short_description = "Deleted?"
+
+    def get_queryset(self, request):
+        # start from default manager
+        qs = super().get_queryset(request)
+        return qs
 
 @admin.register(HouseMember)
 class HouseMemberAdmin(admin.ModelAdmin):

@@ -278,7 +278,15 @@ class UsersHousesView(APIView):
 
     def get(self, request):
         user = request.user
-        memberships = HouseMember.objects.filter(user=user).select_related("house")
+        memberships = (
+            HouseMember.objects
+            .filter(
+                user=user,
+                deleted_at__isnull=True,
+                house__deleted_at__isnull=True,
+            )
+            .select_related("house")
+        )
         houses = [m.house for m in memberships]
 
         serializer = HouseSerializer(houses, many=True)

@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, ActivityIndicator } from "react-native";
+import { FontAwesome } from "@expo/vector-icons";
+
+import HouseOptionsModal from "../components/modals/HouseOptionsModal";
 import api from "../utils/api";
 import logout from "../utils/logout";
 import { apiLogError, apiLogSuccess, jsonLog } from "../utils/loggers";
@@ -10,12 +13,14 @@ export default function HouseAccessScreen({ navigation }) {
     const [result, setResult] = useState("");
     const [houses, setHouses] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [houseOptionsModalVisible, setHouseOptionsModalVisible] = useState(false);
+    const [selectedHouse, setSelectedHouse] = useState(null);
 
     useEffect(() => {
         const fetchUser = async () => {
             try {
                 const res = await api.get("accounts/user/");
-                apiLogSuccess(res);
+                // apiLogSuccess(res);
             } catch (err) {
                 apiLogError(err);
             }
@@ -24,19 +29,19 @@ export default function HouseAccessScreen({ navigation }) {
     }, []);
 
     useEffect(() => {
-        const fetchUserHouses = async () => {
-            try {
-                const res = await api.get("houses/user/");
-                setHouses(res.data);
-            } catch (err) {
-                console.log("Failed to fetch user houses:", err.response?.data || err.message);
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchUserHouses();
     }, []);
+
+    const fetchUserHouses = async () => {
+        try {
+            const res = await api.get("houses/user/");
+            setHouses(res.data);
+        } catch (err) {
+            console.log("Failed to fetch user houses:", err.response?.data || err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleJoinHouse = async () => {
         if (!joinCode.trim()) {
@@ -64,6 +69,15 @@ export default function HouseAccessScreen({ navigation }) {
             onPress={() => navigation.navigate("HouseDashboard", { house: item })}
         >
             <Text style={styles.houseName}>{item.name}</Text>
+            <TouchableOpacity
+                style={styles.houseOptions}
+                onPress={() => {
+                    setSelectedHouse(item);
+                    setHouseOptionsModalVisible(true);
+                }}
+            >
+                <FontAwesome name={"ellipsis-v"} size={20} color="#000" />
+            </TouchableOpacity>
         </TouchableOpacity>
     );
 
@@ -71,8 +85,20 @@ export default function HouseAccessScreen({ navigation }) {
         logout();
         navigation.navigate("Login");
     };
+
     const temp_login_redirect = () => {
         navigation.navigate("Login");
+    };
+
+    const handleDelete = async (house) => {
+        try {
+            const res = await api.delete(`house/${house.id}/delete/`, {data: {house_version: house.version}});
+            apiLogSuccess(res);
+        } catch (error) {
+            apiLogError(error);
+        } finally {
+            fetchUserHouses();
+        }
     };
 
     return (
@@ -131,6 +157,17 @@ export default function HouseAccessScreen({ navigation }) {
             <TouchableOpacity style={styles.button} onPress={temp_login_redirect}>
                 <Text style={styles.buttonText}>LoginRedirect</Text>
             </TouchableOpacity>
+
+            <HouseOptionsModal
+                visible={houseOptionsModalVisible}
+                house={selectedHouse}
+                onClose={() => {
+                    setHouseOptionsModalVisible(false);
+                    fetchUserHouses();
+                }}
+                onEdit={(house) => jsonLog("edit", house)}
+                onDelete={(house) => handleDelete(house)}
+            />
         </View>
     );
 }
@@ -169,7 +206,17 @@ const styles = StyleSheet.create({
         padding: 12,
         backgroundColor: "#f0f0f0",
         borderRadius: 6,
-        marginBottom: 8,
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
     },
     houseName: { fontSize: 16 },
+    houseOptions: {
+        justifyContent: "center",
+        alignItems: "center",
+        paddingHorizontal: 15,
+        backgroundColor: "#ddd",
+        aspectRatio: 1,
+        borderRadius: 5,
+    },
 });
