@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Activity
 import { FontAwesome } from "@expo/vector-icons";
 
 import HouseOptionsModal from "../components/modals/HouseOptionsModal";
+import HouseModal from "../components/modals/HouseModal";
 import api from "../utils/api";
 import logout from "../utils/logout";
 import { apiLogError, apiLogSuccess, jsonLog } from "../utils/loggers";
@@ -15,6 +16,12 @@ export default function HouseAccessScreen({ navigation }) {
     const [loading, setLoading] = useState(true);
     const [houseOptionsModalVisible, setHouseOptionsModalVisible] = useState(false);
     const [selectedHouse, setSelectedHouse] = useState(null);
+    const [houseModalVisible, setHouseModalVisible] = useState(false);
+    const [newName, setNewName] = useState("");
+    const [newPassword, setNewPassword] = useState("");
+    const [newAddress, setNewAddress] = useState("");
+    const [newPlaceId, setNewPlaceId] = useState("");
+    const [newMaxMembers, setNewMaxMembers] = useState("6");
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -101,6 +108,31 @@ export default function HouseAccessScreen({ navigation }) {
         }
     };
 
+    useEffect(() => {
+        setNewName(selectedHouse ? selectedHouse.name : "");
+        setNewPassword("");
+        setNewAddress(selectedHouse ? selectedHouse.address : "");
+        setNewPlaceId(selectedHouse ? selectedHouse.place_id : "");
+        setNewMaxMembers(selectedHouse ? selectedHouse.max_members.toString() : "6");
+    }, [houseModalVisible]);
+
+    const handleSaveHouse = async (house) => {
+        try {
+            const data = {
+                name: newName,
+                password: newPassword,
+                address: newAddress,
+                place_id: newPlaceId,
+                max_members: parseInt(newMaxMembers),
+                house_version: house.version,
+            };
+            jsonLog("save", data);
+        } catch (error) {
+        } finally {
+            fetchUserHouses();
+        }
+    };
+
     return (
         <View style={styles.container}>
             <Text style={styles.title}>Your Houses</Text>
@@ -158,6 +190,23 @@ export default function HouseAccessScreen({ navigation }) {
                 <Text style={styles.buttonText}>LoginRedirect</Text>
             </TouchableOpacity>
 
+            <HouseModal
+                visible={houseModalVisible}
+                house={selectedHouse}
+                onClose={() => setHouseModalVisible(false)}
+                onSave={(house) => handleSaveHouse(house)}
+                newName={newName}
+                setNewName={setNewName}
+                newPassword={newPassword}
+                setNewPassword={setNewPassword}
+                newAddress={newAddress}
+                setNewAddress={setNewAddress}
+                newPlaceId={newPlaceId}
+                setNewPlaceId={setNewPlaceId}
+                newMaxMembers={newMaxMembers}
+                setNewMaxMembers={setNewMaxMembers}
+            />
+
             <HouseOptionsModal
                 visible={houseOptionsModalVisible}
                 house={selectedHouse}
@@ -165,7 +214,10 @@ export default function HouseAccessScreen({ navigation }) {
                     setHouseOptionsModalVisible(false);
                     fetchUserHouses();
                 }}
-                onEdit={(house) => jsonLog("edit", house)}
+                onEdit={(house) => {
+                    setHouseOptionsModalVisible(false);
+                    setHouseModalVisible(true);
+                }}
                 onDelete={(house) => handleDelete(house)}
             />
         </View>
