@@ -42,18 +42,27 @@ GOOGLE_DETAILS_URL = "https://maps.googleapis.com/maps/api/place/details/json"
 class HouseMemberManagementView(APIView):
     permission_classes = [IsAuthenticated]
 
+    def get(self, request, house_id, member_id):
+        user = request.user
+        house = get_object_or_404(House, id=house_id)
+        if not HouseMember.objects.filter(house=house, user=user).exists():
+            return Response({"error": "You are not part of this house"},
+                        status=status.HTTP_403_FORBIDDEN)
+        member = get_object_or_404(HouseMember, house=house, user_id=member_id)
+        serializer = HouseMemberSerializer(member)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
     @transaction.atomic
     def patch(self, request, house_id, member_id):
         user = request.user
         data = request.data
 
-        house_version = data.get("house_version")
+        member_version = data.get("member_version")
         new_role = data.get("role")
         if new_role not in ["owner", "member"]:
             return Response({"error": "Invalid role"}, status=status.HTTP_400_BAD_REQUEST)
 
-        house = get_object_or_404(House.objects.select_for_update(), id=house_id)
-        check_version(house, house_version)
+        house = get_object_or_404(House, id=house_id)
 
         house_member = get_object_or_404(HouseMember, house=house, user=user)
         if house_member.role != "owner":
@@ -62,6 +71,7 @@ class HouseMemberManagementView(APIView):
 
         member_to_update = get_object_or_404(HouseMember.objects.select_for_update(),
                                              house=house, user_id=member_id)
+        check_version(member_to_update, member_version)
         if member_to_update.user_id == user.id:
             return Response({"error": "Owner cannot change their own role"}, status=status.HTTP_400_BAD_REQUEST)
         member_to_update.role = new_role

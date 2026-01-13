@@ -9,6 +9,8 @@ import LoginScreen from "../screens/LoginScreen";
 import HouseAccessScreen from "../screens/HouseAccessScreen";
 import CreateHouseScreen from "../screens/CreateHouseScreen";
 import HouseDashboardScreen from "../screens/HouseDashboardScreen";
+import EditHouseScreen from "../screens/EditHouseScreen";
+import EditChoreScreen from "../screens/EditChoreScreen";
 import { dumpAsyncStorage } from "../utils/asyncDump";
 import { isTokenExpired, refreshAccessToken, guestLogin } from "../utils/auth";
 
@@ -65,6 +67,8 @@ export default function MainStack() {
             <Stack.Screen name="HouseAccess" component={HouseAccessScreen} />
             <Stack.Screen name="CreateHouse" component={CreateHouseScreen} />
             <Stack.Screen name="HouseDashboard" component={HouseDashboardScreen} />
+            <Stack.Screen name="EditHouse" component={EditHouseScreen} />
+            <Stack.Screen name="EditChore" component={EditChoreScreen} />
         </Stack.Navigator>
     );
 }

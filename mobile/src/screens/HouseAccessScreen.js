@@ -2,27 +2,56 @@ import React, { useState, useEffect, useMemo } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, ActivityIndicator } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
 
-import HouseOptionsModal from "../components/modals/HouseOptionsModal";
-import HouseModal from "../components/modals/HouseModal";
+import { useActionSheet } from "@expo/react-native-action-sheet";
 import api from "../utils/api";
 import logout from "../utils/logout";
 import { apiLogError, apiLogSuccess, jsonLog } from "../utils/loggers";
 
 export default function HouseAccessScreen({ navigation }) {
+    const { showActionSheetWithOptions } = useActionSheet();
+
     const [joinCode, setJoinCode] = useState("");
     const [password, setPassword] = useState("");
     const [result, setResult] = useState("");
     const [houses, setHouses] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [houseOptionsModalVisible, setHouseOptionsModalVisible] = useState(false);
-    // const [selectedHouse, setSelectedHouse] = useState(null);
     const [selectedHouseId, setSelectedHouseId] = useState(null);
-    const [houseModalVisible, setHouseModalVisible] = useState(false);
     const [newName, setNewName] = useState("");
     const [newPassword, setNewPassword] = useState("");
     const [newAddress, setNewAddress] = useState("");
     const [newPlaceId, setNewPlaceId] = useState("");
     const [newMaxMembers, setNewMaxMembers] = useState("6");
+
+    const handleHouseOptions = (house) => {
+        setSelectedHouseId(house.id);
+
+        const options = ["Edit House", "Delete House", "Cancel"];
+        const cancelButtonIndex = 2;
+        const destructiveButtonIndex = 1;
+
+        showActionSheetWithOptions(
+            {
+                options,
+                cancelButtonIndex,
+                destructiveButtonIndex,
+                title: house.name,
+            },
+            (buttonIndex) => {
+                switch (buttonIndex) {
+                    case 0:
+                        // Edit
+                        navigation.navigate("EditHouse", { houseId: house.id });
+                        break;
+                    case 1:
+                        // Delete
+                        handleDeleteHouse(house);
+                        break;
+                    default:
+                        break;
+                }
+            }
+        );
+    };
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -79,10 +108,7 @@ export default function HouseAccessScreen({ navigation }) {
             <Text style={styles.houseName}>{item.name}</Text>
             <TouchableOpacity
                 style={styles.houseOptions}
-                onPress={() => {
-                    setSelectedHouseId(item.id);
-                    setHouseOptionsModalVisible(true);
-                }}
+                onPress={() => handleHouseOptions(item)}
             >
                 <FontAwesome name={"ellipsis-v"} size={20} color="#000" />
             </TouchableOpacity>
@@ -103,7 +129,7 @@ export default function HouseAccessScreen({ navigation }) {
         navigation.navigate("Login");
     };
 
-    const handleDelete = async (house) => {
+    const handleDeleteHouse = async (house) => {
         try {
             const res = await api.delete(`house/${house.id}/delete/`, {data: {house_version: house.version}});
             apiLogSuccess(res);
@@ -113,14 +139,6 @@ export default function HouseAccessScreen({ navigation }) {
             fetchUserHouses();
         }
     };
-
-    useEffect(() => {
-        setNewName(selectedHouse ? selectedHouse.name : "");
-        setNewPassword("");
-        setNewAddress(selectedHouse ? selectedHouse.address : "");
-        setNewPlaceId(selectedHouse ? selectedHouse.place_id : "");
-        setNewMaxMembers(selectedHouse ? selectedHouse.max_members.toString() : "6");
-    }, [houseModalVisible]);
 
     const handleSaveHouse = async (house) => {
         try {
@@ -195,38 +213,6 @@ export default function HouseAccessScreen({ navigation }) {
             <TouchableOpacity style={styles.button} onPress={temp_login_redirect}>
                 <Text style={styles.buttonText}>LoginRedirect</Text>
             </TouchableOpacity>
-
-            <HouseModal
-                visible={houseModalVisible}
-                house={selectedHouse}
-                onClose={() => setHouseModalVisible(false)}
-                onSave={(house) => handleSaveHouse(house)}
-                newName={newName}
-                setNewName={setNewName}
-                newPassword={newPassword}
-                setNewPassword={setNewPassword}
-                newAddress={newAddress}
-                setNewAddress={setNewAddress}
-                newPlaceId={newPlaceId}
-                setNewPlaceId={setNewPlaceId}
-                newMaxMembers={newMaxMembers}
-                setNewMaxMembers={setNewMaxMembers}
-                fetchHouses={() => fetchUserHouses()}
-            />
-
-            <HouseOptionsModal
-                visible={houseOptionsModalVisible}
-                house={selectedHouse}
-                onClose={() => {
-                    setHouseOptionsModalVisible(false);
-                    fetchUserHouses();
-                }}
-                onEdit={(house) => {
-                    setHouseOptionsModalVisible(false);
-                    setHouseModalVisible(true);
-                }}
-                onDelete={(house) => handleDelete(house)}
-            />
         </View>
     );
 }
