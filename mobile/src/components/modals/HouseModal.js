@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
     ScrollView,
     View,
@@ -38,13 +38,14 @@ export default function HouseModal({
     const [loadingSuggestions, setLoadingSuggestions] = useState(false);
     const [address, setAddress] = useState(newAddress || "");
     const [memberLongPressModalVisible, setMemberLongPressModalVisible] = useState(false);
-    const [selectedMember, setSelectedMember] = useState();
+    // const [selectedMember, setSelectedMember] = useState();
+    const [selectedMemberId, setSelectedMemberId] = useState();
 
     const renderMemberItem = ({ item }) => {
         return (
             <Pressable
                 onLongPress={() => {
-                    setSelectedMember(item);
+                    setSelectedMemberId(item.id);
                     setMemberLongPressModalVisible(true);
                 }}
                 style={styles.memberRow}
@@ -54,6 +55,11 @@ export default function HouseModal({
             </Pressable>
         );
     }
+
+    const selectedMember = useMemo(
+        () => house?.members?.find(m => m.id === selectedMemberId),
+        [house, selectedMemberId]
+    );
 
     useEffect(() => {
         if (address.length < 2) {
