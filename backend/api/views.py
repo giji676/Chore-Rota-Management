@@ -42,6 +42,16 @@ GOOGLE_DETAILS_URL = "https://maps.googleapis.com/maps/api/place/details/json"
 class HouseMemberManagementView(APIView):
     permission_classes = [IsAuthenticated]
 
+    def get(self, request, house_id, member_id):
+        user = request.user
+        house = get_object_or_404(House, id=house_id)
+        if not HouseMember.objects.filter(house=house, user=user).exists():
+            return Response({"error": "You are not part of this house"},
+                        status=status.HTTP_403_FORBIDDEN)
+        member = get_object_or_404(HouseMember, house=house, user_id=member_id)
+        serializer = HouseMemberSerializer(member)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
     @transaction.atomic
     def patch(self, request, house_id, member_id):
         user = request.user
