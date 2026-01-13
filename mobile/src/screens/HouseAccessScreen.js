@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { 
     View,
     Text,
@@ -24,7 +24,6 @@ export default function HouseAccessScreen({ navigation }) {
     const [result, setResult] = useState("");
     const [houses, setHouses] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [selectedHouseId, setSelectedHouseId] = useState(null);
     const [newName, setNewName] = useState("");
     const [newPassword, setNewPassword] = useState("");
     const [newAddress, setNewAddress] = useState("");
@@ -32,8 +31,6 @@ export default function HouseAccessScreen({ navigation }) {
     const [newMaxMembers, setNewMaxMembers] = useState("6");
 
     const handleHouseOptions = (house) => {
-        setSelectedHouseId(house.id);
-
         const options = ["Edit House", "Delete House", "Cancel"];
         const cancelButtonIndex = 2;
         const destructiveButtonIndex = 1;
@@ -122,11 +119,6 @@ export default function HouseAccessScreen({ navigation }) {
                 <FontAwesome name={"ellipsis-v"} size={20} color="#000" />
             </TouchableOpacity>
         </TouchableOpacity>
-    );
-
-    const selectedHouse = useMemo(
-        () => houses.find(h => h.id === selectedHouseId),
-        [houses, selectedHouseId]
     );
 
     const temp_logout = () => {
