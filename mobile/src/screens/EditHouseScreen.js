@@ -31,7 +31,6 @@ export default function EditHouseScreen({ route, navigation }) {
     const [address, setAddress] = useState("");
     const [placeId, setPlaceId] = useState("");
     const [maxMembers, setMaxMembers] = useState("6");
-    // TODO: Check house update is working correctly
 
     // address autocomplete
     const [suggestions, setSuggestions] = useState([]);
@@ -106,7 +105,7 @@ export default function EditHouseScreen({ route, navigation }) {
 
             jsonLog("save house", data);
 
-            const res = await api.put(`house/${house.id}/update/`, data);
+            const res = await api.patch(`house/${house.id}/update/`, data);
             apiLogSuccess(res);
 
             navigation.goBack();
@@ -271,7 +270,7 @@ export default function EditHouseScreen({ route, navigation }) {
             )}
             <Text style={styles.subtitle}>Members</Text>
             <FlatList
-                data={house.members}
+                data={house?.members}
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={renderMemberItem}
             />
