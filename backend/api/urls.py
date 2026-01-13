@@ -7,6 +7,7 @@ urlpatterns = [
     path("house/<int:house_id>/update/", views.HouseManagementView.as_view(), name="update-house"),
     path("house/<int:house_id>/delete/", views.HouseManagementView.as_view(), name="delete-house"),
     path("house/<int:house_id>/details/", views.HouseDetailsView.as_view(), name="house-details"),
+    path("house/<int:house_id>/", views.HouseDetailsView.as_view(), name="house-details"),
     path("house/<int:house_id>/member/<int:member_id>/",
          views.HouseMemberManagementView.as_view(), name="get-house-member"),
     path("house/<int:house_id>/member/<int:member_id>/delete/",
