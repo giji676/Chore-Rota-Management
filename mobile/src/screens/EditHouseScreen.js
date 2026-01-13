@@ -31,10 +31,16 @@ export default function EditHouseScreen({ route, navigation }) {
     const [address, setAddress] = useState("");
     const [placeId, setPlaceId] = useState("");
     const [maxMembers, setMaxMembers] = useState("6");
+    // TODO: Check house update is working correctly
 
     // address autocomplete
     const [suggestions, setSuggestions] = useState([]);
     const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+
+    const ROLE_LABELS = {
+        owner: "Admin",
+        member: "Member",
+    };
 
     const fetchHouse = async () => {
         try {
@@ -134,7 +140,9 @@ export default function EditHouseScreen({ route, navigation }) {
             style={styles.memberRow}
             onLongPress={() => handleMemberOptions(item)}
         >
-            <Text>{item.label}</Text>
+            <Text>
+                {item.label} • {ROLE_LABELS[item.role]}
+            </Text>
         </Pressable>
     );
 
@@ -145,7 +153,7 @@ export default function EditHouseScreen({ route, navigation }) {
     const handleMemberOptions = (member) => {
         if (!member) return;
 
-        const options = ["Edit Member", "Remove Member", "Cancel"];
+        const options = ["Change Role", "Remove Member", "Cancel"];
         const cancelButtonIndex = 2;
         const destructiveButtonIndex = 1;
 
@@ -156,29 +164,54 @@ export default function EditHouseScreen({ route, navigation }) {
                 destructiveButtonIndex,
                 title: member.label ?? "Member",
             },
-            async (buttonIndex) => {
-                switch (buttonIndex) {
-                    case 0:
-                        // Edit
-                        console.log("Edit member:", member);
-                        // later: navigation.navigate("EditMember", { memberId: member.id })
-                        break;
+            (buttonIndex) => {
+                if (buttonIndex === cancelButtonIndex) return;
 
-                    case 1:
-                        // Remove
-                        await handleDeleteMember(member);
-                        break;
-
-                    default:
-                        break;
+                if (buttonIndex === 0) {
+                    // Defer the role sheet so outer sheet closes first
+                    setTimeout(() => showRoleActionSheet(member), 0);
+                } else if (buttonIndex === 1) {
+                    handleDeleteMember(member);
                 }
             }
         );
     };
 
-    const handleReAdd = async () => {
-        await api.post("house/readd/");
-        fetchHouse();
+    const showRoleActionSheet = (member) => {
+        const roleOptions = ["Admin", "Member", "Cancel"];
+        const cancelButtonIndex = 2;
+
+        showActionSheetWithOptions(
+            {
+                options: roleOptions,
+                cancelButtonIndex,
+                title: `Change role for ${member.label}`,
+            },
+            async (buttonIndex) => {
+                if (buttonIndex === cancelButtonIndex) return;
+
+                console.log("Selected role index:", buttonIndex);
+
+                const roleMap = {
+                    0: "owner", // Admin
+                    1: "member",
+                };
+
+                try {
+                    await api.patch(
+                        `house/${house.id}/member/${member.id}/update/`,
+                        {
+                            role: roleMap[buttonIndex],
+                            member_version: member.version,
+                        }
+                    );
+                    fetchHouse();
+                } catch (err) {
+                    apiLogError(err);
+                    Alert.alert("Error", "Failed to update role");
+                }
+            }
+        );
     };
 
     return (
@@ -244,7 +277,6 @@ export default function EditHouseScreen({ route, navigation }) {
             />
 
             <Button title="Save Changes" onPress={handleSave} />
-            <Button title="ReAdd(TEMP)" onPress={handleReAdd} />
         </View>
     );
 }
