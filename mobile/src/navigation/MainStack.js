@@ -9,6 +9,7 @@ import LoginScreen from "../screens/LoginScreen";
 import HouseAccessScreen from "../screens/HouseAccessScreen";
 import CreateHouseScreen from "../screens/CreateHouseScreen";
 import HouseDashboardScreen from "../screens/HouseDashboardScreen";
+import { dumpAsyncStorage } from "../utils/asyncDump";
 import { isTokenExpired, refreshAccessToken, guestLogin } from "../utils/auth";
 
 const Stack = createNativeStackNavigator();
@@ -18,6 +19,7 @@ export default function MainStack() {
 
     useEffect(() => {
         const checkLogin = async () => {
+            dumpAsyncStorage();
             const lastLogin = await AsyncStorage.getItem("last_login");
             if (lastLogin === "registered") {
                 const access = await AsyncStorage.getItem("access_token");
@@ -26,6 +28,7 @@ export default function MainStack() {
                     setInitialRoute("HouseAccess");
                 } else if (refresh && !isTokenExpired(refresh)) {
                     const newAccess = await refreshAccessToken();
+                    console.log("Refreshed access token:", newAccess);
                     if (newAccess) {
                         setInitialRoute("HouseAccess");
                     } else {

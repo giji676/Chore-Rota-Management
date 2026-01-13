@@ -1,5 +1,18 @@
 import React, { useState, useEffect } from "react";
-import { ScrollView, View, Text, Modal, TextInput, Button, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
+import {
+    ScrollView,
+    View,
+    Text,
+    Modal,
+    TextInput,
+    Button,
+    FlatList,
+    StyleSheet,
+    TouchableOpacity,
+    ActivityIndicator,
+    Pressable,
+} from "react-native";
+import MemberLongPressModal from "./MemberLongPressModal";
 import api from "../../utils/api";
 import { jsonLog } from "../../utils/loggers";
 
@@ -19,16 +32,26 @@ export default function HouseModal({
     setNewPlaceId,
     newMaxMembers,
     setNewMaxMembers,
+    fetchHouses,
 }) {
     const [suggestions, setSuggestions] = useState([]);
     const [loadingSuggestions, setLoadingSuggestions] = useState(false);
-    const [address, setAddress] = useState("");
+    const [address, setAddress] = useState(newAddress || "");
+    const [memberLongPressModalVisible, setMemberLongPressModalVisible] = useState(false);
+    const [selectedMember, setSelectedMember] = useState();
 
     const renderMemberItem = ({ item }) => {
         return (
-            <View key={item?.id} style={styles.memberRow}>
+            <Pressable
+                onLongPress={() => {
+                    setSelectedMember(item);
+                    setMemberLongPressModalVisible(true);
+                }}
+                style={styles.memberRow}
+                key={item?.id}
+            >
                 <Text>{item?.label}</Text>
-            </View>
+            </Pressable>
         );
     }
 
@@ -63,6 +86,25 @@ export default function HouseModal({
         setNewPlaceId(item.place_id);
         setNewAddress(item.description);
         setSuggestions([]);
+    };
+
+    const handleEditMember = async () => {
+        console.log("Editing member:", selectedMember);
+    };
+
+    const handleDeleteMember = async () => {
+        try {
+            const res = await api.delete(`house/${house.id}/member/${selectedMember.id}/delete/`,
+                {data: {
+                    "house_version": house.version,
+                    "member_version": selectedMember.version,
+                }});
+            apiLogSuccess(res);
+        } catch (err) {
+            apiLogError(err);
+        } finally {
+            fetchHouses();
+        }
     };
 
     return (
@@ -100,7 +142,7 @@ export default function HouseModal({
                         style={styles.input}
                         placeholder="Address"
                         placeholderTextColor="gray"
-                        value={address}
+                        value={newAddress}
                         onChangeText={text => {
                             setAddress(text);
                             setNewPlaceId("");
@@ -128,6 +170,14 @@ export default function HouseModal({
                             renderItem={renderMemberItem}
                         />
                     )}
+
+                    <MemberLongPressModal
+                        visible={memberLongPressModalVisible}
+                        member={selectedMember}
+                        onClose={() => { setMemberLongPressModalVisible(false); }}
+                        onEdit={() => {handleEditMember()}}
+                        onDelete={() => {handleDeleteMember()}}
+                    />
                     <View style={styles.buttons}>
                         <Button title="Cancel" onPress={onClose} />
                         <Button title="Save" onPress={() => onSave(house)} />

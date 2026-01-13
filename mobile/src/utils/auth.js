@@ -68,8 +68,9 @@ export const refreshAccessToken = async () => {
 
         return newAccessToken;
     } catch (err) {
-        await AsyncStorage.removeItem("access_token");
-        await AsyncStorage.removeItem("refresh_token");
+        console.log("Token refresh failed:", err.response?.data || err.message);
+        // await AsyncStorage.removeItem("access_token");
+        // await AsyncStorage.removeItem("refresh_token");
 
         const guestToken = await guestLogin();
         if (guestToken) return guestToken;

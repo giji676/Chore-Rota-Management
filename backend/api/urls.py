@@ -7,6 +7,10 @@ urlpatterns = [
     path("house/<int:house_id>/update/", views.HouseManagementView.as_view(), name="update-house"),
     path("house/<int:house_id>/delete/", views.HouseManagementView.as_view(), name="delete-house"),
     path("house/<int:house_id>/details/", views.HouseDetailsView.as_view(), name="house-details"),
+    path("house/<int:house_id>/member/<int:member_id>/delete/",
+         views.HouseMemberManagementView.as_view(), name="delete-house-member"),
+    path("house/<int:house_id>/member/<int:member_id>/update/",
+         views.HouseMemberManagementView.as_view(), name="update-house-member"),
 
     path("house/join/<str:join_code>/", views.JoinHouseView.as_view(), name="join-house"),
     path("houses/user/", views.UsersHousesView.as_view(), name="user-houses"),

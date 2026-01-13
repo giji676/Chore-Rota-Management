@@ -48,9 +48,19 @@ class HouseAdmin(admin.ModelAdmin):
 
 @admin.register(HouseMember)
 class HouseMemberAdmin(admin.ModelAdmin):
-    list_display = ("id", "user", "house", "role", "joined_at")
-    list_filter = ("role", "house")
+    list_display = ("id", "user", "house", "role", "joined_at", "deleted_at_display")
+    list_filter = ("role", "house", DeletedListFilter)
     search_fields = ("user__first_name",)
+
+    def deleted_at_display(self, obj):
+        return obj.deleted_at is not None
+    deleted_at_display.boolean = True
+    deleted_at_display.short_description = "Deleted?"
+
+    def get_queryset(self, request):
+        # start from default manager
+        qs = super().get_queryset(request)
+        return qs
 
 @admin.register(Chore)
 class ChoreAdmin(admin.ModelAdmin):

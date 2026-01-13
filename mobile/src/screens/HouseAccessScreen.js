@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, ActivityIndicator } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
 
@@ -15,7 +15,8 @@ export default function HouseAccessScreen({ navigation }) {
     const [houses, setHouses] = useState([]);
     const [loading, setLoading] = useState(true);
     const [houseOptionsModalVisible, setHouseOptionsModalVisible] = useState(false);
-    const [selectedHouse, setSelectedHouse] = useState(null);
+    // const [selectedHouse, setSelectedHouse] = useState(null);
+    const [selectedHouseId, setSelectedHouseId] = useState(null);
     const [houseModalVisible, setHouseModalVisible] = useState(false);
     const [newName, setNewName] = useState("");
     const [newPassword, setNewPassword] = useState("");
@@ -79,13 +80,18 @@ export default function HouseAccessScreen({ navigation }) {
             <TouchableOpacity
                 style={styles.houseOptions}
                 onPress={() => {
-                    setSelectedHouse(item);
+                    setSelectedHouseId(item.id);
                     setHouseOptionsModalVisible(true);
                 }}
             >
                 <FontAwesome name={"ellipsis-v"} size={20} color="#000" />
             </TouchableOpacity>
         </TouchableOpacity>
+    );
+
+    const selectedHouse = useMemo(
+        () => houses.find(h => h.id === selectedHouseId),
+        [houses, selectedHouseId]
     );
 
     const temp_logout = () => {
@@ -205,6 +211,7 @@ export default function HouseAccessScreen({ navigation }) {
                 setNewPlaceId={setNewPlaceId}
                 newMaxMembers={newMaxMembers}
                 setNewMaxMembers={setNewMaxMembers}
+                fetchHouses={() => fetchUserHouses()}
             />
 
             <HouseOptionsModal

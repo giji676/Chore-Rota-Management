@@ -37,6 +37,69 @@ GOOGLE_DETAILS_URL = "https://maps.googleapis.com/maps/api/place/details/json"
 # TODO: Add patch to HouseMember for changing role
 # TODO: HouseManagementView.patch should get house_id as input and update only that house
 # TODO: Valudate all inputs and input types to all patch methods
+# TODO: After update/delete happens, return updated object with new version
+
+class HouseMemberManagementView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @transaction.atomic
+    def patch(self, request, house_id, member_id):
+        user = request.user
+        data = request.data
+
+        house_version = data.get("house_version")
+        new_role = data.get("role")
+        if new_role not in ["owner", "member"]:
+            return Response({"error": "Invalid role"}, status=status.HTTP_400_BAD_REQUEST)
+
+        house = get_object_or_404(House.objects.select_for_update(), id=house_id)
+        check_version(house, house_version)
+
+        house_member = get_object_or_404(HouseMember, house=house, user=user)
+        if house_member.role != "owner":
+            return Response({"error": "Only the owner can update member roles"},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        member_to_update = get_object_or_404(HouseMember.objects.select_for_update(),
+                                             house=house, user_id=member_id)
+        if member_to_update.user_id == user.id:
+            return Response({"error": "Owner cannot change their own role"}, status=status.HTTP_400_BAD_REQUEST)
+        member_to_update.role = new_role
+        member_to_update.version = F("version") + 1
+        member_to_update.save(update_fields=["role", "version"])
+
+        House.objects.filter(id=house.id).update(version=F('version') + 1)
+        updated_member = HouseMember.objects.get(id=member_to_update.id)
+
+        return Response(HouseMemberSerializer(updated_member).data, status=status.HTTP_200_OK)
+
+    @transaction.atomic
+    def delete(self, request, house_id, member_id):
+        user = request.user
+        data = request.data
+
+        house_version = data.get("house_version")
+        house = get_object_or_404(House.objects.select_for_update(), id=house_id)
+        check_version(house, house_version)
+
+        house_member = get_object_or_404(HouseMember, house=house, user=user)
+        if house_member.role != "owner":
+            return Response({"error": "Only the owner can remove members"},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        member_to_remove_version = data.get("member_version")
+        member_to_remove = get_object_or_404(HouseMember.objects.select_for_update(),
+                                             house=house, user_id=member_id)
+        check_version(member_to_remove, member_to_remove_version)
+        if member_to_remove.user_id == user.id:
+            return Response({"error": "Owner cannot remove themselves"}, status=status.HTTP_400_BAD_REQUEST)
+
+        member_to_remove.deleted_at = timezone.now()
+        member_to_remove.version = F("version") + 1
+        member_to_remove.save(update_fields=["deleted_at", "version"])
+        House.objects.filter(id=house.id).update(version=F('version') + 1)
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 class OccurrenceUpdateView(APIView):
     permission_classes = [IsAuthenticated]
