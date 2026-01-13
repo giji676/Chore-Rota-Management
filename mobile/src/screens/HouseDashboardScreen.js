@@ -95,29 +95,6 @@ export default function HouseDashboardScreen({ navigation, route }) {
         }
     };
 
-    const handleDeleteHouse = async () => {
-        Alert.alert(
-            "Confirm Delete",
-            "Are you sure you want to delete this house? This action cannot be undone.",
-            [
-                { text: "Cancel", style: "cancel" },
-                {
-                    text: "Delete",
-                    style: "destructive",
-                    onPress: async () => {
-                        try {
-                            await api.delete(`house/${house.id}/`, {"house_version": house.version});
-                            Alert.alert("House deleted successfully");
-                            navigation.goBack();
-                        } catch (err) {
-                            Alert.alert("Error", err.response?.data?.error || err.message);
-                        }
-                    }
-                }
-            ]
-        );
-    };
-
     const handleCheckOccurrence = async (occ) => {
         await api.patch(`occurrences/${occ.id}/update/`, {
             "occurrence_version": occ.version,
@@ -142,7 +119,9 @@ export default function HouseDashboardScreen({ navigation, route }) {
                         };
                         try {
                             const res = await api.delete(`occurrences/${occ.id}/delete/`, {data: data});
+                            Alert.alert("Chore deleted successfully");
                         } catch (err) {
+                            Alert.alert("Error", err.response?.data?.error || err.message);
                         } finally {
                             fetchHouse();
                         }
@@ -158,7 +137,9 @@ export default function HouseDashboardScreen({ navigation, route }) {
                         };
                         try {
                             const res = await api.delete(`occurrences/${occ.id}/delete/`, {data: data});
+                            Alert.alert("All chores deleted successfully");
                         } catch (err) {
+                            Alert.alert("Error", err.response?.data?.error || err.message);
                         } finally {
                             fetchHouse();
                         }
@@ -315,9 +296,6 @@ export default function HouseDashboardScreen({ navigation, route }) {
                     <Button title="Create & Assign Chore" onPress={() => 
                         navigation.navigate("EditChore", { house })
                     }/>
-                </View>
-                <View style={styles.buttonContainer}>
-                    <Button title="Delete House" color="red" onPress={handleDeleteHouse} />
                 </View>
             </View>
         </View>

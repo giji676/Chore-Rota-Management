@@ -103,8 +103,6 @@ export default function EditHouseScreen({ route, navigation }) {
                 house_version: house.version,
             };
 
-            jsonLog("save house", data);
-
             const res = await api.patch(`house/${house.id}/update/`, data);
             apiLogSuccess(res);
 
@@ -116,22 +114,35 @@ export default function EditHouseScreen({ route, navigation }) {
     };
 
     const handleDeleteMember = async (member) => {
-        try {
-            const res = await api.delete(
-                `house/${house.id}/member/${member.id}/delete/`,
+        Alert.alert(
+            "Confirm Remove",
+            "Are you sure you want to remove this member?",
+            [
+                { text: "Cancel", style: "cancel" },
                 {
-                    data: {
-                        house_version: house.version,
-                        member_version: member.version,
-                    },
+                    text: "remove",
+                    style: "destructive",
+                    onPress: async () => {
+                        try {
+                            const res = await api.delete(
+                                `house/${house.id}/member/${member.id}/delete/`,
+                                {
+                                    data: {
+                                        house_version: house.version,
+                                        member_version: member.version,
+                                    },
+                                }
+                            );
+                            Alert.alert("Member removed successfully");
+                        } catch (err) {
+                            Alert.alert("Error", err.response?.data?.error || err.message);
+                        } finally {
+                            fetchHouse();
+                        }
+                    }
                 }
-            );
-            apiLogSuccess(res);
-        } catch (err) {
-            apiLogError(err);
-        } finally {
-            fetchHouse();
-        }
+            ]
+        );
     };
 
     const renderMemberItem = ({ item }) => (

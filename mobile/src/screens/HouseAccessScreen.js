@@ -1,5 +1,14 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, ActivityIndicator } from "react-native";
+import { 
+    View,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    StyleSheet,
+    FlatList,
+    ActivityIndicator,
+    Alert,
+} from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
 
 import { useActionSheet } from "@expo/react-native-action-sheet";
@@ -130,31 +139,29 @@ export default function HouseAccessScreen({ navigation }) {
     };
 
     const handleDeleteHouse = async (house) => {
-        try {
-            const res = await api.delete(`house/${house.id}/delete/`, {data: {house_version: house.version}});
-            apiLogSuccess(res);
-        } catch (error) {
-            apiLogError(error);
-        } finally {
-            fetchUserHouses();
-        }
-    };
-
-    const handleSaveHouse = async (house) => {
-        try {
-            const data = {
-                name: newName,
-                password: newPassword,
-                address: newAddress,
-                place_id: newPlaceId,
-                max_members: parseInt(newMaxMembers),
-                house_version: house.version,
-            };
-            jsonLog("save", data);
-        } catch (error) {
-        } finally {
-            fetchUserHouses();
-        }
+        Alert.alert(
+            "Confirm Delete",
+            "Are you sure you want to delete this house? This action cannot be undone.",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Delete",
+                    style: "destructive",
+                    onPress: async () => {
+                        try {
+                            await api.delete(`house/${house.id}/delete/`,
+                                {data: {house_version: house.version}});
+                            Alert.alert("House deleted successfully");
+                        } catch (err) {
+                            apiLogError(err);
+                            Alert.alert("Error", err.response?.data?.error || err.message);
+                        } finally {
+                            fetchUserHouses();
+                        }
+                    }
+                }
+            ]
+        );
     };
 
     return (
