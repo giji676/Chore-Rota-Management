@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import {
     View,
     Text,
@@ -14,10 +14,12 @@ import {
 } from "react-native";
 
 import api from "../utils/api";
-import MemberLongPressModal from "../components/modals/MemberLongPressModal";
+import { useActionSheet } from "@expo/react-native-action-sheet";
 import { jsonLog, apiLogSuccess, apiLogError } from "../utils/loggers";
 
 export default function EditHouseScreen({ route, navigation }) {
+    const { showActionSheetWithOptions } = useActionSheet();
+
     const { houseId } = route.params;
 
     const [house, setHouse] = useState(null);
@@ -33,10 +35,6 @@ export default function EditHouseScreen({ route, navigation }) {
     // address autocomplete
     const [suggestions, setSuggestions] = useState([]);
     const [loadingSuggestions, setLoadingSuggestions] = useState(false);
-
-    // member actions
-    const [selectedMemberId, setSelectedMemberId] = useState(null);
-    const [memberModalVisible, setMemberModalVisible] = useState(false);
 
     const fetchHouse = async () => {
         try {
@@ -58,11 +56,6 @@ export default function EditHouseScreen({ route, navigation }) {
     useEffect(() => {
         fetchHouse();
     }, []);
-
-    const selectedMember = useMemo(
-        () => house?.members?.find(m => m.id === selectedMemberId),
-        [house, selectedMemberId]
-    );
 
     useEffect(() => {
         if (address.length < 2) {
@@ -117,14 +110,14 @@ export default function EditHouseScreen({ route, navigation }) {
         }
     };
 
-    const handleDeleteMember = async () => {
+    const handleDeleteMember = async (member) => {
         try {
             const res = await api.delete(
-                `house/${house.id}/member/${selectedMember.id}/delete/`,
+                `house/${house.id}/member/${member.id}/delete/`,
                 {
                     data: {
                         house_version: house.version,
-                        member_version: selectedMember.version,
+                        member_version: member.version,
                     },
                 }
             );
@@ -132,7 +125,6 @@ export default function EditHouseScreen({ route, navigation }) {
         } catch (err) {
             apiLogError(err);
         } finally {
-            setMemberModalVisible(false);
             fetchHouse();
         }
     };
@@ -140,10 +132,7 @@ export default function EditHouseScreen({ route, navigation }) {
     const renderMemberItem = ({ item }) => (
         <Pressable
             style={styles.memberRow}
-            onLongPress={() => {
-                setSelectedMemberId(item.id);
-                setMemberModalVisible(true);
-            }}
+            onLongPress={() => handleMemberOptions(item)}
         >
             <Text>{item.label}</Text>
         </Pressable>
@@ -152,6 +141,45 @@ export default function EditHouseScreen({ route, navigation }) {
     if (loading) {
         return <ActivityIndicator size="large" style={{ marginTop: 40 }} />;
     }
+
+    const handleMemberOptions = (member) => {
+        if (!member) return;
+
+        const options = ["Edit Member", "Remove Member", "Cancel"];
+        const cancelButtonIndex = 2;
+        const destructiveButtonIndex = 1;
+
+        showActionSheetWithOptions(
+            {
+                options,
+                cancelButtonIndex,
+                destructiveButtonIndex,
+                title: member.label ?? "Member",
+            },
+            async (buttonIndex) => {
+                switch (buttonIndex) {
+                    case 0:
+                        // Edit
+                        console.log("Edit member:", member);
+                        // later: navigation.navigate("EditMember", { memberId: member.id })
+                        break;
+
+                    case 1:
+                        // Remove
+                        await handleDeleteMember(member);
+                        break;
+
+                    default:
+                        break;
+                }
+            }
+        );
+    };
+
+    const handleReAdd = async () => {
+        await api.post("house/readd/");
+        fetchHouse();
+    };
 
     return (
         <View style={styles.container}>
@@ -216,14 +244,7 @@ export default function EditHouseScreen({ route, navigation }) {
             />
 
             <Button title="Save Changes" onPress={handleSave} />
-
-            <MemberLongPressModal
-                visible={memberModalVisible}
-                member={selectedMember}
-                onClose={() => setMemberModalVisible(false)}
-                onEdit={() => console.log("edit member")}
-                onDelete={handleDeleteMember}
-            />
+            <Button title="ReAdd(TEMP)" onPress={handleReAdd} />
         </View>
     );
 }

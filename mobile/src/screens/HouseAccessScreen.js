@@ -3,7 +3,6 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Activity
 import { FontAwesome } from "@expo/vector-icons";
 
 import { useActionSheet } from "@expo/react-native-action-sheet";
-import HouseOptionsModal from "../components/modals/HouseOptionsModal";
 import api from "../utils/api";
 import logout from "../utils/logout";
 import { apiLogError, apiLogSuccess, jsonLog } from "../utils/loggers";
@@ -16,7 +15,6 @@ export default function HouseAccessScreen({ navigation }) {
     const [result, setResult] = useState("");
     const [houses, setHouses] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [houseOptionsModalVisible, setHouseOptionsModalVisible] = useState(false);
     const [selectedHouseId, setSelectedHouseId] = useState(null);
     const [newName, setNewName] = useState("");
     const [newPassword, setNewPassword] = useState("");
@@ -215,19 +213,6 @@ export default function HouseAccessScreen({ navigation }) {
             <TouchableOpacity style={styles.button} onPress={temp_login_redirect}>
                 <Text style={styles.buttonText}>LoginRedirect</Text>
             </TouchableOpacity>
-
-            <HouseOptionsModal
-                visible={houseOptionsModalVisible}
-                house={selectedHouse}
-                onClose={() => {
-                    setHouseOptionsModalVisible(false);
-                    fetchUserHouses();
-                }}
-                onEdit={(house) => {
-                    navigation.navigate("EditHouse", { houseId: house.id });
-                }}
-                onDelete={(house) => handleDelete(house)}
-            />
         </View>
     );
 }
