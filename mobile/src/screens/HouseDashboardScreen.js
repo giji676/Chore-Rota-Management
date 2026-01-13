@@ -1,16 +1,15 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
-import { Pressable, Alert, View, Text, Button, FlatList, StyleSheet, TextInput, Modal } from 'react-native';
+import { Pressable, Alert, View, Text, Button, StyleSheet, TextInput, Modal } from 'react-native';
 import WheelPicker from "react-native-wheel-scrollview-picker";
 import { Picker } from '@react-native-picker/picker';
 import * as Notifications from 'expo-notifications';
 import { registerForPushNotificationsAsync, configureAndroidChannel } from '../utils/notifications';
+import { useActionSheet } from "@expo/react-native-action-sheet";
 
 import api from '../utils/api';
 import { apiLogSuccess, apiLogError, jsonLog } from "../utils/loggers";
 import MonthCalendar from "../components/MonthCalendar";
 import CheckBox from "../components/CheckBox";
-import OccurrenceLongPressModal from "../components/modals/OccurrenceLongPressModal";
-import ChoreModal from "../components/modals/ChoreModal";
 
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
@@ -21,6 +20,8 @@ Notifications.setNotificationHandler({
 });
 
 export default function HouseDashboardScreen({ navigation, route }) {
+    const { showActionSheetWithOptions } = useActionSheet();
+
     const presetColors = [
         "#ff0000", "#00ff00", "#0000ff",
         "#ffff00", "#ff00ff", "#00ffff",
@@ -31,7 +32,6 @@ export default function HouseDashboardScreen({ navigation, route }) {
     const [house, setHouse] = useState(route.params.house);
     const [error, setError] = useState('');
     const [displayDayKey, setDisplayDayKey] = useState();
-    const [choreModalVisible, setChoreModalVisible] = useState(false);
     const [newChoreName, setNewChoreName] = useState('');
     const [newChoreDescription, setNewChoreDescription] = useState('');
     const [newChoreColor, setNewChoreColor] = useState(presetColors[0]);
@@ -46,7 +46,6 @@ export default function HouseDashboardScreen({ navigation, route }) {
     const [repeatDelta, setRepeatDelta] = useState({days: 7});
     const [newCompleted, setNewCompleted] = useState();
 
-    const [occLongPressModalVisible, setOccLongPressModalVisible] = useState(false);
     const [selectedOcc, setSelectedOcc] = useState();
 
     const [occurrenceEditModalVisible, setOccurrenceEditModalVisible] = useState(false);
@@ -201,29 +200,6 @@ export default function HouseDashboardScreen({ navigation, route }) {
         }
     };
 
-    const handleCreateChore = async () => {
-        if (!newChoreName.trim()) {
-            Alert.alert("Error", "Chore name is required");
-            return;
-        }
-        const data = {
-            house_id: house.id,
-            chore_name: newChoreName,
-            chore_description: newChoreDescription,
-            chore_color: newChoreColor,
-            assignee_id: selectedMember.id,
-            start_date: selectedDate.toISOString().split('T')[0],
-            repeat_delta: repeatDelta
-        };
-        try {
-            await api.post("chores/schedule/create/", data);
-            fetchHouse();
-            setChoreModalVisible(false);
-        } catch (err) {
-            Alert.alert("Error", err.response?.data?.error || err.message);
-        }
-    };
-
     const occurrencesByDate = useMemo(() => {
         if (!house?.occurrences) return {};
 
@@ -253,6 +229,25 @@ export default function HouseDashboardScreen({ navigation, route }) {
         );
     };
 
+    const handleOccurrenceLongPress = (occ) => {
+        const options = ["Edit Chore", "Delete", "Cancel"];
+        const cancelButtonIndex = 2;
+        const destructiveButtonIndex = 1;
+
+        showActionSheetWithOptions({
+            options,
+            cancelButtonIndex,
+            destructiveButtonIndex,
+            title: occ.chore.name,
+        }, buttonIndex => {
+                if (buttonIndex === 0){
+                    navigation.navigate("EditChore", { house, occurrence: occ });
+                } else if( buttonIndex=== 1){
+                    handleDeleteOccurrence(occ);
+                }
+            });
+    };
+
     return (
         <View style={styles.container}>
             <View>
@@ -277,10 +272,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
                                     prev === occ.id ? null : occ.id
                                 );
                             }}
-                            onLongPress={() => {
-                                setSelectedOcc(occ);
-                                setOccLongPressModalVisible(true);
-                            }}
+                            onLongPress={() => {handleOccurrenceLongPress(occ)}}
                             style={styles.choreDetail}
                         >
                             <View>
@@ -320,79 +312,14 @@ export default function HouseDashboardScreen({ navigation, route }) {
                 ))}
 
                 <View style={styles.buttonContainer}>
-                    <Button title="Create & Assign Chore" onPress={() => setChoreModalVisible(true)} />
+                    <Button title="Create & Assign Chore" onPress={() => 
+                        navigation.navigate("EditChore", { house })
+                    }/>
                 </View>
                 <View style={styles.buttonContainer}>
                     <Button title="Delete House" color="red" onPress={handleDeleteHouse} />
                 </View>
             </View>
-
-            {/* Occurrence Long Press Modal */}
-            <OccurrenceLongPressModal
-                visible={occLongPressModalVisible}
-                occurrence={selectedOcc}
-                onClose={() => setOccLongPressModalVisible(false)}
-                onEdit={() => {
-                    setNewChoreName(selectedOcc.chore.name);
-                    setNewChoreDescription(selectedOcc.chore.description);
-                    setNewChoreColor(selectedOcc.chore.color);
-                    setOccurrenceEditModalVisible(true);
-                    const schedule = house.schedules.find(s => s.id === selectedOcc.schedule);
-                    setRepeatDelta(schedule.repeat_delta);
-                    const user = house.members.find(m => m.id === schedule.user);
-                    setSelectedMember(user);
-                    setSelectedDate(new Date(selectedOcc.due_date));
-                }}
-                onDelete={handleDeleteOccurrence}
-            />
-
-            {/* Create Chore Modal */}
-            <ChoreModal
-                visible={choreModalVisible}
-                onClose={() => setChoreModalVisible(false)}
-                onSave={() => handleCreateChore()}
-                action={"create"}
-                presetColors={presetColors}
-                choreName={newChoreName}
-                setChoreName={setNewChoreName}
-                choreDescription={newChoreDescription}
-                setChoreDescription={setNewChoreDescription}
-                choreColor={newChoreColor}
-                setChoreColor={setNewChoreColor}
-                members={house?.members || []}
-                selectedMember={selectedMember}
-                setSelectedMember={setSelectedMember}
-                repeatDelta={repeatDelta}
-                setRepeatDelta={setRepeatDelta}
-                selectedDate={selectedDate}
-                setSelectedDate={setSelectedDate}
-                newCompleted={newCompleted}
-                setNewCompleted={setNewCompleted}
-            />
-
-            {/* Edit Occurrence Modal */}
-            <ChoreModal
-                visible={occurrenceEditModalVisible}
-                onClose={() => setOccurrenceEditModalVisible(false)}
-                onSave={() => handleEditOccurrence(selectedOcc)}
-                action={"edit"}
-                presetColors={presetColors}
-                choreName={newChoreName}
-                setChoreName={setNewChoreName}
-                choreDescription={newChoreDescription}
-                setChoreDescription={setNewChoreDescription}
-                choreColor={newChoreColor}
-                setChoreColor={setNewChoreColor}
-                members={house?.members || []}
-                selectedMember={selectedMember}
-                setSelectedMember={setSelectedMember}
-                repeatDelta={repeatDelta}
-                setRepeatDelta={setRepeatDelta}
-                selectedDate={selectedDate}
-                setSelectedDate={setSelectedDate}
-                newCompleted={newCompleted}
-                setNewCompleted={setNewCompleted}
-            />
         </View>
     );
 }
