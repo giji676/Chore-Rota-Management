@@ -1,11 +1,13 @@
-import React, { useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import {
     View,
     Text,
     StyleSheet,
     TouchableOpacity,
     ScrollView,
-    PanResponder
+    PanResponder,
+    Animated,
+    Easing,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -19,8 +21,8 @@ export default function MonthCalendar({
     currentMonth,
     onPrevMonth,
     onNextMonth,
+    handleCollapse,
 }) {
-
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
 
@@ -87,6 +89,53 @@ export default function MonthCalendar({
         rows.push(monthDays.slice(i, i + 7));
     }
 
+    const translateY = useRef(new Animated.Value(0)).current;
+    const rowHeightsRef = useRef({});
+
+    const selectedRowIndex = useMemo(() => {
+        return rows.findIndex(week =>
+            week.some(
+                date => date && date.toISOString().split("T")[0] === selectedDay
+            )
+        );
+    }, [rows, selectedDay]);
+
+    const getTranslateYForRow = (rowIndex) => {
+        let offset = 0;
+        for (let i = 0; i < rowIndex; i++) {
+            offset += rowHeightsRef.current[i] || 0;
+        }
+        return -offset;
+    };
+
+    const getSelectedRowHeight = () =>
+        rowHeightsRef.current[selectedRowIndex] || 0;
+
+    const allRowsMeasured =
+        Object.keys(rowHeightsRef.current).length === rows.length;
+
+    useEffect(() => {
+        if (!allRowsMeasured) return;
+        if (!handleCollapse || selectedRowIndex === -1) {
+            Animated.timing(translateY, {
+                toValue: 0,
+                duration: 250,
+                easing: Easing.out(Easing.ease),
+                useNativeDriver: true,
+            }).start();
+            return;
+        }
+
+        const offset = getTranslateYForRow(selectedRowIndex);
+
+        Animated.timing(translateY, {
+            toValue: offset,
+            duration: 250,
+            easing: Easing.out(Easing.ease),
+            useNativeDriver: true,
+        }).start();
+    }, [handleCollapse, selectedRowIndex]);
+
     return (
         <View>
             {/* HEADER */}
@@ -101,53 +150,70 @@ export default function MonthCalendar({
                     <Ionicons name="chevron-forward" size={28} />
                 </TouchableOpacity>
             </View>
-            <View {...panResponder.panHandlers}>
-                {/* CALENDAR */}
-                {rows.map((week, rowIndex) => (
-                    <View key={rowIndex} style={styles.weekRow}>
-                        {week.map((date, colIndex) => {
-                            if (!date) {
-                                return <View key={colIndex} style={styles.dayCell} />;
-                            }
+            <View
+                style={{
+                    height: handleCollapse
+                        ? getSelectedRowHeight()
+                        : undefined,
+                    overflow: "hidden",
+                }}
+            >
+                <Animated.View
+                    {...panResponder.panHandlers}
+                    style={{ transform: [{ translateY }] }}
+                >
+                    {rows.map((week, rowIndex) => (
+                        <View
+                            key={rowIndex}
+                            style={styles.weekRow}
+                            onLayout={(e) => {
+                                rowHeightsRef.current[rowIndex] = e.nativeEvent.layout.height;
+                            }}
+                        >
+                            {week.map((date, colIndex) => {
+                                if (!date) return <View key={colIndex} style={styles.dayCell} />;
 
-                            const key = date.toISOString().split("T")[0];
-                            const occs = occByDate[key] || [];
-                            const isSelected = key === selectedDay;
-                            const isToday = key === new Date().toISOString().split("T")[0];
+                                const key = date.toISOString().split("T")[0];
+                                const occs = occByDate[key] || [];
+                                const isSelected = key === selectedDay;
+                                const isToday = key === new Date().toISOString().split("T")[0];
 
-                            return (
-                                <TouchableOpacity
-                                    key={key}
-                                    style={[
-                                        styles.dayCell,
-                                        isSelected && styles.dayCellSelected,
-                                    ]}
-                                    onPress={() => onDayPress(key)}
-                                >
-                                    <Text style={[
-                                        styles.dateNumber,
-                                        isToday && styles.todaysCell,
-                                    ]}>
-                                        {date.getDate()}
-                                    </Text>
-
-                                    {occs.map((occ) => (
-                                        <View
-                                            key={occ.id}
+                                return (
+                                    <TouchableOpacity
+                                        key={key}
+                                        style={[
+                                            styles.dayCell,
+                                            isSelected && styles.dayCellSelected,
+                                        ]}
+                                        onPress={() => onDayPress(key)}
+                                    >
+                                        <Text
                                             style={[
-                                                styles.choreBar,
-                                                {
-                                                    backgroundColor: occ.chore?.color || DEFAULT_COLOR,
-                                                    opacity: occ.completed ? 0.4 : 1,
-                                                },
+                                                styles.dateNumber,
+                                                isToday && styles.todaysCell,
                                             ]}
-                                        />
-                                    ))}
-                                </TouchableOpacity>
-                            );
-                        })}
-                    </View>
-                ))}
+                                        >
+                                            {date.getDate()}
+                                        </Text>
+
+                                        {occs.map((occ) => (
+                                            <View
+                                                key={occ.id}
+                                                style={[
+                                                    styles.choreBar,
+                                                    {
+                                                        backgroundColor: occ.chore?.color || DEFAULT_COLOR,
+                                                        opacity: occ.completed ? 0.4 : 1,
+                                                    },
+                                                ]}
+                                            />
+                                        ))}
+                                    </TouchableOpacity>
+                                );
+                            })}
+                        </View>
+                    ))}
+                </Animated.View>
             </View>
         </View>
     );

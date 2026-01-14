@@ -1,5 +1,16 @@
-import React, { useEffect, useState, useRef, useMemo } from 'react';
-import { Pressable, Alert, View, Text, Button, StyleSheet, TextInput, Modal } from 'react-native';
+import { useEffect, useState, useRef, useMemo } from 'react';
+import { 
+    Pressable,
+    Alert,
+    View,
+    Text,
+    Button,
+    StyleSheet,
+    TextInput,
+    Modal,
+    PanResponder,
+    Animated,
+} from 'react-native';
 import WheelPicker from "react-native-wheel-scrollview-picker";
 import { Picker } from '@react-native-picker/picker';
 import * as Notifications from 'expo-notifications';
@@ -247,9 +258,60 @@ export default function HouseDashboardScreen({ navigation, route }) {
         return [...uncompleted, ...completed];
     }, [displayDay]);
 
+    const SWIPE_THRESHOLD = 50;
+
+    /* SWIPE HANDLER */
+    const panResponder = useRef(
+        PanResponder.create({
+            onStartShouldSetPanResponder: () => false,
+            onStartShouldSetPanResponderCapture: () => false,
+
+            onMoveShouldSetPanResponder: (_, gesture) =>
+                Math.abs(gesture.dy) > 10 &&
+                    Math.abs(gesture.dy) > Math.abs(gesture.dx),
+
+            onPanResponderRelease: (_, gesture) => {
+                if (gesture.dy > SWIPE_THRESHOLD) {
+                    onSwipeDown();
+                } else if (gesture.dy < -SWIPE_THRESHOLD) {
+                    onSwipeUp();
+                }
+            },
+        })
+    ).current;
+
+    const onSwipeUp = () => {
+        setIsCollapsed(true);
+    };
+
+    const onSwipeDown = () => {
+        setIsCollapsed(false);
+    };
+
+    const calRef = useRef(null);
+    const [calendarHeightValue, setCalendarHeightValue] = useState(0);
+    const [isCollapsed, setIsCollapsed] = useState(true);
+    const calendarHeight = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        console.log(calendarHeight);
+    }, [calendarHeightValue]);
+
     return (
-        <View style={styles.container}>
-            <View style={styles.calendarContainer}>
+        <View 
+            {...panResponder.panHandlers}
+            style={styles.container}
+        >
+            <View 
+                style={styles.calendarContainer}
+                ref={calRef}
+                onLayout={(event) => {
+                    if (isCollapsed) return;
+                    const { height } = event.nativeEvent.layout;
+                    setCalendarHeightValue(height);
+                    calendarHeight.setValue(height);
+                }}
+            >
                 <MonthCalendar
                     occurrences={house.occurrences}
                     selectedDay={displayDayKey}
@@ -257,6 +319,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
                     currentMonth={currentMonth}
                     onPrevMonth={goToPrevMonth}
                     onNextMonth={goToNextMonth}
+                    handleCollapse={isCollapsed}
                 />
             </View>
 
