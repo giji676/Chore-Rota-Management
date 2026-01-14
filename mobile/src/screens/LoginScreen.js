@@ -75,7 +75,7 @@ export default function LoginScreen({ navigation }) {
             await AsyncStorage.setItem("access_token", res.data.access_token);
             await AsyncStorage.setItem("refresh_token", res.data.refresh_token);
             await AsyncStorage.setItem("last_login", "registered");
-            navigation.replace("HouseAccess");
+            // navigation.replace("HouseAccess");
         } catch (err) {
             setError(getErrorMessage(err));
         }

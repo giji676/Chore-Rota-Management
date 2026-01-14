@@ -2,13 +2,13 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import get_user_model, authenticate
-from django.db import IntegrityError
-from .serializers import RegisterSerializer, GuestSerializer, UserSerializer
+from django.utils import timezone
+from django.shortcuts import render, redirect
+from .serializers import RegisterSerializer, UserSerializer
 from .models import PushToken
 from .helpers.verify_email import send_verification_email
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from django.utils import timezone
 import secrets
 
 
@@ -18,19 +18,21 @@ class VerifyEmailView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        token = request.query_params.get("token")
+        token = request.GET.get("token")
         if not token:
-            return Response({"error": "Token is required"}, status=status.HTTP_400_BAD_REQUEST)
+            return render(request, "verify_failed.html", {"error": "Token is required"})
+
         try:
             user = User.objects.get(verification_token=token)
             if timezone.now() - user.verification_sent_at > timezone.timedelta(hours=24):
-                return Response({"error": "Token has expired"}, status=status.HTTP_400_BAD_REQUEST)
+                return render(request, "verify_failed.html", {"error": "Token has expired"})
+            
             user.is_verified = True
             user.verification_token = None
             user.save()
-            return Response({"detail": "Email verified successfully"}, status=status.HTTP_200_OK)
+            return render(request, "verify_success.html")
         except User.DoesNotExist:
-            return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
+            return render(request, "verify_failed.html", {"error": "Invalid token"})
 
 class UserView(APIView):
     permission_classes = [IsAuthenticated]
