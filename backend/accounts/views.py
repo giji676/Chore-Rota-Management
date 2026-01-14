@@ -5,11 +5,32 @@ from django.contrib.auth import get_user_model, authenticate
 from django.db import IntegrityError
 from .serializers import RegisterSerializer, GuestSerializer, UserSerializer
 from .models import PushToken
+from .helpers.verify_email import send_verification_email
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from django.utils import timezone
+import secrets
 
 
 User = get_user_model()
+
+class VerifyEmailView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        token = request.query_params.get("token")
+        if not token:
+            return Response({"error": "Token is required"}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            user = User.objects.get(verification_token=token)
+            if timezone.now() - user.verification_sent_at > timezone.timedelta(hours=24):
+                return Response({"error": "Token has expired"}, status=status.HTTP_400_BAD_REQUEST)
+            user.is_verified = True
+            user.verification_token = None
+            user.save()
+            return Response({"detail": "Email verified successfully"}, status=status.HTTP_200_OK)
+        except User.DoesNotExist:
+            return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
 
 class UserView(APIView):
     permission_classes = [IsAuthenticated]
@@ -28,14 +49,19 @@ class LoginView(APIView):
         if not email or not password:
             return Response(
                 {"error": "Email and password are required"},
-                status=status.HTTP_400_BAD_REQUEST,
+                status=status.HTTP_400_BAD_REQUEST
             )
 
         user = authenticate(request, email=email, password=password)
         if not user:
             return Response(
                 {"error": "Invalid credentials"},
-                status=status.HTTP_401_UNAUTHORIZED,
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        if not user.is_verified:
+            return Response(
+                {"error": "Please verify your email before logging in."},
+                status=status.HTTP_403_FORBIDDEN
             )
 
         refresh = RefreshToken.for_user(user)
@@ -88,9 +114,35 @@ class RegisterView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
+        email = request.data.get("email")
+        if not email:
+            return Response({"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check if user exists
+        try:
+            existing_user = User.objects.get(email=email)
+            if existing_user.is_verified:
+                return Response(
+                    {"error": "Email already registered. Please log in."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            else:
+                # Unverified user -> resend verification email
+                token = secrets.token_urlsafe(32)
+                existing_user.verification_token = token
+                existing_user.verification_sent_at = timezone.now()
+                existing_user.save()
+                send_verification_email(existing_user.email, token)
+                return Response(
+                    {"detail": "Account exists but not verified. Verification email resent."},
+                    status=status.HTTP_200_OK
+                )
+        except User.DoesNotExist:
+            pass  # New user -> continue with normal registration
+
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
-            user = serializer.save()  # save() should handle first_name, last_name, email, password
+            user = serializer.save()
             refresh = RefreshToken.for_user(user)
             return Response({
                 "access_token": str(refresh.access_token),
