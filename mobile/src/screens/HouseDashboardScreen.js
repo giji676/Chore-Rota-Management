@@ -31,7 +31,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
 
     const [house, setHouse] = useState(route.params.house);
     const [error, setError] = useState('');
-    const [displayDayKey, setDisplayDayKey] = useState();
+    const [displayDayKey, setDisplayDayKey] = useState(new Date().toISOString().split("T")[0]);
     const [newChoreName, setNewChoreName] = useState('');
     const [newChoreDescription, setNewChoreDescription] = useState('');
     const [newChoreColor, setNewChoreColor] = useState(presetColors[0]);
@@ -149,6 +149,8 @@ export default function HouseDashboardScreen({ navigation, route }) {
         );
     };
 
+    // TODO: Check selectedDate is being set correctly?
+    // TODO: Move to EditChoreScreen
     const handleEditOccurrence = async (occ) => {
         const schedule = house.schedules.find(s => s.id === occ.schedule);
         const data = {
@@ -229,6 +231,22 @@ export default function HouseDashboardScreen({ navigation, route }) {
             });
     };
 
+    const getDueTime = (occ) => new Date(occ.due_date).getTime();
+
+    const orderedOccurrences = useMemo(() => {
+        if (!displayDay) return [];
+
+        const uncompleted = displayDay
+        .filter(occ => !occ.completed)
+        .sort((a, b) => getDueTime(a) - getDueTime(b));
+
+        const completed = displayDay
+        .filter(occ => occ.completed)
+        .sort((a, b) => getDueTime(a) - getDueTime(b));
+
+        return [...uncompleted, ...completed];
+    }, [displayDay]);
+
     return (
         <View style={styles.container}>
             <View style={styles.calendarContainer}>
@@ -243,7 +261,13 @@ export default function HouseDashboardScreen({ navigation, route }) {
             </View>
 
             <View style={styles.choreView}>
-                {displayDay.map((occ, index) => (
+                <Text style={styles.choreViewTitle}>
+                    {new Date(displayDayKey).toLocaleString("en-GB", {
+                        day: "2-digit",
+                        month: "short",
+                    })}
+                </Text>
+                {orderedOccurrences.map((occ, index) => (
                     <View key={occ.id}>
                         <Pressable
                             onPress={() => {
@@ -256,13 +280,20 @@ export default function HouseDashboardScreen({ navigation, route }) {
                         >
                             <View>
                                 <View style={styles.row}>
+                                    <View 
+                                        style={[
+                                            styles.choreBar,
+                                            {
+                                                backgroundColor: occ.chore?.color || DEFAULT_COLOR,
+                                                opacity: occ.completed ? 0.4 : 1,
+                                            },
+                                        ]}
+                                    >
+                                    </View>
                                     <View style={styles.textColumn}>
                                         <Text style={styles.choreName}>{occ.chore.name}</Text>
                                         <Text style={styles.dateText}>
                                             {new Date(occ.due_date).toLocaleString("en-GB", {
-                                                day: "2-digit",
-                                                month: "2-digit",
-                                                year: "numeric",
                                                 hour: "2-digit",
                                                 minute: "2-digit",
                                             })}
@@ -321,6 +352,10 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
+        // backgroundColor: "#e5e5e5",
+        // borderRadius: 8,
+        // borderWidth: 1,
+        // borderColor: "#d5d5d5",
     },
     markCompleteContainer: {
         flexDirection: "row",
@@ -342,8 +377,8 @@ const styles = StyleSheet.create({
         flexShrink: 1,
     },
     choreName: {
-        fontSize: 22,
-        fontWeight: "500",
+        fontSize: 20,
+        fontWeight: "400",
     },
     dateText: {
         color: "#666",
@@ -352,5 +387,15 @@ const styles = StyleSheet.create({
         marginTop: 6,
         color: "#666",
         fontSize: 14,
+    },
+    choreBar: {
+        width: 6,
+        height: "80%",
+        borderRadius: 3,
+        marginRight: 10,
+    },
+    choreViewTitle: {
+        fontSize: 20,
+        fontWeight: "bold",
     },
 });
