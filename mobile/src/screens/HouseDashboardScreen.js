@@ -231,7 +231,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
 
     return (
         <View style={styles.container}>
-            <View>
+            <View style={styles.calendarContainer}>
                 <MonthCalendar
                     occurrences={house.occurrences}
                     selectedDay={displayDayKey}
@@ -242,9 +242,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
                 />
             </View>
 
-            <View style={{flex: 1}} />
-
-            <View>
+            <View style={styles.choreView}>
                 {displayDay.map((occ, index) => (
                     <View key={occ.id}>
                         <Pressable
@@ -291,25 +289,32 @@ export default function HouseDashboardScreen({ navigation, route }) {
                         )}
                     </View>
                 ))}
-
-                <View style={styles.buttonContainer}>
-                    <Button title="Create & Assign Chore" onPress={() => 
-                        navigation.navigate("EditChore", { house })
-                    }/>
-                </View>
+            </View>
+            <View style={styles.buttonContainer}>
+                <Button title="Create Chore" onPress={() => 
+                    navigation.navigate("EditChore", { house })
+                }/>
             </View>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, padding: 20 },
+    container: { flex: 1 },
+    calendarContainer: {
+        padding: 20,
+        backgroundColor: "#e5e5e5",
+    },
     title: { fontSize: 24, fontWeight: "bold", marginBottom: 10 },
     joinCode: { fontSize: 16, marginBottom: 20 },
     subTitle: { fontSize: 18, marginBottom: 10 },
     member: { fontSize: 16, marginBottom: 5 },
-    buttonContainer: { marginTop: 20 },
+    buttonContainer: { margin: 20 },
     error: { color: "red", textAlign: "center", marginTop: 20 },
+    choreView: {
+        flex: 1,
+        padding: 20,
+    },
     choreDetail: {
         padding: 5,
         paddingRight: 12,

@@ -154,9 +154,6 @@ export default function MonthCalendar({
 }
 
 const styles = StyleSheet.create({
-    container: {
-        paddingVertical: 10,
-    },
     header: {
         flexDirection: "row",
         alignItems: "center",
