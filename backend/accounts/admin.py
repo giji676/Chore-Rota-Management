@@ -33,29 +33,76 @@ class UserChangeForm(forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ("email", "first_name", "last_name", "password", "is_active", "is_staff", "is_superuser", "is_guest", "groups", "user_permissions")
+        fields = (
+            "email",
+            "first_name",
+            "last_name",
+            "password",
+            "is_active",
+            "is_staff",
+            "is_superuser",
+            "is_guest",
+            "groups",
+            "user_permissions"
+        )
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
     form = UserChangeForm
     add_form = UserCreationForm
 
-    list_display = ("id", "email", "first_name", "last_name", "is_staff", "is_active", "is_guest")
-    list_filter = ("is_staff", "is_active", "is_guest")
+    list_display = (
+        "id",
+        "email",
+        "first_name",
+        "last_name",
+        "is_verified",
+        "is_guest",
+        "is_active",
+        "is_staff",
+    )
+    list_filter = (
+        "is_active",
+        "is_guest",
+        "is_staff",
+        "is_active",
+    )
     ordering = ("email",)
     search_fields = ("email", "first_name", "last_name")
 
     fieldsets = (
         (None, {"fields": ("email", "password")}),
-        ("Personal info", {"fields": ("first_name", "last_name")}),
-        ("Permissions", {"fields": ("is_active", "is_staff", "is_superuser", "is_guest", "groups", "user_permissions")}),
+        ("Personal info", {
+            "fields": ("first_name", "last_name")
+        }),
+        ("Permissions", {
+            "fields": (
+                "is_verified",
+                "is_active",
+                "is_staff",
+                "is_superuser",
+                "is_guest",
+                "groups",
+                "user_permissions"
+            )
+        }),
         # ("Important dates", {"fields": ("last_login", "date_joined")}),
     )
 
     add_fieldsets = (
         (None, {
             "classes": ("wide",),
-            "fields": ("email", "first_name", "last_name", "password1", "password2", "is_active", "is_staff", "is_superuser", "is_guest"),
+            "fields": (
+                "email",
+                "first_name",
+                "last_name",
+                "password1",
+                "password2",
+                "is_active",
+                "is_staff",
+                "is_superuser",
+                "is_guest"
+            ),
         }),
     )
 

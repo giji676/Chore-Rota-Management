@@ -7,6 +7,8 @@ import { v4 as uuidv4 } from "uuid";
 
 import { dumpAsyncStorage } from "../utils/asyncDump";
 
+// TODO: Add resend verification email functionality
+
 export default function LoginScreen({ navigation }) {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -15,6 +17,7 @@ export default function LoginScreen({ navigation }) {
     const [lastName, setLastName] = useState("");
 
     const [error, setError] = useState("");
+    const [messageModalVisible, setMessageModalVisible] = useState(false);
     const [isRegistering, setIsRegistering] = useState(false);
 
     const [guestModalVisible, setGuestModalVisible] = useState(false);
@@ -56,6 +59,7 @@ export default function LoginScreen({ navigation }) {
         }
     };
 
+
     const handleRegister = async () => {
         setError("");
 
@@ -65,19 +69,29 @@ export default function LoginScreen({ navigation }) {
         }
 
         try {
-            const res = await api.post("accounts/register/", {
+            await api.post("accounts/register/", {
                 email,
                 password,
                 first_name: firstName,
                 last_name: lastName,
             });
 
-            await AsyncStorage.setItem("access_token", res.data.access_token);
-            await AsyncStorage.setItem("refresh_token", res.data.refresh_token);
-            await AsyncStorage.setItem("last_login", "registered");
-            navigation.replace("HouseAccess");
+            // clear any stored tokens
+            await AsyncStorage.removeItem("access_token");
+            await AsyncStorage.removeItem("refresh_token");
+
+            // show modal feedback
+            setMessageModalVisible(true);
+
         } catch (err) {
-            setError(getErrorMessage(err));
+            const message = getErrorMessage(err);
+            if (message.includes("user with this email already exists")) {
+                setError(
+                    "An account with this email already exists. Did you verify your email?"
+                );
+            } else {
+                setError(message);
+            }
         }
     };
 
@@ -174,6 +188,30 @@ export default function LoginScreen({ navigation }) {
             />
 
             <Modal
+                visible={messageModalVisible}
+                animationType="slide"
+                transparent
+                onRequestClose={() => setMessageModalVisible(false)}
+            >
+                <View style={styles.modalBackdrop}>
+                    <View style={styles.modalCard}>
+                        <Text style={styles.modalTitle}>Registration Successful!</Text>
+                        <Text style={styles.modalText}>
+                            Please check your email to verify your account before logging in.
+                        </Text>
+                        <Button
+                            title="Go to Login"
+                            onPress={() => {
+                                setMessageModalVisible(false);
+                                setIsRegistering(!isRegistering);
+                                setError("");
+                            }}
+                        />
+                    </View>
+                </View>
+            </Modal>
+
+            <Modal
                 visible={guestModalVisible}
                 transparent
                 animationType="fade"
@@ -255,6 +293,13 @@ const styles = StyleSheet.create({
         fontSize: 14,
         lineHeight: 20,
     },
+    success: {
+        marginTop: 15,
+        color: "green",
+        textAlign: "center",
+        fontSize: 14,
+        lineHeight: 20,
+    },
     modalBackdrop: {
         flex: 1,
         backgroundColor: "rgba(0,0,0,0.5)",
@@ -277,5 +322,10 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         justifyContent: "space-between",
         marginTop: 15,
+    },
+    modalText: {
+        fontSize: 16,
+        marginBottom: 20,
+        textAlign: "center",
     },
 });

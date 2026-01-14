@@ -2,14 +2,37 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import get_user_model, authenticate
-from django.db import IntegrityError
-from .serializers import RegisterSerializer, GuestSerializer, UserSerializer
+from django.utils import timezone
+from django.shortcuts import render, redirect
+from .serializers import RegisterSerializer, UserSerializer
 from .models import PushToken
+from .helpers.verify_email import send_verification_email
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from rest_framework.permissions import IsAuthenticated, AllowAny
+import secrets
 
 
 User = get_user_model()
+
+class VerifyEmailView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        token = request.GET.get("token")
+        if not token:
+            return render(request, "verify_failed.html", {"error": "Token is required"})
+
+        try:
+            user = User.objects.get(verification_token=token)
+            if timezone.now() - user.verification_sent_at > timezone.timedelta(hours=24):
+                return render(request, "verify_failed.html", {"error": "Token has expired"})
+            
+            user.is_verified = True
+            user.verification_token = None
+            user.save()
+            return render(request, "verify_success.html")
+        except User.DoesNotExist:
+            return render(request, "verify_failed.html", {"error": "Invalid token"})
 
 class UserView(APIView):
     permission_classes = [IsAuthenticated]
@@ -28,14 +51,19 @@ class LoginView(APIView):
         if not email or not password:
             return Response(
                 {"error": "Email and password are required"},
-                status=status.HTTP_400_BAD_REQUEST,
+                status=status.HTTP_400_BAD_REQUEST
             )
 
         user = authenticate(request, email=email, password=password)
         if not user:
             return Response(
                 {"error": "Invalid credentials"},
-                status=status.HTTP_401_UNAUTHORIZED,
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        if not user.is_verified:
+            return Response(
+                {"error": "Please verify your email before logging in."},
+                status=status.HTTP_403_FORBIDDEN
             )
 
         refresh = RefreshToken.for_user(user)
@@ -88,9 +116,35 @@ class RegisterView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
+        email = request.data.get("email")
+        if not email:
+            return Response({"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check if user exists
+        try:
+            existing_user = User.objects.get(email=email)
+            if existing_user.is_verified:
+                return Response(
+                    {"error": "Email already registered. Please log in."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            else:
+                # Unverified user -> resend verification email
+                token = secrets.token_urlsafe(32)
+                existing_user.verification_token = token
+                existing_user.verification_sent_at = timezone.now()
+                existing_user.save()
+                send_verification_email(existing_user.email, token)
+                return Response(
+                    {"detail": "Account exists but not verified. Verification email resent."},
+                    status=status.HTTP_200_OK
+                )
+        except User.DoesNotExist:
+            pass  # New user -> continue with normal registration
+
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
-            user = serializer.save()  # save() should handle first_name, last_name, email, password
+            user = serializer.save()
             refresh = RefreshToken.for_user(user)
             return Response({
                 "access_token": str(refresh.access_token),

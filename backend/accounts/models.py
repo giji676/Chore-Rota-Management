@@ -27,6 +27,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     last_name = models.CharField(max_length=150)
     is_guest = models.BooleanField(default=False)
     device_id = models.CharField(max_length=255, null=True, blank=True, unique=True)
+    is_verified = models.BooleanField(default=False)
+    verification_token = models.CharField(max_length=64, null=True, blank=True)
+    verification_sent_at = models.DateTimeField(null=True, blank=True)
 
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
