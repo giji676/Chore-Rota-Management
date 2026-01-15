@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
     View,
     Text,
@@ -11,6 +11,8 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
+import { jsonLog } from "../utils/loggers";
+
 const DEFAULT_COLOR = "#3498db";
 const SWIPE_THRESHOLD = 50;
 
@@ -21,7 +23,7 @@ export default function MonthCalendar({
     currentMonth,
     onPrevMonth,
     onNextMonth,
-    handleCollapse,
+    collapseProgress,
 }) {
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
@@ -32,7 +34,7 @@ export default function MonthCalendar({
     });
     const currentDate = new Date().getDate();
 
-    /* SWIPE HANDLER */
+    /* HORIZONTAL SWIPE HANDLER */
     const panResponder = useRef(
         PanResponder.create({
             onStartShouldSetPanResponder: () => false,
@@ -89,9 +91,7 @@ export default function MonthCalendar({
         rows.push(monthDays.slice(i, i + 7));
     }
 
-    const translateY = useRef(new Animated.Value(0)).current;
-    const rowHeightsRef = useRef({});
-
+    /* VERTICAL SWIPE HANDLER */
     const selectedRowIndex = useMemo(() => {
         return rows.findIndex(week =>
             week.some(
@@ -100,41 +100,67 @@ export default function MonthCalendar({
         );
     }, [rows, selectedDay]);
 
-    const getTranslateYForRow = (rowIndex) => {
-        let offset = 0;
-        for (let i = 0; i < rowIndex; i++) {
-            offset += rowHeightsRef.current[i] || 0;
-        }
-        return -offset;
-    };
+    const [measured, setMeasured] = useState(false);
+    const rowHeightsRef = useRef({});
+    const translateY = useRef(new Animated.Value(0)).current;
 
-    const getSelectedRowHeight = () =>
-        rowHeightsRef.current[selectedRowIndex] || 0;
-
-    const allRowsMeasured =
-        Object.keys(rowHeightsRef.current).length === rows.length;
+    const selectedRowIndexRef = useRef(selectedRowIndex);
 
     useEffect(() => {
-        if (!allRowsMeasured) return;
-        if (!handleCollapse || selectedRowIndex === -1) {
-            Animated.timing(translateY, {
-                toValue: 0,
-                duration: 250,
-                easing: Easing.out(Easing.ease),
-                useNativeDriver: true,
-            }).start();
-            return;
+        selectedRowIndexRef.current = selectedRowIndex;
+    }, [selectedRowIndex]);
+
+    const originalCalendarHeight = () => {
+        let totalHeight = 0;
+        for (let i = 0; i < rows.length; i++) {
+            totalHeight += rowHeightsRef.current[i] || 0;
         }
+        return totalHeight;
+    };
 
-        const offset = getTranslateYForRow(selectedRowIndex);
+    const verticalShrink = useRef(new Animated.Value(originalCalendarHeight())).current;
 
-        Animated.timing(translateY, {
-            toValue: offset,
-            duration: 250,
-            easing: Easing.out(Easing.ease),
-            useNativeDriver: true,
-        }).start();
-    }, [handleCollapse, selectedRowIndex]);
+    useEffect(() => {
+        if (Object.keys(rowHeightsRef.current).length === rows.length) {
+            const totalHeight = Object.values(rowHeightsRef.current).reduce((sum, h) => sum + h, 0);
+            verticalShrink.setValue(totalHeight); // initialize Animated.Value now
+            setMeasured(true); // flag that layout is ready
+        }
+    }, [rows]);
+
+    // TODO: If row index changes, manually set collapse progress so the multiplied offset isn't 0
+    useEffect(() => {
+        if (!measured) return; 
+        const id = collapseProgress.addListener(({ value }) => {
+            let offset = 0;
+            let shrinkToValue = shrinkToValue = originalCalendarHeight();
+            if (value > 0) {
+                for (let i = 0; i < selectedRowIndexRef.current; i++) {
+                    offset += rowHeightsRef.current[i] || 0;
+                }
+                offset *= -1 * value;
+                offset = Math.min(0, offset);
+                shrinkToValue = rowHeightsRef.current[selectedRowIndexRef.current] || 0;
+            }
+
+            Animated.parallel([
+                Animated.timing(translateY, {
+                    toValue: offset,
+                    duration: 250,
+                    easing: Easing.out(Easing.ease),
+                    useNativeDriver: true,
+                }),
+                Animated.timing(verticalShrink, {
+                    toValue: shrinkToValue,
+                    duration: 250,
+                    easing: Easing.out(Easing.ease),
+                    useNativeDriver: false,
+                }),
+            ]).start();
+        });
+
+        return () => collapseProgress.removeListener(id);
+    }, [measured]);
 
     return (
         <View>
@@ -150,11 +176,9 @@ export default function MonthCalendar({
                     <Ionicons name="chevron-forward" size={28} />
                 </TouchableOpacity>
             </View>
-            <View
+            <Animated.View
                 style={{
-                    height: handleCollapse
-                        ? getSelectedRowHeight()
-                        : undefined,
+                    height: measured ? verticalShrink : undefined,
                     overflow: "hidden",
                 }}
             >
@@ -214,7 +238,7 @@ export default function MonthCalendar({
                         </View>
                     ))}
                 </Animated.View>
-            </View>
+            </Animated.View>
         </View>
     );
 }

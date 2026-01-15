@@ -258,60 +258,45 @@ export default function HouseDashboardScreen({ navigation, route }) {
         return [...uncompleted, ...completed];
     }, [displayDay]);
 
-    const SWIPE_THRESHOLD = 50;
 
-    /* SWIPE HANDLER */
+    const collapseProgress = useRef(new Animated.Value(0)).current;
+
     const panResponder = useRef(
         PanResponder.create({
-            onStartShouldSetPanResponder: () => false,
-            onStartShouldSetPanResponderCapture: () => false,
-
             onMoveShouldSetPanResponder: (_, gesture) =>
                 Math.abs(gesture.dy) > 10 &&
                     Math.abs(gesture.dy) > Math.abs(gesture.dx),
 
+            onPanResponderMove: (_, gesture) => {
+                const drag = Math.max(-1, Math.min(1, -gesture.dy / 160));
+                collapseProgress.setValue(drag);
+            },
+
             onPanResponderRelease: (_, gesture) => {
-                if (gesture.dy > SWIPE_THRESHOLD) {
-                    onSwipeDown();
-                } else if (gesture.dy < -SWIPE_THRESHOLD) {
-                    onSwipeUp();
+                let toValue = 0;
+                if (gesture.dy < -50 || gesture.vy < -0.6) {
+                    toValue = 1;
+                } else if (gesture.dy > 50 || gesture.vy > 0.6) {
+                    toValue = -1;
                 }
+
+                Animated.spring(collapseProgress, {
+                    toValue,
+                    useNativeDriver: false,
+                    damping: 22,
+                    stiffness: 200,
+                    mass: 0.7,
+                }).start();
             },
         })
     ).current;
-
-    const onSwipeUp = () => {
-        setIsCollapsed(true);
-    };
-
-    const onSwipeDown = () => {
-        setIsCollapsed(false);
-    };
-
-    const calRef = useRef(null);
-    const [calendarHeightValue, setCalendarHeightValue] = useState(0);
-    const [isCollapsed, setIsCollapsed] = useState(true);
-    const calendarHeight = useRef(new Animated.Value(0)).current;
-
-    useEffect(() => {
-        console.log(calendarHeight);
-    }, [calendarHeightValue]);
 
     return (
         <View 
             {...panResponder.panHandlers}
             style={styles.container}
         >
-            <View 
-                style={styles.calendarContainer}
-                ref={calRef}
-                onLayout={(event) => {
-                    if (isCollapsed) return;
-                    const { height } = event.nativeEvent.layout;
-                    setCalendarHeightValue(height);
-                    calendarHeight.setValue(height);
-                }}
-            >
+            <View style={styles.calendarContainer}>
                 <MonthCalendar
                     occurrences={house.occurrences}
                     selectedDay={displayDayKey}
@@ -319,7 +304,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
                     currentMonth={currentMonth}
                     onPrevMonth={goToPrevMonth}
                     onNextMonth={goToNextMonth}
-                    handleCollapse={isCollapsed}
+                    collapseProgress={collapseProgress}
                 />
             </View>
 
