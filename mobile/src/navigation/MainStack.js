@@ -21,7 +21,7 @@ export default function MainStack() {
 
     useEffect(() => {
         const checkLogin = async () => {
-            dumpAsyncStorage();
+            // dumpAsyncStorage();
             const lastLogin = await AsyncStorage.getItem("last_login");
             if (lastLogin === "registered") {
                 const access = await AsyncStorage.getItem("access_token");

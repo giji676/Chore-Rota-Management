@@ -1,5 +1,16 @@
-import React, { useEffect, useState, useRef, useMemo } from 'react';
-import { Pressable, Alert, View, Text, Button, StyleSheet, TextInput, Modal } from 'react-native';
+import { useEffect, useState, useRef, useMemo } from 'react';
+import { 
+    Pressable,
+    Alert,
+    View,
+    Text,
+    Button,
+    StyleSheet,
+    TextInput,
+    Modal,
+    PanResponder,
+    Animated,
+} from 'react-native';
 import WheelPicker from "react-native-wheel-scrollview-picker";
 import { Picker } from '@react-native-picker/picker';
 import * as Notifications from 'expo-notifications';
@@ -31,7 +42,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
 
     const [house, setHouse] = useState(route.params.house);
     const [error, setError] = useState('');
-    const [displayDayKey, setDisplayDayKey] = useState();
+    const [displayDayKey, setDisplayDayKey] = useState(new Date().toISOString().split("T")[0]);
     const [newChoreName, setNewChoreName] = useState('');
     const [newChoreDescription, setNewChoreDescription] = useState('');
     const [newChoreColor, setNewChoreColor] = useState(presetColors[0]);
@@ -149,6 +160,8 @@ export default function HouseDashboardScreen({ navigation, route }) {
         );
     };
 
+    // TODO: Check selectedDate is being set correctly?
+    // TODO: Move to EditChoreScreen
     const handleEditOccurrence = async (occ) => {
         const schedule = house.schedules.find(s => s.id === occ.schedule);
         const data = {
@@ -229,9 +242,62 @@ export default function HouseDashboardScreen({ navigation, route }) {
             });
     };
 
+    const getDueTime = (occ) => new Date(occ.due_date).getTime();
+
+    const orderedOccurrences = useMemo(() => {
+        if (!displayDay) return [];
+
+        const uncompleted = displayDay
+        .filter(occ => !occ.completed)
+        .sort((a, b) => getDueTime(a) - getDueTime(b));
+
+        const completed = displayDay
+        .filter(occ => occ.completed)
+        .sort((a, b) => getDueTime(a) - getDueTime(b));
+
+        return [...uncompleted, ...completed];
+    }, [displayDay]);
+
+
+    const collapseProgress = useRef(new Animated.Value(0)).current;
+
+    const panResponder = useRef(
+        PanResponder.create({
+            onMoveShouldSetPanResponder: (_, gesture) =>
+                Math.abs(gesture.dy) > 10 &&
+                    Math.abs(gesture.dy) > Math.abs(gesture.dx),
+
+            onPanResponderMove: (_, gesture) => {
+                const dragLenInPixels = 250;
+                const drag = Math.max(-1, Math.min(1, -gesture.dy / dragLenInPixels));
+                collapseProgress.setValue(drag);
+            },
+
+            onPanResponderRelease: (_, gesture) => {
+                let toValue = 0;
+                if (gesture.dy < -50 || gesture.vy < -0.6) {
+                    toValue = 1;
+                } else if (gesture.dy > 50 || gesture.vy > 0.6) {
+                    toValue = -1;
+                }
+
+                Animated.spring(collapseProgress, {
+                    toValue,
+                    useNativeDriver: false,
+                    damping: 22,
+                    stiffness: 200,
+                    mass: 0.7,
+                }).start();
+            },
+        })
+    ).current;
+
     return (
-        <View style={styles.container}>
-            <View>
+        <View 
+            {...panResponder.panHandlers}
+            style={styles.container}
+        >
+            <View style={styles.calendarContainer}>
                 <MonthCalendar
                     occurrences={house.occurrences}
                     selectedDay={displayDayKey}
@@ -239,13 +305,18 @@ export default function HouseDashboardScreen({ navigation, route }) {
                     currentMonth={currentMonth}
                     onPrevMonth={goToPrevMonth}
                     onNextMonth={goToNextMonth}
+                    collapseProgress={collapseProgress}
                 />
             </View>
 
-            <View style={{flex: 1}} />
-
-            <View>
-                {displayDay.map((occ, index) => (
+            <View style={styles.choreView}>
+                <Text style={styles.choreViewTitle}>
+                    {new Date(displayDayKey).toLocaleString("en-GB", {
+                        day: "2-digit",
+                        month: "short",
+                    })}
+                </Text>
+                {orderedOccurrences.map((occ, index) => (
                     <View key={occ.id}>
                         <Pressable
                             onPress={() => {
@@ -258,13 +329,20 @@ export default function HouseDashboardScreen({ navigation, route }) {
                         >
                             <View>
                                 <View style={styles.row}>
+                                    <View 
+                                        style={[
+                                            styles.choreBar,
+                                            {
+                                                backgroundColor: occ.chore?.color || DEFAULT_COLOR,
+                                                opacity: occ.completed ? 0.4 : 1,
+                                            },
+                                        ]}
+                                    >
+                                    </View>
                                     <View style={styles.textColumn}>
                                         <Text style={styles.choreName}>{occ.chore.name}</Text>
                                         <Text style={styles.dateText}>
                                             {new Date(occ.due_date).toLocaleString("en-GB", {
-                                                day: "2-digit",
-                                                month: "2-digit",
-                                                year: "numeric",
                                                 hour: "2-digit",
                                                 minute: "2-digit",
                                             })}
@@ -291,31 +369,42 @@ export default function HouseDashboardScreen({ navigation, route }) {
                         )}
                     </View>
                 ))}
-
-                <View style={styles.buttonContainer}>
-                    <Button title="Create & Assign Chore" onPress={() => 
-                        navigation.navigate("EditChore", { house })
-                    }/>
-                </View>
+            </View>
+            <View style={styles.buttonContainer}>
+                <Button title="Create Chore" onPress={() => 
+                    navigation.navigate("EditChore", { house })
+                }/>
             </View>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, padding: 20 },
+    container: { flex: 1 },
+    calendarContainer: {
+        padding: 20,
+        backgroundColor: "#e5e5e5",
+    },
     title: { fontSize: 24, fontWeight: "bold", marginBottom: 10 },
     joinCode: { fontSize: 16, marginBottom: 20 },
     subTitle: { fontSize: 18, marginBottom: 10 },
     member: { fontSize: 16, marginBottom: 5 },
-    buttonContainer: { marginTop: 20 },
+    buttonContainer: { margin: 20 },
     error: { color: "red", textAlign: "center", marginTop: 20 },
+    choreView: {
+        flex: 1,
+        padding: 20,
+    },
     choreDetail: {
         padding: 5,
         paddingRight: 12,
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
+        // backgroundColor: "#e5e5e5",
+        // borderRadius: 8,
+        // borderWidth: 1,
+        // borderColor: "#d5d5d5",
     },
     markCompleteContainer: {
         flexDirection: "row",
@@ -337,8 +426,8 @@ const styles = StyleSheet.create({
         flexShrink: 1,
     },
     choreName: {
-        fontSize: 22,
-        fontWeight: "500",
+        fontSize: 20,
+        fontWeight: "400",
     },
     dateText: {
         color: "#666",
@@ -347,5 +436,15 @@ const styles = StyleSheet.create({
         marginTop: 6,
         color: "#666",
         fontSize: 14,
+    },
+    choreBar: {
+        width: 6,
+        height: "80%",
+        borderRadius: 3,
+        marginRight: 10,
+    },
+    choreViewTitle: {
+        fontSize: 20,
+        fontWeight: "bold",
     },
 });
