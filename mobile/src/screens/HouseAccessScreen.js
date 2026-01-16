@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { 
     View,
-    Text,
-    TextInput,
     TouchableOpacity,
     StyleSheet,
     FlatList,
@@ -15,6 +13,10 @@ import { useActionSheet } from "@expo/react-native-action-sheet";
 import api from "../utils/api";
 import logout from "../utils/logout";
 import { apiLogError, apiLogSuccess, jsonLog } from "../utils/loggers";
+import { colors, spacing, typography } from "../theme";
+import AppText from "../components/AppText";
+import AppTextInput from "../components/AppTextInput";
+import AppButton from "../components/AppButton";
 
 export default function HouseAccessScreen({ navigation }) {
     const { showActionSheetWithOptions } = useActionSheet();
@@ -24,12 +26,8 @@ export default function HouseAccessScreen({ navigation }) {
     const [result, setResult] = useState("");
     const [houses, setHouses] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [newName, setNewName] = useState("");
-    const [newPassword, setNewPassword] = useState("");
-    const [newAddress, setNewAddress] = useState("");
-    const [newPlaceId, setNewPlaceId] = useState("");
-    const [newMaxMembers, setNewMaxMembers] = useState("6");
 
+    // TODO: Figure out styling for ActionSheet
     const handleHouseOptions = (house) => {
         const options = ["Edit House", "Delete House", "Cancel"];
         const cancelButtonIndex = 2;
@@ -45,11 +43,9 @@ export default function HouseAccessScreen({ navigation }) {
             (buttonIndex) => {
                 switch (buttonIndex) {
                     case 0:
-                        // Edit
                         navigation.navigate("EditHouse", { houseId: house.id });
                         break;
                     case 1:
-                        // Delete
                         handleDeleteHouse(house);
                         break;
                     default:
@@ -62,8 +58,7 @@ export default function HouseAccessScreen({ navigation }) {
     useEffect(() => {
         const fetchUser = async () => {
             try {
-                const res = await api.get("accounts/user/");
-                // apiLogSuccess(res);
+                await api.get("accounts/user/");
             } catch (err) {
                 apiLogError(err);
             }
@@ -97,7 +92,6 @@ export default function HouseAccessScreen({ navigation }) {
             setResult(JSON.stringify(response.data, null, 2));
             navigation.navigate("HouseDashboard", { house: response.data });
         } catch (error) {
-            console.log(error.response?.data || error.message);
             setResult("Error: " + (error.response?.data?.error || error.message));
         }
     };
@@ -111,12 +105,12 @@ export default function HouseAccessScreen({ navigation }) {
             style={styles.houseItem}
             onPress={() => navigation.navigate("HouseDashboard", { house: item })}
         >
-            <Text style={styles.houseName}>{item.name}</Text>
+            <AppText style={styles.houseName}>{item.name}</AppText>
             <TouchableOpacity
                 style={styles.houseOptions}
                 onPress={() => handleHouseOptions(item)}
             >
-                <FontAwesome name={"ellipsis-v"} size={20} color="#000" />
+                <FontAwesome name={"ellipsis-v"} size={spacing.lg} color={colors.textPrimary} />
             </TouchableOpacity>
         </TouchableOpacity>
     );
@@ -158,109 +152,107 @@ export default function HouseAccessScreen({ navigation }) {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Your Houses</Text>
+            <AppText style={styles.title}>Your Houses</AppText>
 
             {loading ? (
-                <ActivityIndicator size="large" style={{ marginVertical: 20 }} />
+                <ActivityIndicator size="large" style={{ marginVertical: spacing.lg }} color={colors.primary} />
             ) : houses.length > 0 ? (
                     <FlatList
                         data={houses}
                         keyExtractor={(item) => item.id.toString()}
                         renderItem={renderHouseItem}
-                        style={{ marginBottom: 20 }}
+                        style={{ marginBottom: spacing.lg }}
                     />
                 ) : (
-                        <Text style={{ textAlign: "center", marginBottom: 20 }}>No houses yet</Text>
+                        <AppText style={{ textAlign: "center", marginBottom: spacing.lg }}>No houses yet</AppText>
                     )}
 
-            <Text style={styles.title}>Join or Create a House</Text>
+            <AppText style={styles.title}>Join or Create a House</AppText>
 
-            <TextInput
-                style={styles.input}
+            <AppTextInput
                 placeholder="Enter join code"
-                placeholderTextColor="gray"
+                placeholderTextColor={colors.textSecondary}
                 value={joinCode}
                 onChangeText={setJoinCode}
-            />
-            <TextInput
                 style={styles.input}
+            />
+            <AppTextInput
                 placeholder="Enter password"
-                placeholderTextColor="gray"
+                placeholderTextColor={colors.textSecondary}
                 value={password}
                 onChangeText={setPassword}
+                style={styles.input}
+                secureTextEntry
             />
 
-            <TouchableOpacity style={styles.button} onPress={handleJoinHouse}>
-                <Text style={styles.buttonText}>Join House</Text>
-            </TouchableOpacity>
+            <AppButton
+                title="Join House"
+                onPress={handleJoinHouse}
+            />
 
-            <Text style={styles.or}>OR</Text>
+            <AppText style={styles.or}>OR</AppText>
 
-            <TouchableOpacity style={styles.createButton} onPress={handleCreateHouse}>
-                <Text style={styles.buttonText}>Create New House</Text>
-            </TouchableOpacity>
+            <AppButton
+                title="Create New House"
+                onPress={handleCreateHouse}
+                variant="secondary"
+            />
 
             {result !== "" && (
                 <View style={styles.resultBox}>
-                    <Text style={styles.resultText}>{result}</Text>
+                    <AppText style={styles.resultText}>{result}</AppText>
                 </View>
             )}
 
-            <TouchableOpacity style={styles.button} onPress={temp_logout}>
-                <Text style={styles.buttonText}>Logout</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.button} onPress={temp_login_redirect}>
-                <Text style={styles.buttonText}>LoginRedirect</Text>
-            </TouchableOpacity>
+            <AppButton
+                title="Logout"
+                onPress={temp_logout}
+            />
+            <AppButton
+                title="LoginRedirect"
+                onPress={temp_login_redirect}
+            />
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, padding: 20 },
-    title: { fontSize: 24, fontWeight: "bold", marginBottom: 20, textAlign: "center" },
+    container: { flex: 1, padding: spacing.lg, backgroundColor: colors.background },
+    title: { ...typography.h2, textAlign: "center", marginBottom: spacing.md, color: colors.textPrimary },
     input: {
         borderWidth: 1,
-        padding: 12,
-        borderRadius: 8,
-        marginBottom: 12,
+        borderColor: colors.border,
+        borderRadius: spacing.sm,
+        padding: spacing.md,
+        marginBottom: spacing.md,
+        ...typography.body,
+        color: colors.textPrimary,
     },
-    button: {
-        backgroundColor: "#3498db",
-        padding: 14,
-        borderRadius: 8,
-        alignItems: "center",
-    },
-    createButton: {
-        backgroundColor: "#2ecc71",
-        padding: 14,
-        borderRadius: 8,
-        alignItems: "center",
-    },
-    buttonText: { color: "white", fontWeight: "bold" },
-    or: { textAlign: "center", marginVertical: 20, fontSize: 16 },
+    buttonText: { ...typography.button, color: colors.background },
+    or: { textAlign: "center", marginVertical: spacing.lg, ...typography.body, color: colors.textSecondary },
     resultBox: {
-        marginTop: 20,
-        padding: 12,
-        backgroundColor: "#eee",
-        borderRadius: 6,
+        marginTop: spacing.md,
+        padding: spacing.md,
+        backgroundColor: colors.surface,
+        borderRadius: spacing.sm,
     },
-    resultText: { fontFamily: "monospace" },
+    resultText: { fontFamily: "monospace", ...typography.body, color: colors.textPrimary },
     houseItem: {
-        padding: 12,
-        backgroundColor: "#f0f0f0",
-        borderRadius: 6,
+        padding: spacing.md,
+        backgroundColor: colors.surface,
+        borderRadius: spacing.sm,
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
+        marginBottom: spacing.sm,
     },
-    houseName: { fontSize: 16 },
+    houseName: { ...typography.body, color: colors.textPrimary },
     houseOptions: {
         justifyContent: "center",
         alignItems: "center",
-        paddingHorizontal: 15,
-        backgroundColor: "#ddd",
+        paddingHorizontal: spacing.md,
         aspectRatio: 1,
-        borderRadius: 5,
+        borderRadius: spacing.sm,
+        backgroundColor: colors.border,
     },
 });
