@@ -238,21 +238,18 @@ export default function EditHouseScreen({ route, navigation }) {
             <AppText style={styles.title}>Edit House</AppText>
             <View style={{ gap: spacing.md }}>
                 <AppTextInput
-                    style={styles.input}
                     placeholder="House Name"
                     value={name}
                     onChangeText={setName}
                 />
 
                 <AppTextInput
-                    style={styles.input}
                     placeholder="New Password"
                     value={password}
                     onChangeText={setPassword}
                 />
 
                 <AppTextInput
-                    style={styles.input}
                     placeholder="Max Members"
                     value={maxMembers}
                     onChangeText={setMaxMembers}
@@ -260,7 +257,6 @@ export default function EditHouseScreen({ route, navigation }) {
                 />
 
                 <AppTextInput
-                    style={styles.input}
                     placeholder="Address"
                     value={address}
                     onChangeText={(text) => {
@@ -294,7 +290,7 @@ export default function EditHouseScreen({ route, navigation }) {
                     </View>
                 )}
             </View>
-            <AppText style={styles.subtitle}>Members</AppText>
+            <AppText style={styles.subTitle}>Members</AppText>
             <FlatList
                 data={house?.members}
                 keyExtractor={(item) => item.id.toString()}
@@ -319,7 +315,7 @@ const styles = StyleSheet.create({
         ...typography.h2,
         marginBottom: spacing.lg,
     },
-    subtitle: {
+    subTitle: {
         ...typography.h3,
         marginTop: spacing.lg,
     },
