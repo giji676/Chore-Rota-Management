@@ -1,11 +1,25 @@
 import React, { useState, useEffect } from "react";
-import { Modal, View, Text, TextInput, Button, StyleSheet, TouchableOpacity } from "react-native";
+import { 
+    Pressable,
+    Modal,
+    View,
+    Button,
+    StyleSheet,
+    TouchableOpacity,
+    KeyboardAvoidingView,
+    ScrollView,
+    Platform,
+} from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from "../utils/api";
 import "react-native-get-random-values";
 import { v4 as uuidv4 } from "uuid";
 
 import { dumpAsyncStorage } from "../utils/asyncDump";
+import { colors, spacing, typography } from "../theme";
+import AppText from "../components/AppText";
+import AppTextInput from "../components/AppTextInput";
+import AppButton from "../components/AppButton";
 
 // TODO: Add resend verification email functionality
 
@@ -123,135 +137,145 @@ export default function LoginScreen({ navigation }) {
     };
 
     return (
-        <View style={styles.container}>
-            <Text style={styles.title}>{isRegistering ? "Create Account" : "Login"}</Text>
-
-            {(isRegistering) && (
-                <>
-                    <TextInput
-                        placeholder="First name"
-                        value={firstName}
-                        onChangeText={setFirstName}
-                        style={styles.input}
-                    />
-                    <TextInput
-                        placeholder="Last name"
-                        value={lastName}
-                        onChangeText={setLastName}
-                        style={styles.input}
-                    />
-                </>
-            )}
-
-            <TextInput
-                placeholder="Email"
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                style={styles.input}
-            />
-
-            <TextInput
-                placeholder="Password"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                style={styles.input}
-            />
-
-            <Button
-                title={isRegistering ? "Register" : "Login"}
-                onPress={isRegistering ? handleRegister : handleLogin}
-            />
-
-            <TouchableOpacity
-                onPress={() => {
-                    setIsRegistering(!isRegistering);
-                    setError("");
-                }}
-                style={{ marginTop: 15 }}
+        <KeyboardAvoidingView
+            style={{ flex: 1, backgroundColor: colors.background }}
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+            <ScrollView
+                contentContainerStyle={styles.container}
+                keyboardShouldPersistTaps="handled"
             >
-                <Text style={styles.toggleText}>
-                    {isRegistering
-                        ? "Already have an account? Login"
-                        : "Don't have an account? Register"}
-                </Text>
-            </TouchableOpacity>
+                <AppText style={styles.title}>{isRegistering ? "Create Account" : "Login"}</AppText>
 
-            <View style={styles.divider} />
-
-            <Button
-                title="Continue as Guest"
-                onPress={() => setGuestModalVisible(true)}
-                color="#777"
-            />
-
-            <Modal
-                visible={messageModalVisible}
-                animationType="slide"
-                transparent
-                onRequestClose={() => setMessageModalVisible(false)}
-            >
-                <View style={styles.modalBackdrop}>
-                    <View style={styles.modalCard}>
-                        <Text style={styles.modalTitle}>Registration Successful!</Text>
-                        <Text style={styles.modalText}>
-                            Please check your email to verify your account before logging in.
-                        </Text>
-                        <Button
-                            title="Go to Login"
-                            onPress={() => {
-                                setMessageModalVisible(false);
-                                setIsRegistering(!isRegistering);
-                                setError("");
-                            }}
-                        />
-                    </View>
-                </View>
-            </Modal>
-
-            <Modal
-                visible={guestModalVisible}
-                transparent
-                animationType="fade"
-            >
-                <View style={styles.modalBackdrop}>
-                    <View style={styles.modalCard}>
-                        <Text style={styles.modalTitle}>Continue as Guest</Text>
-
-                        <TextInput
+                {(isRegistering) && (
+                    <>
+                        <AppTextInput
                             placeholder="First name"
-                            value={guestFirstName}
-                            onChangeText={setGuestFirstName}
+                            value={firstName}
+                            onChangeText={setFirstName}
                             style={styles.input}
                         />
-
-                        <TextInput
+                        <AppTextInput
                             placeholder="Last name"
-                            value={guestLastName}
-                            onChangeText={setGuestLastName}
+                            value={lastName}
+                            onChangeText={setLastName}
                             style={styles.input}
                         />
+                    </>
+                )}
 
-                        <View style={styles.modalButtons}>
-                            <Button
-                                title="Cancel"
-                                onPress={() => setGuestModalVisible(false)}
-                            />
-                            <Button
-                                title="Continue"
-                                onPress={() => handleGuest(guestFirstName, guestLastName)}
-                                disabled={!guestFirstName || !guestLastName}
+                <AppTextInput
+                    placeholder="Email"
+                    value={email}
+                    onChangeText={setEmail}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                    style={styles.input}
+                    placeholderTextColor={colors.textSecondary}
+                />
+
+                <AppTextInput
+                    placeholder="Password"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry
+                    style={styles.input}
+                />
+
+                <AppButton
+                    title={isRegistering ? "Register" : "Login"}
+                    onPress={isRegistering ? handleRegister : handleLogin}
+                    loading={false}
+                />
+
+                <TouchableOpacity
+                    onPress={() => {
+                        setIsRegistering(!isRegistering);
+                        setError("");
+                    }}
+                    style={{ marginTop: 4 }}
+                >
+                    <AppText style={styles.toggleText}>
+                        {isRegistering
+                            ? "Already have an account? Login"
+                            : "Don't have an account? Register"}
+                    </AppText>
+                </TouchableOpacity>
+
+                <View style={styles.divider} />
+
+                <AppButton
+                    title="Continue as Guest"
+                    variant="secondary"
+                    onPress={() => setGuestModalVisible(true)}
+                />
+
+                <Modal
+                    visible={messageModalVisible}
+                    animationType="slide"
+                    transparent
+                    onRequestClose={() => setMessageModalVisible(false)}
+                >
+                    <View style={styles.modalBackdrop}>
+                        <View style={styles.modalCard}>
+                            <AppText style={styles.modalTitle}>Registration Successful!</AppText>
+                            <AppText style={styles.modalText}>
+                                Please check your email to verify your account before logging in.
+                            </AppText>
+                            <AppButton
+                                title="Go to Login"
+                                onPress={() => {
+                                    setMessageModalVisible(false);
+                                    setIsRegistering(!isRegistering);
+                                    setError("");
+                                }}
                             />
                         </View>
                     </View>
-                </View>
-            </Modal>
+                </Modal>
+
+                <Modal
+                    visible={guestModalVisible}
+                    transparent
+                    animationType="fade"
+                >
+                    <View style={styles.modalBackdrop}>
+                        <View style={styles.modalCard}>
+                            <AppText style={styles.modalTitle}>Continue as Guest</AppText>
+
+                            <AppTextInput
+                                placeholder="First name"
+                                value={guestFirstName}
+                                onChangeText={setGuestFirstName}
+                                style={styles.input}
+                            />
+
+                            <AppTextInput
+                                placeholder="Last name"
+                                value={guestLastName}
+                                onChangeText={setGuestLastName}
+                                style={styles.input}
+                            />
+                            <View style={{ gap: 10 }}>
+                                <AppButton
+                                    title="Cancel"
+                                    variant="secondary"
+                                    onPress={() => setGuestModalVisible(false)}
+                                />
+                                <AppButton
+                                    title="Continue"
+                                    onPress={() => handleGuest(guestFirstName, guestLastName)}
+                                    disabled={!guestFirstName || !guestLastName}
+                                />
+                            </View>
+                        </View>
+                    </View>
+                </Modal>
 
 
-            {error ? <Text style={styles.error}>{error}</Text> : null}
-        </View>
+                {error ? <AppText style={styles.error}>{error}</AppText> : null}
+            </ScrollView>
+        </KeyboardAvoidingView>
     );
 }
 
@@ -259,46 +283,46 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         justifyContent: "center",
-        padding: 20,
-        backgroundColor: "#fff",
+        padding: spacing.lg,
+        backgroundColor: colors.background,
+        gap: spacing.md,
     },
     title: {
-        fontSize: 26,
-        fontWeight: "bold",
-        marginBottom: 20,
+        ...typography.h2,
         textAlign: "center",
+        color: colors.textPrimary,
     },
     input: {
         borderWidth: 1,
-        borderColor: "#ccc",
-        borderRadius: 8,
-        padding: 12,
-        marginBottom: 10,
-        fontSize: 16,
+        borderColor: colors.border,
+        borderRadius: spacing.sm,
+        padding: spacing.md,
+        ...typography.body,
+        color: colors.textPrimary,
     },
     toggleText: {
-        color: "#007bff",
+        color: colors.primary,
         textAlign: "center",
-        fontSize: 14,
-    },
-    divider: {
-        marginVertical: 20,
-        borderBottomWidth: 1,
-        borderBottomColor: "#ddd",
+        ...typography.small,
     },
     error: {
-        marginTop: 15,
-        color: "#d32f2f",
+        marginTop: spacing.xs,
+        color: colors.error,
         textAlign: "center",
-        fontSize: 14,
+        ...typography.small,
         lineHeight: 20,
     },
     success: {
-        marginTop: 15,
-        color: "green",
+        marginTop: spacing.sm,
+        color: colors.success || "#4caf50",
         textAlign: "center",
-        fontSize: 14,
+        ...typography.small,
         lineHeight: 20,
+    },
+    divider: {
+        borderBottomWidth: 1,
+        borderBottomColor: colors.divider,
+        marginVertical: spacing.sm,
     },
     modalBackdrop: {
         flex: 1,
@@ -307,25 +331,51 @@ const styles = StyleSheet.create({
         alignItems: "center",
     },
     modalCard: {
-        backgroundColor: "#fff",
-        padding: 20,
+        backgroundColor: colors.surface,
+        padding: spacing.lg,
         width: "85%",
-        borderRadius: 12,
+        borderRadius: spacing.md,
+        gap: spacing.md,
     },
     modalTitle: {
-        fontSize: 20,
-        fontWeight: "bold",
-        marginBottom: 15,
+        ...typography.h2,
+        marginBottom: spacing.sm,
         textAlign: "center",
+        color: colors.textPrimary,
+    },
+    modalText: {
+        ...typography.body,
+        marginBottom: spacing.lg,
+        textAlign: "center",
+        color: colors.textSecondary,
     },
     modalButtons: {
         flexDirection: "row",
         justifyContent: "space-between",
-        marginTop: 15,
+        marginTop: spacing.md,
+        gap: spacing.sm,
     },
-    modalText: {
-        fontSize: 16,
-        marginBottom: 20,
-        textAlign: "center",
+    button: {
+        backgroundColor: colors.primary,
+        paddingVertical: spacing.md,
+        borderRadius: spacing.sm,
+        alignItems: "center",
+    },
+    buttonText: {
+        color: colors.background,
+        fontWeight: "600",
+        fontSize: typography.body.fontSize,
+    },
+    secondaryButton: {
+        borderWidth: 1,
+        borderColor: colors.border,
+        paddingVertical: spacing.md,
+        borderRadius: spacing.sm,
+        alignItems: "center",
+    },
+    secondaryButtonText: {
+        color: colors.textSecondary,
+        fontWeight: "500",
+        fontSize: typography.body.fontSize,
     },
 });
