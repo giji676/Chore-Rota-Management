@@ -1,6 +1,6 @@
 import React from "react";
 import { TextInput, StyleSheet } from "react-native";
-import { colors } from "../theme/colors";
+import { spacing, colors } from "../theme/index";
 
 export default function AppTextInput({ style, ...props }) {
     return (
@@ -17,8 +17,8 @@ const styles = StyleSheet.create({
     input: {
         borderWidth: 1,
         borderColor: colors.border,
-        borderRadius: 10,
-        padding: 12,
+        borderRadius: spacing.sm,
+        padding: spacing.md,
         fontSize: 16,
         color: colors.textPrimary,
         backgroundColor: colors.surface,

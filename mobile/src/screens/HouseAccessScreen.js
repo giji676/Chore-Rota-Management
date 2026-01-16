@@ -28,6 +28,7 @@ export default function HouseAccessScreen({ navigation }) {
     const [loading, setLoading] = useState(true);
 
     // TODO: Figure out styling for ActionSheet
+    // TODO: Figure out styling for Alert
     const handleHouseOptions = (house) => {
         const options = ["Edit House", "Delete House", "Cancel"];
         const cancelButtonIndex = 2;
@@ -221,9 +222,6 @@ const styles = StyleSheet.create({
     title: { ...typography.h2, textAlign: "center", marginBottom: spacing.md, color: colors.textPrimary },
     input: {
         borderWidth: 1,
-        borderColor: colors.border,
-        borderRadius: spacing.sm,
-        padding: spacing.md,
         marginBottom: spacing.md,
         ...typography.body,
         color: colors.textPrimary,

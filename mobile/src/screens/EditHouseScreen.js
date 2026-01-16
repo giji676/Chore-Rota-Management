@@ -17,6 +17,11 @@ import api from "../utils/api";
 import { useActionSheet } from "@expo/react-native-action-sheet";
 import { jsonLog, apiLogSuccess, apiLogError } from "../utils/loggers";
 
+import { colors, spacing, typography } from "../theme";
+import AppText from "../components/AppText";
+import AppTextInput from "../components/AppTextInput";
+import AppButton from "../components/AppButton";
+
 export default function EditHouseScreen({ route, navigation }) {
     const { showActionSheetWithOptions } = useActionSheet();
 
@@ -145,15 +150,19 @@ export default function EditHouseScreen({ route, navigation }) {
         );
     };
 
-    const renderMemberItem = ({ item }) => (
-        <Pressable
-            style={styles.memberRow}
-            onLongPress={() => handleMemberOptions(item)}
-        >
-            <Text>
-                {item.label} • {ROLE_LABELS[item.role]}
-            </Text>
-        </Pressable>
+    const renderMemberItem = ({ item, index }) => (
+        <View>
+            <Pressable
+                style={styles.memberRow}
+                onLongPress={() => handleMemberOptions(item)}
+            >
+                <AppText>
+                    {item.label} • {ROLE_LABELS[item.role]}
+                </AppText>
+            </Pressable>
+
+            {index < house.members.length - 1 && <View style={styles.divider} />}
+        </View>
     );
 
     if (loading) {
@@ -226,98 +235,111 @@ export default function EditHouseScreen({ route, navigation }) {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Edit House</Text>
+            <AppText style={styles.title}>Edit House</AppText>
+            <View style={{ gap: spacing.md }}>
+                <AppTextInput
+                    style={styles.input}
+                    placeholder="House Name"
+                    value={name}
+                    onChangeText={setName}
+                />
 
-            <TextInput
-                style={styles.input}
-                placeholder="House Name"
-                value={name}
-                onChangeText={setName}
-            />
+                <AppTextInput
+                    style={styles.input}
+                    placeholder="New Password"
+                    value={password}
+                    onChangeText={setPassword}
+                />
 
-            <TextInput
-                style={styles.input}
-                placeholder="New Password"
-                value={password}
-                onChangeText={setPassword}
-            />
+                <AppTextInput
+                    style={styles.input}
+                    placeholder="Max Members"
+                    value={maxMembers}
+                    onChangeText={setMaxMembers}
+                    keyboardType="numeric"
+                />
 
-            <TextInput
-                style={styles.input}
-                placeholder="Max Members"
-                value={maxMembers}
-                onChangeText={setMaxMembers}
-                keyboardType="numeric"
-            />
+                <AppTextInput
+                    style={styles.input}
+                    placeholder="Address"
+                    value={address}
+                    onChangeText={(text) => {
+                        setAddress(text);
+                        setPlaceId("");
+                    }}
+                />
 
-            <TextInput
-                style={styles.input}
-                placeholder="Address"
-                value={address}
-                onChangeText={(text) => {
-                    setAddress(text);
-                    setPlaceId("");
-                }}
-            />
+                {loadingSuggestions && <ActivityIndicator size="small" />}
+                {suggestions.length > 0 && (
+                    <View style={styles.suggestions}>
+                        <ScrollView
+                            showsVerticalScrollIndicator={false}
+                            keyboardShouldPersistTaps="handled"
+                        >
+                            {suggestions.map((item, index) => (
+                                <View key={item.place_id}>
+                                    <TouchableOpacity
+                                        style={styles.suggestionItem}
+                                        onPress={() => handleSelectSuggestion(item)}
+                                    >
+                                        <AppText>{item.description}</AppText>
+                                    </TouchableOpacity>
 
-            {loadingSuggestions && <ActivityIndicator size="small" />}
-            {suggestions.length > 0 && (
-                <View style={styles.suggestions}>
-                    <ScrollView
-                        showsVerticalScrollIndicator={false}
-                        keyboardShouldPersistTaps="handled"
-                    >
-                        {suggestions.map(item => (
-                            <TouchableOpacity
-                                key={item.place_id}
-                                style={styles.suggestionItem}
-                                onPress={() => handleSelectSuggestion(item)}
-                            >
-                                <Text>{item.description}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
-                </View>
-            )}
-            <Text style={styles.subtitle}>Members</Text>
+                                    {index < suggestions.length - 1 && (
+                                        <View style={styles.divider} />
+                                    )}
+                                </View>
+                            ))}
+                        </ScrollView>
+                    </View>
+                )}
+            </View>
+            <AppText style={styles.subtitle}>Members</AppText>
             <FlatList
                 data={house?.members}
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={renderMemberItem}
             />
 
-            <Button title="Save Changes" onPress={handleSave} />
+            <AppButton
+                title="Save Changes"
+                onPress={handleSave}
+            />
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, padding: 20 },
-    title: { fontSize: 24, fontWeight: "bold", marginBottom: 20 },
-    subtitle: { fontSize: 18, fontWeight: "bold", marginTop: 20 },
-    input: {
-        borderWidth: 1,
-        borderColor: "#ccc",
-        borderRadius: 8,
-        padding: 10,
-        marginBottom: 10,
+    container: {
+        flex: 1,
+        padding: spacing.lg,
+        backgroundColor: colors.background,
+    },
+    title: {
+        ...typography.h2,
+        marginBottom: spacing.lg,
+    },
+    subtitle: {
+        ...typography.h3,
+        marginTop: spacing.lg,
     },
     memberRow: {
-        padding: 10,
-        borderBottomWidth: 1,
-        borderColor: "#eee",
+        padding: spacing.sm,
     },
     suggestions: {
         borderWidth: 1,
-        borderColor: "#ccc",
+        borderColor: colors.border,
+        backgroundColor: colors.raisedSurface,
         borderRadius: 8,
-        marginBottom: 10,
         maxHeight: 150,
         overflow: "hidden"
     },
     suggestionItem: {
-        padding: 10,
+        padding: spacing.sm,
+    },
+    divider: {
         borderBottomWidth: 1,
-        borderBottomColor: "#eee",
+        borderBottomColor: colors.divider,
+        marginVertical: spacing.xs,
     },
 });
