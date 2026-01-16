@@ -129,6 +129,8 @@ export default function MonthCalendar({
     }, [rows]);
 
     // TODO: If row index changes, manually set collapse progress so the multiplied offset isn't 0
+    // TODO: When swiping up (collapsing) slowly,
+    // shrink seems to get to the target before the translate does, causing a jump. Fix timing.
     useEffect(() => {
         if (!measured) return; 
         const id = collapseProgress.addListener(({ value }) => {
@@ -140,7 +142,7 @@ export default function MonthCalendar({
                 }
                 offset *= -1 * value;
                 offset = Math.min(0, offset);
-                shrinkToValue = rowHeightsRef.current[selectedRowIndexRef.current] || 0;
+                shrinkToValue = rowHeightsRef.current[selectedRowIndexRef.current] * value || 0;
             }
 
             Animated.parallel([

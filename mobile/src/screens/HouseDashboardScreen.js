@@ -268,7 +268,8 @@ export default function HouseDashboardScreen({ navigation, route }) {
                     Math.abs(gesture.dy) > Math.abs(gesture.dx),
 
             onPanResponderMove: (_, gesture) => {
-                const drag = Math.max(-1, Math.min(1, -gesture.dy / 160));
+                const dragLenInPixels = 250;
+                const drag = Math.max(-1, Math.min(1, -gesture.dy / dragLenInPixels));
                 collapseProgress.setValue(drag);
             },
 
