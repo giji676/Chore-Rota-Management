@@ -2,6 +2,11 @@ import React, { useState, useEffect } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, FlatList, ActivityIndicator } from "react-native";
 import api from "../utils/api";
 
+import { colors, spacing, typography } from "../theme";
+import AppText from "../components/AppText";
+import AppTextInput from "../components/AppTextInput";
+import AppButton from "../components/AppButton";
+
 export default function CreateHouseScreen({ navigation }) {
     const [name, setName] = useState("");
     const [password, setPassword] = useState("");
@@ -75,102 +80,107 @@ export default function CreateHouseScreen({ navigation }) {
 
     return (
         <ScrollView contentContainerStyle={styles.container}>
-            <Text style={styles.title}>Create a House</Text>
+            <AppText style={styles.title}>Create a House</AppText>
+            <View style={{ gap: spacing.md }}>
+                <AppTextInput
+                    placeholder="House Name"
+                    placeholderTextColor="gray"
+                    value={name}
+                    onChangeText={setName}
+                />
 
-            <TextInput
-                style={styles.input}
-                placeholder="House Name"
-                placeholderTextColor="gray"
-                value={name}
-                onChangeText={setName}
-            />
+                <AppTextInput
+                    placeholder="Address"
+                    placeholderTextColor="gray"
+                    value={address}
+                    onChangeText={text => {
+                        setAddress(text);
+                        setPlaceId("");
+                    }}
+                />
 
-            <TextInput
-                style={styles.input}
-                placeholder="Address"
-                placeholderTextColor="gray"
-                value={address}
-                onChangeText={text => {
-                    setAddress(text);
-                    setPlaceId("");
-                }}
-            />
-
-            {loadingSuggestions && <ActivityIndicator size="small" />}
-            {suggestions.length > 0 && (
-                <ScrollView style={styles.suggestionsList}>
-                    {suggestions.map((item) => (
-                        <TouchableOpacity
-                            key={item.place_id}
-                            style={styles.suggestionItem}
-                            onPress={() => handleSelectSuggestion(item)}
+                {loadingSuggestions && <ActivityIndicator size="small" />}
+                {suggestions.length > 0 && (
+                    <View style={styles.suggestions}>
+                        <ScrollView
+                            showsVerticalScrollIndicator={false}
+                            keyboardShouldPersistTaps="handled"
                         >
-                            <Text>{item.description}</Text>
-                        </TouchableOpacity>
-                    ))}
-                </ScrollView>
-            )}
+                            {suggestions.map((item, index) => (
+                                <View key={item.place_id}>
+                                    <TouchableOpacity
+                                        style={styles.suggestionItem}
+                                        onPress={() => handleSelectSuggestion(item)}
+                                    >
+                                        <AppText>{item.description}</AppText>
+                                    </TouchableOpacity>
 
-            <TextInput
-                style={styles.input}
-                secureTextEntry
-                placeholder="House Password"
-                placeholderTextColor="gray"
-                value={password}
-                onChangeText={setPassword}
-            />
+                                    {index < suggestions.length - 1 && (
+                                        <View style={styles.divider} />
+                                    )}
+                                </View>
+                            ))}
+                        </ScrollView>
+                    </View>
+                )}
 
-            <TextInput
-                style={styles.input}
-                placeholder="Max Members"
-                placeholderTextColor="gray"
-                keyboardType="numeric"
-                value={maxMembers}
-                onChangeText={setMaxMembers}
-            />
+                <AppTextInput
+                    secureTextEntry
+                    placeholder="House Password"
+                    placeholderTextColor="gray"
+                    value={password}
+                    onChangeText={setPassword}
+                />
 
-            <TouchableOpacity style={styles.button} onPress={handleCreate}>
-                <Text style={styles.buttonText}>Create House</Text>
-            </TouchableOpacity>
+                <AppTextInput
+                    placeholder="Max Members"
+                    placeholderTextColor="gray"
+                    keyboardType="numeric"
+                    value={maxMembers}
+                    onChangeText={setMaxMembers}
+                />
 
-            {result !== "" && (
-                <View style={styles.resultBox}>
-                    <Text style={styles.resultText}>{result}</Text>
-                </View>
-            )}
+                <AppButton
+                    title="Save Changes"
+                    onPress={handleCreate}
+                />
+
+                {result !== "" && (
+                    <View style={styles.resultBox}>
+                        <AppText style={styles.resultText}>{result}</AppText>
+                    </View>
+                )}
+            </View>
         </ScrollView>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { padding: 20, paddingTop: 60 },
-    title: { fontSize: 24, fontWeight: "bold", marginBottom: 20, textAlign: "center" },
-    input: {
-        borderWidth: 1,
-        borderRadius: 8,
-        padding: 12,
-        marginBottom: 10,
+    container: {
+        flex: 1,
+        padding: spacing.lg,
+        backgroundColor: colors.background,
     },
-    suggestionsList: {
+    title: {
+        ...typography.h2,
+        marginBottom: spacing.lg,
+    },
+    suggestions: {
         borderWidth: 1,
-        borderColor: "#ccc",
-        maxHeight: 150,
-        marginBottom: 10,
+        borderColor: colors.border,
+        backgroundColor: colors.raisedSurface,
         borderRadius: 8,
+        maxHeight: 150,
+        overflow: "hidden"
     },
     suggestionItem: {
-        padding: 10,
+        padding: spacing.sm,
+    },
+    divider: {
         borderBottomWidth: 1,
-        borderBottomColor: "#eee",
+        borderBottomColor: colors.divider,
+        marginVertical: spacing.xs,
     },
-    button: {
-        backgroundColor: "#27ae60",
-        padding: 14,
-        borderRadius: 8,
-        alignItems: "center",
-        marginTop: 10,
-    },
-    buttonText: { color: "white", fontWeight: "bold" },
     resultBox: {
         marginTop: 20,
         padding: 12,

@@ -22,6 +22,11 @@ import TimePicker from "../components/modals/TimePicker";
 import api from "../utils/api";
 import { jsonLog, apiLogSuccess, apiLogError } from "../utils/loggers";
 
+import { colors, spacing, typography } from "../theme";
+import AppText from "../components/AppText";
+import AppTextInput from "../components/AppTextInput";
+import AppButton from "../components/AppButton";
+
 export default function EditChoreScreen({ route, navigation }) {
     const { showActionSheetWithOptions } = useActionSheet();
     const { house, occurrence} = route.params; // occurrence will be undefined for create
@@ -33,6 +38,14 @@ export default function EditChoreScreen({ route, navigation }) {
         "#000000", "#ffffff", "#ffa500",
         "#7600bc", "#a0a0a0", "#1f7d53"
     ];
+
+    const pickerCommonStyle = {
+        color: colors.textPrimary,        // text color
+        backgroundColor: colors.surface,  // container background
+        marginTop: spacing.md,
+        fontSize: typography.body.fontSize,
+        fontFamily: typography.body.fontFamily,
+    };
 
     const repeatDeltaPresets = {
         "Don't repeat": {},
@@ -175,15 +188,15 @@ export default function EditChoreScreen({ route, navigation }) {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>{chore ? "Edit Chore" : "Create Chore"}</Text>
-            <TextInput
+            <AppText style={styles.title}>{chore ? "Edit Chore" : "Create Chore"}</AppText>
+            <AppTextInput
                 style={styles.input}
                 placeholder="Chore Name"
                 placeholderTextColor="gray"
                 value={choreName}
                 onChangeText={setChoreName}
             />
-            <TextInput
+            <AppTextInput
                 style={[styles.input, styles.multiline]}
                 placeholder="Description"
                 placeholderTextColor="gray"
@@ -195,13 +208,13 @@ export default function EditChoreScreen({ route, navigation }) {
             <View style={styles.displayDateTimeContainer}>
                 <View style={styles.displayDateTime}>
                     <View style={[styles.colorDot, { backgroundColor: choreColor }]} />
-                    <Text style={{ textAlign: "center" }}>
+                    <AppText style={{ textAlign: "center" }}>
                         {selectedDateDisplayText}
-                    </Text>
-                    <Text>-</Text>
-                    <Text style={{ textAlign: "center" }}>
+                    </AppText>
+                    <AppText>-</AppText>
+                    <AppText style={{ textAlign: "center" }}>
                         {selectedRepeatDeltaText}
-                    </Text>
+                    </AppText>
                 </View>
             </View>
             {activeFeature === "palette" && (
@@ -227,18 +240,15 @@ export default function EditChoreScreen({ route, navigation }) {
             )}
             {activeFeature === "user" && (
                 <View style={styles.expandedContainer}>
-                    <Text>Assign to</Text>
+                    <AppText>Assign to</AppText>
                     <Picker
                         selectedValue={selectedMember}
                         onValueChange={setSelectedMember}
-                        style={styles.picker}
+                        style={pickerCommonStyle}
+                        itemStyle={pickerCommonStyle}
                     >
                         {house.members.map((member) => (
-                            <Picker.Item
-                                key={member.id}
-                                label={member.label}
-                                value={member}
-                            />
+                            <Picker.Item key={member.id} label={member.label} value={member} />
                         ))}
                     </Picker>
                 </View>
@@ -247,24 +257,36 @@ export default function EditChoreScreen({ route, navigation }) {
                 <View style={styles.expandedContainer}>
                     {pickerMode === null && (
                         <View style={styles.selectDateTimeRow}>
-                            <View style={styles.selectDateTimeBtns}>
-                                <Button title="Set Date" onPress={() => setPickerMode("date")} />
-                            </View>
-                            <View style={styles.selectDateTimeBtns}>
-                                <Button title="Set Time" onPress={() => setPickerMode("time")} />
-                            </View>
+                            <AppButton
+                                title="Set Date"
+                                variant="secondary"
+                                onPress={() => setPickerMode("date")}
+                                style={styles.selectDateTimeBtns}
+                            />
+                            <AppButton
+                                title="Set Time"
+                                variant="secondary"
+                                onPress={() => setPickerMode("time")}
+                                style={styles.selectDateTimeBtns}
+                            />
                         </View>
                     )}
                     <View>
-                        <Picker selectedValue={repeatDeltaLabel} onValueChange={onChangePicker}>
+                        {/* Fix styling on picker and custom unit View */}
+                        <Picker
+                            selectedValue={repeatDeltaLabel}
+                            onValueChange={onChangePicker}
+                            style={pickerCommonStyle}        // Android container & text
+                            itemStyle={pickerCommonStyle}    // iOS text
+                        >
                             {Object.keys(repeatDeltaPresets).map((label) => (
                                 <Picker.Item key={label} label={label} value={label} />
                             ))}
                         </Picker>
                         {repeatDeltaLabel === "Custom" && (
                             <View style={styles.customContainer}>
-                                <Text>Every</Text>
-                                <TextInput
+                                <AppText style={{ color: colors.textPrimary }}>Every</AppText>
+                                <AppTextInput
                                     style={styles.inputCustomNum}
                                     keyboardType="numeric"
                                     value={customNum}
@@ -310,20 +332,23 @@ export default function EditChoreScreen({ route, navigation }) {
                     />
                 </View>
             )}
-            <View style={styles.div}/>
+            <View style={styles.divider}/>
             <View style={styles.featureBar}>
                 <TouchableOpacity onPress={() => setActiveFeature(prev => prev === "dateTime" ? null : "dateTime")}>
-                    <MaterialCommunityIcons name={getIconName("dateTime")} size={30} color="#000" />
+                    <MaterialCommunityIcons name={getIconName("dateTime")} size={30} color={colors.textPrimary}/>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => setActiveFeature(prev => prev === "user" ? null : "user")}>
-                    <MaterialCommunityIcons name={getIconName("user")} size={30} color="#000" />
+                    <MaterialCommunityIcons name={getIconName("user")} size={30} color={colors.textPrimary} />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => setActiveFeature(prev => prev === "palette" ? null : "palette")}>
-                    <MaterialCommunityIcons name={getIconName("palette")} size={30} color="#000" />
+                    <MaterialCommunityIcons name={getIconName("palette")} size={30} color={colors.textPrimary}/>
                 </TouchableOpacity>
             </View>
-            <View style={styles.div}/>
-            <Button title="Save Changes" onPress={handleSave} />
+            <View style={styles.divider}/>
+            <AppButton
+                title="Save Changes"
+                onPress={handleSave}
+            />
         </View>
     );
 }
@@ -331,26 +356,13 @@ export default function EditChoreScreen({ route, navigation }) {
 const styles = StyleSheet.create({
     container: { 
         flex: 1,
-        padding: 20,
-        gap: 10,
+        backgroundColor: colors.background,
+        padding: spacing.lg,
+        gap: spacing.md,
     },
     title: {
-        fontSize: 24,
-        fontWeight: "bold",
-        marginBottom: 20
-    },
-    input: {
-        borderWidth: 1,
-        borderColor: "#ccc",
-        borderRadius: 8,
-        padding: 10,
-        // marginBottom: 15,
-        fontSize: 16,
-    },
-    buttons: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        marginBottom: 20,
+        ...typography.h2,
+        marginBottom: spacing.lg,
     },
     picker: {
         color: "#444",
@@ -361,13 +373,12 @@ const styles = StyleSheet.create({
     customContainer: {
         flexDirection: "row",
         alignItems: "center",
-        paddingHorizontal: 10,
-        backgroundColor: "#f0f0f0",
-        borderRadius: 8,
+        paddingHorizontal: spacing.md,
+        backgroundColor: colors.surface,
+        borderRadius: spacing.sm,
     },
     inputCustomNum: {
-        borderWidth: 1,
-        borderColor: "#ccc",
+        borderWidth: 2,
         borderRadius: 8,
         paddingHorizontal: 15,
         marginHorizontal: 15,
@@ -376,6 +387,7 @@ const styles = StyleSheet.create({
     },
     unitPicker: {
         flex: 1,
+        color: colors.textPrimary,
     },
     dayPickerOverlay: {
         ...StyleSheet.absoluteFillObject,
@@ -383,9 +395,12 @@ const styles = StyleSheet.create({
     },
     selectDateTimeRow: {
         flexDirection: "row",
+        gap: spacing.sm,
     },
     selectDateTimeBtns: {
         flex: 1,
+        borderRadius: 50,
+        backgroundColor: colors.surface,
     },
     displayDateTimeContainer: {
         flexShrink: 0,
@@ -393,23 +408,23 @@ const styles = StyleSheet.create({
         alignItems: "center",
     },
     displayDateTime: {
-        padding: 10,
+        padding: spacing.md,
         borderWidth: 1,
         borderRadius: 50,
-        borderColor: "#aaa",
-        backgroundColor: "#ccc",
+        borderColor: colors.border,
+        backgroundColor: "#444",
         alignSelf: "center",
         flexDirection: "row",
-        gap: 10,
+        gap: spacing.md,
     },
     colorDot: {
         aspectRatio: 1,
         borderRadius: 50,
     },
-    div: {
-        height: StyleSheet.hairlineWidth,
-        alignSelf: "stretch",
-        backgroundColor: "#aaa",
+    divider: {
+        borderBottomWidth: 1,
+        borderBottomColor: colors.divider,
+        marginVertical: spacing.sm,
     },
     featureBar: {
         flexDirection: "row",

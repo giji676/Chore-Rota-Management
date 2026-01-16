@@ -6,7 +6,6 @@ import {
     Text,
     Button,
     StyleSheet,
-    TextInput,
     Modal,
     PanResponder,
     Animated,
@@ -21,6 +20,10 @@ import api from '../utils/api';
 import { apiLogSuccess, apiLogError, jsonLog } from "../utils/loggers";
 import MonthCalendar from "../components/MonthCalendar";
 import CheckBox from "../components/CheckBox";
+
+import { colors, spacing, typography } from "../theme";
+import AppText from "../components/AppText";
+import AppButton from "../components/AppButton";
 
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
@@ -41,7 +44,6 @@ export default function HouseDashboardScreen({ navigation, route }) {
     ];
 
     const [house, setHouse] = useState(route.params.house);
-    const [error, setError] = useState('');
     const [displayDayKey, setDisplayDayKey] = useState(new Date().toISOString().split("T")[0]);
     const [newChoreName, setNewChoreName] = useState('');
     const [newChoreDescription, setNewChoreDescription] = useState('');
@@ -310,12 +312,12 @@ export default function HouseDashboardScreen({ navigation, route }) {
             </View>
 
             <View style={styles.choreView}>
-                <Text style={styles.choreViewTitle}>
+                <AppText style={styles.choreViewTitle}>
                     {new Date(displayDayKey).toLocaleString("en-GB", {
                         day: "2-digit",
                         month: "short",
                     })}
-                </Text>
+                </AppText>
                 {orderedOccurrences.map((occ, index) => (
                     <View key={occ.id}>
                         <Pressable
@@ -340,13 +342,13 @@ export default function HouseDashboardScreen({ navigation, route }) {
                                     >
                                     </View>
                                     <View style={styles.textColumn}>
-                                        <Text style={styles.choreName}>{occ.chore.name}</Text>
-                                        <Text style={styles.dateText}>
+                                        <AppText style={styles.choreName}>{occ.chore.name}</AppText>
+                                        <AppText style={styles.dateText}>
                                             {new Date(occ.due_date).toLocaleString("en-GB", {
                                                 hour: "2-digit",
                                                 minute: "2-digit",
                                             })}
-                                        </Text>
+                                        </AppText>
                                     </View>
 
                                     <CheckBox
@@ -357,9 +359,9 @@ export default function HouseDashboardScreen({ navigation, route }) {
                                 </View>
 
                                 {expandedOccId === occ.id && (
-                                    <Text style={styles.description}>
+                                    <AppText style={styles.description}>
                                         {occ.chore.description}
-                                    </Text>
+                                    </AppText>
                                 )}
                             </View>
                         </Pressable>
@@ -370,50 +372,36 @@ export default function HouseDashboardScreen({ navigation, route }) {
                     </View>
                 ))}
             </View>
-            <View style={styles.buttonContainer}>
-                <Button title="Create Chore" onPress={() => 
-                    navigation.navigate("EditChore", { house })
-                }/>
-            </View>
+
+            <AppButton
+                title="Create Chore"
+                onPress={() => navigation.navigate("EditChore", { house })}
+                style={{ margin: spacing.lg }}
+            />
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1 },
+    container: { flex: 1, backgroundColor: colors.background },
     calendarContainer: {
-        padding: 20,
-        backgroundColor: "#e5e5e5",
+        padding: spacing.lg,
+        backgroundColor: colors.surface,
     },
-    title: { fontSize: 24, fontWeight: "bold", marginBottom: 10 },
-    joinCode: { fontSize: 16, marginBottom: 20 },
-    subTitle: { fontSize: 18, marginBottom: 10 },
-    member: { fontSize: 16, marginBottom: 5 },
-    buttonContainer: { margin: 20 },
-    error: { color: "red", textAlign: "center", marginTop: 20 },
     choreView: {
         flex: 1,
-        padding: 20,
+        padding: spacing.lg,
     },
     choreDetail: {
-        padding: 5,
-        paddingRight: 12,
+        padding: spacing.sm,
+        paddingRight: spacing.md,
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
-        // backgroundColor: "#e5e5e5",
-        // borderRadius: 8,
-        // borderWidth: 1,
-        // borderColor: "#d5d5d5",
-    },
-    markCompleteContainer: {
-        flexDirection: "row",
-        justifyContent: "flex-end",
-        marginBottom: 5,
     },
     divider: {
         height: 1.5,
-        backgroundColor: "#ddd",
+        backgroundColor: colors.divider,
         marginVertical: 5,
     },
     row: {
@@ -426,25 +414,23 @@ const styles = StyleSheet.create({
         flexShrink: 1,
     },
     choreName: {
-        fontSize: 20,
-        fontWeight: "400",
+        ...typography.h3,
     },
     dateText: {
-        color: "#666",
+        ...typography.small,
+        color: colors.textSecondary,
     },
     description: {
-        marginTop: 6,
         color: "#666",
-        fontSize: 14,
+        ...typography.small,
     },
     choreBar: {
         width: 6,
         height: "80%",
         borderRadius: 3,
-        marginRight: 10,
+        marginRight: spacing.md,
     },
     choreViewTitle: {
-        fontSize: 20,
-        fontWeight: "bold",
+        ...typography.h2,
     },
 });
