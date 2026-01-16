@@ -14,6 +14,7 @@ import EditChoreScreen from "../screens/EditChoreScreen";
 import { dumpAsyncStorage } from "../utils/asyncDump";
 import { isTokenExpired, refreshAccessToken, guestLogin } from "../utils/auth";
 
+import { colors } from "../theme/index";
 const Stack = createNativeStackNavigator();
 
 export default function MainStack() {
@@ -61,14 +62,33 @@ export default function MainStack() {
         );
     }
 
+    const headerOpts = {
+        headerStyle: { backgroundColor: colors.primary },
+        headerTintColor: colors.background,
+        headerTitleStyle: { fontWeight: "bold" },
+        // title: "",
+    }
+
     return (
         <Stack.Navigator initialRouteName={initialRoute}>
-            <Stack.Screen name="Login" component={LoginScreen} />
-            <Stack.Screen name="HouseAccess" component={HouseAccessScreen} />
-            <Stack.Screen name="CreateHouse" component={CreateHouseScreen} />
-            <Stack.Screen name="HouseDashboard" component={HouseDashboardScreen} />
-            <Stack.Screen name="EditHouse" component={EditHouseScreen} />
-            <Stack.Screen name="EditChore" component={EditChoreScreen} />
+            <Stack.Screen name="Login" component={LoginScreen} options={{
+                ...headerOpts,
+            }} />
+            <Stack.Screen name="HouseAccess" component={HouseAccessScreen} options={{
+                ...headerOpts,
+            }} />
+            <Stack.Screen name="CreateHouse" component={CreateHouseScreen} options={{
+                ...headerOpts,
+            }} />
+            <Stack.Screen name="HouseDashboard" component={HouseDashboardScreen} options={{
+                ...headerOpts,
+            }} />
+            <Stack.Screen name="EditHouse" component={EditHouseScreen} options={{
+                ...headerOpts,
+            }} />
+            <Stack.Screen name="EditChore" component={EditChoreScreen} options={{
+                ...headerOpts,
+            }} />
         </Stack.Navigator>
     );
 }

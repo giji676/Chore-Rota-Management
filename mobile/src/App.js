@@ -9,7 +9,6 @@ export default function App() {
             <NavigationContainer>
                 <MainStack />
             </NavigationContainer>
-
         </ActionSheetProvider>
     );
 }
