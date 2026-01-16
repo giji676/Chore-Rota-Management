@@ -12,6 +12,9 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 
 import { jsonLog } from "../utils/loggers";
+import { colors, spacing, typography } from "../theme";
+import AppText from "../components/AppText";
+import AppButton from "../components/AppButton";
 
 const DEFAULT_COLOR = "#3498db";
 const SWIPE_THRESHOLD = 50;
@@ -169,13 +172,13 @@ export default function MonthCalendar({
             {/* HEADER */}
             <View style={styles.header}>
                 <TouchableOpacity style={styles.arrow} onPress={onPrevMonth}>
-                    <Ionicons name="chevron-back" size={28} />
+                    <Ionicons name="chevron-back" size={28} color={colors.textPrimary}/>
                 </TouchableOpacity>
 
-                <Text style={styles.monthHeader}>{monthYearLabel}</Text>
+                <AppText style={styles.monthHeader}>{monthYearLabel}</AppText>
 
                 <TouchableOpacity style={styles.arrow} onPress={onNextMonth}>
-                    <Ionicons name="chevron-forward" size={28} />
+                    <Ionicons name="chevron-forward" size={28} color={colors.textPrimary}/>
                 </TouchableOpacity>
             </View>
             <Animated.View
@@ -213,14 +216,14 @@ export default function MonthCalendar({
                                         ]}
                                         onPress={() => onDayPress(key)}
                                     >
-                                        <Text
+                                        <AppText
                                             style={[
                                                 styles.dateNumber,
                                                 isToday && styles.todaysCell,
                                             ]}
                                         >
                                             {date.getDate()}
-                                        </Text>
+                                        </AppText>
 
                                         {occs.map((occ) => (
                                             <View
@@ -281,8 +284,8 @@ const styles = StyleSheet.create({
         borderColor: "transparent",
     },
     dayCellSelected: {
-        borderColor: "#aaa",
-        backgroundColor: "#eee",
+        borderColor: colors.border,
+        backgroundColor: colors.surfaceRaised,
         borderRadius: 6,
     },
     dateNumber: {
