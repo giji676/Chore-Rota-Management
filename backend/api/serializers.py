@@ -58,7 +58,7 @@ class ChoreScheduleSerializer(serializers.ModelSerializer):
 
 class ChoreOccurrenceSerializer(serializers.ModelSerializer):
     chore = serializers.SerializerMethodField()
-    user_name = serializers.CharField(source="schedule.user.username", read_only=True)
+    user_id = serializers.IntegerField(source="schedule.user.id", read_only=True)
     repeat_label = serializers.CharField(source="schedule.repeat_label", read_only=True)
 
     class Meta:
@@ -67,7 +67,7 @@ class ChoreOccurrenceSerializer(serializers.ModelSerializer):
             "id",
             "schedule",
             "chore",
-            "user_name",
+            "user_id",
             "repeat_label",
             "due_date",
             "completed",

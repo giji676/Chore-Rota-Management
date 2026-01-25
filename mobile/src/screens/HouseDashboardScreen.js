@@ -60,6 +60,9 @@ export default function HouseDashboardScreen({ navigation, route }) {
     const [newCompleted, setNewCompleted] = useState();
 
     const [selectedOcc, setSelectedOcc] = useState();
+    const [choreFilter, setChoreFilter] = useState("all"); 
+    // const currentUserId = route.params?.userId;
+    const currentUserId = 15;
 
     const [occurrenceEditModalVisible, setOccurrenceEditModalVisible] = useState(false);
 
@@ -196,18 +199,29 @@ export default function HouseDashboardScreen({ navigation, route }) {
         }
     };
 
-    const occurrencesByDate = useMemo(() => {
-        if (!house?.occurrences) return {};
+    const filteredOccurrences = useMemo(() => {
+        if (!house?.occurrences) return [];
 
+        if (choreFilter === "all") {
+            return house.occurrences;
+        }
+
+        return house.occurrences.filter(
+            occ => occ.user_id === currentUserId
+        );
+    }, [house, choreFilter, currentUserId]);
+
+    const occurrencesByDate = useMemo(() => {
         const map = {};
-        house.occurrences.forEach((occ) => {
+
+        filteredOccurrences.forEach((occ) => {
             const key = new Date(occ.due_date).toISOString().split("T")[0];
             if (!map[key]) map[key] = [];
             map[key].push(occ);
         });
 
         return map;
-    }, [house]);
+    }, [filteredOccurrences]);
 
     const displayDay = displayDayKey
         ? occurrencesByDate[displayDayKey] || []
@@ -299,9 +313,45 @@ export default function HouseDashboardScreen({ navigation, route }) {
             {...panResponder.panHandlers}
             style={styles.container}
         >
+
+            <View style={styles.filterRow}>
+                <Pressable
+                    onPress={() => setChoreFilter("all")}
+                    style={[
+                        styles.filterPill,
+                        choreFilter === "all" && styles.filterPillActive,
+                    ]}
+                >
+                    <AppText
+                        style={[
+                            styles.filterText,
+                            choreFilter === "all" && styles.filterTextActive,
+                        ]}
+                    >
+                        All
+                    </AppText>
+                </Pressable>
+
+                <Pressable
+                    onPress={() => setChoreFilter("mine")}
+                    style={[
+                        styles.filterPill,
+                        choreFilter === "mine" && styles.filterPillActive,
+                    ]}
+                >
+                    <AppText
+                        style={[
+                            styles.filterText,
+                            choreFilter === "mine" && styles.filterTextActive,
+                        ]}
+                    >
+                        My chores
+                    </AppText>
+                </Pressable>
+            </View>
             <View style={styles.calendarContainer}>
                 <MonthCalendar
-                    occurrences={house.occurrences}
+                    occurrences={filteredOccurrences}
                     selectedDay={displayDayKey}
                     onDayPress={setDisplayDayKey}
                     currentMonth={currentMonth}
@@ -432,5 +482,32 @@ const styles = StyleSheet.create({
     },
     choreViewTitle: {
         ...typography.h2,
+    },
+    filterRow: {
+        flexDirection: "row",
+        justifyContent: "flex-end",
+        alignItems: "center",
+        gap: spacing.sm,
+        padding: spacing.md,
+    },
+    filterPill: {
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+        borderRadius: 50,
+        backgroundColor: colors.surfaceRaised,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    filterPillActive: {
+        backgroundColor: colors.accentSurface,
+        borderColor: colors.accentBorder,
+    },
+    filterText: {
+        color: colors.textSecondary,
+        ...typography.small,
+    },
+    filterTextActive: {
+        color: colors.primary,
+        fontWeight: "600",
     },
 });
