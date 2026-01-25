@@ -126,14 +126,21 @@ export default function MonthCalendar({
     };
 
     const verticalShrink = useRef(new Animated.Value(originalCalendarHeight())).current;
+    const fullHeightRef = useRef(0);
 
     useEffect(() => {
         if (Object.keys(rowHeightsRef.current).length === rows.length) {
-            const totalHeight = Object.values(rowHeightsRef.current).reduce((sum, h) => sum + h, 0);
-            verticalShrink.setValue(totalHeight); // initialize Animated.Value now
-            setMeasured(true); // flag that layout is ready
+            const totalHeight = rows.reduce(
+                (sum, _, i) => sum + (rowHeightsRef.current[i] || 0),
+                0
+            );
+            fullHeightRef.current = totalHeight;
+
+            if (collapseProgress.__getValue() === 0) {
+                verticalShrink.setValue(totalHeight);
+            }
         }
-    }, [rows]);
+    }, [rows, occurrences, measured]);
 
     // TODO: If row index changes, manually set collapse progress so the multiplied offset isn't 0
     // TODO: When swiping up (collapsing) slowly,
