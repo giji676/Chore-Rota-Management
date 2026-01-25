@@ -111,7 +111,11 @@ export default function HouseAccessScreen({ navigation }) {
                 style={styles.houseOptions}
                 onPress={() => handleHouseOptions(item)}
             >
-                <FontAwesome name={"ellipsis-v"} size={spacing.lg} color={colors.textPrimary} />
+                <FontAwesome
+                    name={"ellipsis-v"}
+                    size={spacing.lg}
+                    color={colors.textPrimary}
+                />
             </TouchableOpacity>
         </TouchableOpacity>
     );
@@ -251,6 +255,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: spacing.md,
         aspectRatio: 1,
         borderRadius: spacing.sm,
-        backgroundColor: colors.border,
+        backgroundColor: colors.accentSurface,
     },
 });
