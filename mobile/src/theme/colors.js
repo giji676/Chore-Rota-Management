@@ -1,23 +1,27 @@
 export const colors = {
     // Background layers
-    background: "#121212",      // app background
-    surface: "#1A1A1A",         // cards, sheets
-    surfaceRaised: "#222222",   // elevated elements
+    background: "#F6FAF9",
+    surface: "#FFFFFF",
+    surfaceRaised: "#EEF4F3",
 
     // Structure
-    border: "#2C2C2C",
-    divider: "#2C2C2C",
+    border: "#D7E3E0",
+    divider: "#D7E3E0",
 
     // Text
-    textPrimary: "#F5F5F5",
-    textSecondary: "#C7C7C7",
-    textMuted: "#9E9E9E",
+    textPrimary: "#1F2D2B",
+    textSecondary: "#425B57",
+    textMuted: "#8AA3A0",
 
     // Brand / actions
-    primary: "#E58E26",         // warm amber
-    primaryPressed: "#CC7A1A",
+    primary: "#2CB1A6",
+    primaryPressed: "#24968C",
 
     // States
-    success: "#4ADE80",
-    error: "#F87171",
+    success: "#22C55E",
+    error: "#EF4444",
+
+    // UI accents / pills / highlights
+    accentBorder: "#2CB1A6",      // highlighted borders (date pill, active items)
+    accentSurface: "#E0F4F2",     // soft highlight background
 };

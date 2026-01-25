@@ -208,11 +208,23 @@ export default function EditChoreScreen({ route, navigation }) {
             <View style={styles.displayDateTimeContainer}>
                 <View style={styles.displayDateTime}>
                     <View style={[styles.colorDot, { backgroundColor: choreColor }]} />
-                    <AppText style={{ textAlign: "center" }}>
+                    <AppText style={{
+                        textAlign: "center",
+                        color: colors.primary,
+                    }}>
+
                         {selectedDateDisplayText}
                     </AppText>
-                    <AppText>-</AppText>
-                    <AppText style={{ textAlign: "center" }}>
+                    <AppText style={{
+                        textAlign: "center",
+                        color: colors.primary,
+                    }}>
+                        -
+                    </AppText>
+                    <AppText style={{
+                        textAlign: "center",
+                        color: colors.primary,
+                    }}>
                         {selectedRepeatDeltaText}
                     </AppText>
                 </View>
@@ -411,8 +423,8 @@ const styles = StyleSheet.create({
         padding: spacing.md,
         borderWidth: 1,
         borderRadius: 50,
-        borderColor: colors.border,
-        backgroundColor: "#444",
+        borderColor: colors.accentBorder,
+        backgroundColor: colors.accentSurface,
         alignSelf: "center",
         flexDirection: "row",
         gap: spacing.md,
