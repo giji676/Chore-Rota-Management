@@ -2,6 +2,7 @@ from datetime import date
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from .models import House, Chore, HouseMember, ChoreOccurrence, ChoreSchedule
+from accounts.serializers import UserSerializer
 
 User = get_user_model()
 
@@ -58,7 +59,8 @@ class ChoreScheduleSerializer(serializers.ModelSerializer):
 
 class ChoreOccurrenceSerializer(serializers.ModelSerializer):
     chore = serializers.SerializerMethodField()
-    user_id = serializers.IntegerField(source="schedule.user.id", read_only=True)
+    user = serializers.SerializerMethodField()
+    user_label = serializers.SerializerMethodField()
     repeat_label = serializers.CharField(source="schedule.repeat_label", read_only=True)
 
     class Meta:
@@ -67,7 +69,8 @@ class ChoreOccurrenceSerializer(serializers.ModelSerializer):
             "id",
             "schedule",
             "chore",
-            "user_id",
+            "user",
+            "user_label",
             "repeat_label",
             "due_date",
             "completed",
@@ -80,6 +83,16 @@ class ChoreOccurrenceSerializer(serializers.ModelSerializer):
     def get_chore(self, obj):
         chore = obj.schedule.chore
         return ChoreSerializer(chore).data
+    
+    def get_user(self, obj):
+        user = obj.schedule.user
+        return UserSerializer(user).data
+
+    def get_user_label(self, obj):
+        user = obj.schedule.user
+        first = user.first_name or ""
+        last_initial = user.last_name[0].upper() if user.last_name else ""
+        return f"{first}{'.' + last_initial if last_initial else ''}"
 
 class HouseSerializer(serializers.ModelSerializer):
     members = serializers.SerializerMethodField()

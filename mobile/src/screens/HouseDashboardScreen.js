@@ -207,7 +207,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
         }
 
         return house.occurrences.filter(
-            occ => occ.user_id === currentUserId
+            occ => occ.user.id === currentUserId
         );
     }, [house, choreFilter, currentUserId]);
 
@@ -314,41 +314,6 @@ export default function HouseDashboardScreen({ navigation, route }) {
             style={styles.container}
         >
 
-            <View style={styles.filterRow}>
-                <Pressable
-                    onPress={() => setChoreFilter("all")}
-                    style={[
-                        styles.filterPill,
-                        choreFilter === "all" && styles.filterPillActive,
-                    ]}
-                >
-                    <AppText
-                        style={[
-                            styles.filterText,
-                            choreFilter === "all" && styles.filterTextActive,
-                        ]}
-                    >
-                        All
-                    </AppText>
-                </Pressable>
-
-                <Pressable
-                    onPress={() => setChoreFilter("mine")}
-                    style={[
-                        styles.filterPill,
-                        choreFilter === "mine" && styles.filterPillActive,
-                    ]}
-                >
-                    <AppText
-                        style={[
-                            styles.filterText,
-                            choreFilter === "mine" && styles.filterTextActive,
-                        ]}
-                    >
-                        My chores
-                    </AppText>
-                </Pressable>
-            </View>
             <View style={styles.calendarContainer}>
                 <MonthCalendar
                     occurrences={filteredOccurrences}
@@ -362,12 +327,50 @@ export default function HouseDashboardScreen({ navigation, route }) {
             </View>
 
             <View style={styles.choreView}>
-                <AppText style={styles.choreViewTitle}>
-                    {new Date(displayDayKey).toLocaleString("en-GB", {
-                        day: "2-digit",
-                        month: "short",
-                    })}
-                </AppText>
+                <View style={styles.filterRow}>
+                    <AppText style={styles.choreViewTitle}>
+                        {new Date(displayDayKey).toLocaleString("en-GB", {
+                            day: "2-digit",
+                            month: "short",
+                        })}
+                    </AppText>
+
+                    <View style={styles.filterRowRight}>
+                        <Pressable
+                            onPress={() => setChoreFilter("all")}
+                            style={[
+                                styles.filterPill,
+                                choreFilter === "all" && styles.filterPillActive,
+                            ]}
+                        >
+                            <AppText
+                                style={[
+                                    styles.filterText,
+                                    choreFilter === "all" && styles.filterTextActive,
+                                ]}
+                            >
+                                All
+                            </AppText>
+                        </Pressable>
+
+                        <Pressable
+                            onPress={() => setChoreFilter("mine")}
+                            style={[
+                                styles.filterPill,
+                                choreFilter === "mine" && styles.filterPillActive,
+                            ]}
+                        >
+                            <AppText
+                                style={[
+                                    styles.filterText,
+                                    choreFilter === "mine" && styles.filterTextActive,
+                                ]}
+                            >
+                                My chores
+                            </AppText>
+                        </Pressable>
+                    </View>
+                </View>
                 {orderedOccurrences.map((occ, index) => (
                     <View key={occ.id}>
                         <Pressable
@@ -392,7 +395,15 @@ export default function HouseDashboardScreen({ navigation, route }) {
                                     >
                                     </View>
                                     <View style={styles.textColumn}>
-                                        <AppText style={styles.choreName}>{occ.chore.name}</AppText>
+                                        <View style={{ 
+                                            flexDirection: "row",
+                                            alignItems: "center",
+                                            gap: spacing.sm,
+                                        }}>
+                                            <AppText style={styles.choreName}>{occ.chore.name}</AppText>
+                                            <AppText>-</AppText>
+                                            <AppText>{occ.user_label}</AppText>
+                                        </View>
                                         <AppText style={styles.dateText}>
                                             {new Date(occ.due_date).toLocaleString("en-GB", {
                                                 hour: "2-digit",
@@ -400,7 +411,6 @@ export default function HouseDashboardScreen({ navigation, route }) {
                                             })}
                                         </AppText>
                                     </View>
-
                                     <CheckBox
                                         onPress={() => handleCheckOccurrence(occ)}
                                         checked={occ.completed}
@@ -416,9 +426,9 @@ export default function HouseDashboardScreen({ navigation, route }) {
                             </View>
                         </Pressable>
 
-                        {index < displayDay.length - 1 && (
-                            <View style={styles.divider} />
-                        )}
+                        {/* {index < displayDay.length - 1 && ( */}
+                        {/*     <View style={styles.divider} /> */}
+                        {/* )} */}
                     </View>
                 ))}
             </View>
@@ -441,6 +451,7 @@ const styles = StyleSheet.create({
     choreView: {
         flex: 1,
         padding: spacing.lg,
+        gap: spacing.sm,
     },
     choreDetail: {
         padding: spacing.sm,
@@ -448,6 +459,8 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
+        backgroundColor: colors.surface,
+        borderRadius: spacing.md,
     },
     divider: {
         height: 1.5,
@@ -485,10 +498,13 @@ const styles = StyleSheet.create({
     },
     filterRow: {
         flexDirection: "row",
-        justifyContent: "flex-end",
+        justifyContent: "space-between",
+        alignItems: "center",
+    },
+    filterRowRight: {
+        flexDirection: "row",
         alignItems: "center",
         gap: spacing.sm,
-        padding: spacing.md,
     },
     filterPill: {
         paddingHorizontal: spacing.md,
