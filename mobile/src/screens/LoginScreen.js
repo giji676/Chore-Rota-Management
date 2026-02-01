@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from "../utils/api";
+import Auth from "../utils/auth";
 import "react-native-get-random-values";
 import { v4 as uuidv4 } from "uuid";
 
@@ -21,6 +22,9 @@ import AppText from "../components/AppText";
 import AppTextInput from "../components/AppTextInput";
 import AppButton from "../components/AppButton";
 
+// TODO: !!! check correct api caller is used for login/guest/register (api, authApi)
+// TODO: Make email case insensitive
+// TODO: Password field starts with upper case by defualt, change that to lower-default
 // TODO: Add resend verification email functionality
 
 export default function LoginScreen({ navigation }) {
@@ -63,7 +67,7 @@ export default function LoginScreen({ navigation }) {
         }
 
         try {
-            const res = await api.post("accounts/login/", { email, password });
+            const res = await Auth.authApi.post("accounts/login/", { email, password });
             await AsyncStorage.setItem("access_token", res.data.access_token);
             await AsyncStorage.setItem("refresh_token", res.data.refresh_token);
             await AsyncStorage.setItem("last_login", "registered");
@@ -83,6 +87,7 @@ export default function LoginScreen({ navigation }) {
         }
 
         try {
+            // TODO: use Auth.authApi here?????
             await api.post("accounts/register/", {
                 email,
                 password,
