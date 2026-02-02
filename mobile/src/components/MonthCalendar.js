@@ -26,7 +26,9 @@ export default function MonthCalendar({
     currentMonth,
     onPrevMonth,
     onNextMonth,
-    collapseProgress,
+    onGrant,
+    onMove,
+    onRelease,
 }) {
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
@@ -109,7 +111,6 @@ export default function MonthCalendar({
 
     const [measured, setMeasured] = useState(false);
     const rowHeightsRef = useRef({});
-    const translateY = useRef(new Animated.Value(0)).current;
 
     const selectedRowIndexRef = useRef(selectedRowIndex);
 
@@ -117,15 +118,23 @@ export default function MonthCalendar({
         selectedRowIndexRef.current = selectedRowIndex;
     }, [selectedRowIndex]);
 
-    const originalCalendarHeight = () => {
-        let totalHeight = 0;
-        for (let i = 0; i < rows.length; i++) {
-            totalHeight += rowHeightsRef.current[i] || 0;
-        }
-        return totalHeight;
-    };
+    const [originalHeight, setOriginalHeight] = useState(0);
 
-    const verticalShrink = useRef(new Animated.Value(originalCalendarHeight())).current;
+    useEffect(() => {
+        const height = rows.reduce((sum, _, i) => {
+            return sum + (rowHeightsRef.current[i] || 0);
+        }, 0);
+
+        if (height > 0) {
+            setOriginalHeight(height);
+            verticalShrink.setValue(height);
+            setMeasured(true);
+        }
+    }, [rows]);
+
+    const verticalShrink = useRef(new Animated.Value(0)).current;
+    const startHeightRef = useRef(0);
+    const translateY = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
         if (Object.keys(rowHeightsRef.current).length === rows.length) {
@@ -135,41 +144,38 @@ export default function MonthCalendar({
         }
     }, [rows]);
 
-    // TODO: If row index changes, manually set collapse progress so the multiplied offset isn't 0
-    // TODO: When swiping up (collapsing) slowly,
-    // shrink seems to get to the target before the translate does, causing a jump. Fix timing.
+    const handleCollapse = (value) => {
+        const selectedRowHeight = rowHeightsRef.current[selectedRowIndexRef.current];
+        const shrinkTo = Math.max(
+            selectedRowHeight,
+            Math.min(startHeightRef.current - value, originalHeight)
+        );
+
+        let heightUpToSelectedRow = 0;
+        for (let i = 0; i < selectedRowIndexRef.current; i++) {
+            heightUpToSelectedRow += rowHeightsRef.current[i] || 0;
+        }
+        let transTarget = heightUpToSelectedRow - heightUpToSelectedRow * (
+            (shrinkTo - selectedRowHeight) /
+            (originalHeight - selectedRowHeight));
+
+        translateY.setValue(-transTarget);
+        verticalShrink.setValue(shrinkTo);
+    };
+
     useEffect(() => {
-        if (!measured) return; 
-        const id = collapseProgress.addListener(({ value }) => {
-            let offset = 0;
-            let shrinkToValue = shrinkToValue = originalCalendarHeight();
-            if (value > 0) {
-                for (let i = 0; i < selectedRowIndexRef.current; i++) {
-                    offset += rowHeightsRef.current[i] || 0;
-                }
-                offset *= -1 * value;
-                offset = Math.min(0, offset);
-                shrinkToValue = rowHeightsRef.current[selectedRowIndexRef.current] * value || 0;
-            }
-
-            Animated.parallel([
-                Animated.timing(translateY, {
-                    toValue: offset,
-                    duration: 250,
-                    easing: Easing.out(Easing.ease),
-                    useNativeDriver: true,
-                }),
-                Animated.timing(verticalShrink, {
-                    toValue: shrinkToValue,
-                    duration: 250,
-                    easing: Easing.out(Easing.ease),
-                    useNativeDriver: false,
-                }),
-            ]).start();
+        onGrant((g) => {
+            verticalShrink.stopAnimation((value) => {
+                startHeightRef.current = value;
+            });
         });
-
-        return () => collapseProgress.removeListener(id);
-    }, [measured]);
+        onMove((g) => {
+            handleCollapse(-g.dy);
+        });
+        onRelease((g) => {
+            // console.log("onRelease");
+        });
+    }, []);
 
     return (
         <View>

@@ -9,6 +9,7 @@ import {
     Modal,
     PanResponder,
     Animated,
+    LayoutAnimation,
 } from 'react-native';
 import WheelPicker from "react-native-wheel-scrollview-picker";
 import { Picker } from '@react-native-picker/picker';
@@ -275,38 +276,34 @@ export default function HouseDashboardScreen({ navigation, route }) {
     }, [displayDay]);
 
 
-    const collapseProgress = useRef(new Animated.Value(0)).current;
+    const onGrantRef = useRef(null);
+    const onMoveRef = useRef(null);
+    const onReleaseRef = useRef(null);
 
     const panResponder = useRef(
         PanResponder.create({
-            onMoveShouldSetPanResponder: (_, gesture) =>
-                Math.abs(gesture.dy) > 10 &&
-                    Math.abs(gesture.dy) > Math.abs(gesture.dx),
+            onMoveShouldSetPanResponder: (_, g) =>
+                Math.abs(g.dy) > 10 &&
+                Math.abs(g.dy) > Math.abs(g.dx),
 
-            onPanResponderMove: (_, gesture) => {
-                const dragLenInPixels = 250;
-                const drag = Math.max(-1, Math.min(1, -gesture.dy / dragLenInPixels));
-                collapseProgress.setValue(drag);
+            onPanResponderGrant: (_, g) => {
+                onGrantRef.current?.(g);
             },
 
-            onPanResponderRelease: (_, gesture) => {
-                let toValue = 0;
-                if (gesture.dy < -50 || gesture.vy < -0.6) {
-                    toValue = 1;
-                } else if (gesture.dy > 50 || gesture.vy > 0.6) {
-                    toValue = -1;
-                }
+            onPanResponderMove: (_, g) => {
+                onMoveRef.current?.(g);
+            },
 
-                Animated.spring(collapseProgress, {
-                    toValue,
-                    useNativeDriver: false,
-                    damping: 22,
-                    stiffness: 200,
-                    mass: 0.7,
-                }).start();
+            onPanResponderRelease: (_, g) => {
+                onReleaseRef.current?.(g);
             },
         })
     ).current;
+
+    const toggleExpanded = (occId) => {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        setExpandedOccId(prev => (prev === occId ? null : occId));
+    };
 
     return (
         <View 
@@ -322,7 +319,9 @@ export default function HouseDashboardScreen({ navigation, route }) {
                     currentMonth={currentMonth}
                     onPrevMonth={goToPrevMonth}
                     onNextMonth={goToNextMonth}
-                    collapseProgress={collapseProgress}
+                    onGrant={(fn) => { onGrantRef.current = fn; }}
+                    onMove={(fn) => { onMoveRef.current = fn; }}
+                    onRelease={(fn) => { onReleaseRef.current = fn; }}
                 />
             </View>
 
@@ -374,11 +373,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
                 {orderedOccurrences.map((occ, index) => (
                     <View key={occ.id}>
                         <Pressable
-                            onPress={() => {
-                                setExpandedOccId(prev =>
-                                    prev === occ.id ? null : occ.id
-                                );
-                            }}
+                            onPress={() => toggleExpanded(occ.id)}
                             onLongPress={() => {handleOccurrenceLongPress(occ)}}
                             style={styles.choreDetail}
                         >
