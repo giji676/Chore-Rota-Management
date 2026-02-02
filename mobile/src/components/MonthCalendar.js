@@ -150,19 +150,71 @@ export default function MonthCalendar({
             selectedRowHeight,
             Math.min(startHeightRef.current - value, originalHeight)
         );
-
         let heightUpToSelectedRow = 0;
         for (let i = 0; i < selectedRowIndexRef.current; i++) {
             heightUpToSelectedRow += rowHeightsRef.current[i] || 0;
         }
         let transTarget = heightUpToSelectedRow - heightUpToSelectedRow * (
             (shrinkTo - selectedRowHeight) /
-            (originalHeight - selectedRowHeight));
+                (originalHeight - selectedRowHeight));
 
         translateY.setValue(-transTarget);
         verticalShrink.setValue(shrinkTo);
     };
 
+    const handleRelease = (value) => {
+        const selectedRowHeight = rowHeightsRef.current[selectedRowIndexRef.current] || 0;
+        const shrinkTo = selectedRowHeight;
+
+        if (value === 0) return;
+
+        // Decide snap direction
+        const threshold = (originalHeight - shrinkTo) / 2;
+
+        const collapse = value > threshold;
+        const expand = value < -threshold;
+
+        // Decide snap target
+        let targetHeight;
+
+        if (collapse) {
+            targetHeight = shrinkTo;
+        } else if (expand) {
+            targetHeight = originalHeight;
+        } else {
+            targetHeight = startHeightRef.current; // snap back if small movement
+        }
+
+        // Compute target translateY
+        let heightUpToSelectedRow = 0;
+        for (let i = 0; i < selectedRowIndexRef.current; i++) {
+            heightUpToSelectedRow += rowHeightsRef.current[i] || 0;
+        }
+
+        let targetTrans;
+        if (targetHeight === shrinkTo) {
+            targetTrans = heightUpToSelectedRow - heightUpToSelectedRow * (
+                (shrinkTo - selectedRowHeight) /
+                    (originalHeight - selectedRowHeight)
+            );
+        } else {
+            targetTrans = 0;
+        }
+
+        Animated.parallel([
+            Animated.spring(verticalShrink, {
+                toValue: targetHeight,
+                useNativeDriver: false,
+            }),
+            Animated.spring(translateY, {
+                toValue: -targetTrans,
+                useNativeDriver: false,
+            }),
+        ]).start();
+
+        // Update snapshot so next drag starts from this height
+        startHeightRef.current = targetHeight;
+    };
     useEffect(() => {
         onGrant((g) => {
             verticalShrink.stopAnimation((value) => {
@@ -173,7 +225,7 @@ export default function MonthCalendar({
             handleCollapse(-g.dy);
         });
         onRelease((g) => {
-            // console.log("onRelease");
+            handleRelease(-g.dy);
         });
     }, []);
 
