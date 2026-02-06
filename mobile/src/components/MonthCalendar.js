@@ -95,10 +95,13 @@ export default function MonthCalendar({
         return map;
     }, [occurrences, month, year]);
 
-    const rows = [];
-    for (let i = 0; i < monthDays.length; i += 7) {
-        rows.push(monthDays.slice(i, i + 7));
-    }
+    const rows = useMemo(() => {
+        const result = [];
+        for (let i = 0; i < monthDays.length; i += 7) {
+            result.push(monthDays.slice(i, i + 7));
+        }
+        return result;
+    }, [monthDays]);
 
     /* VERTICAL SWIPE HANDLER */
     const selectedRowIndex = useMemo(() => {
@@ -109,8 +112,9 @@ export default function MonthCalendar({
         );
     }, [rows, selectedDay]);
 
-    const [measured, setMeasured] = useState(false);
+    const measuredRef = useRef(false);
     const rowHeightsRef = useRef({});
+    const [rowsMeasured, setRowsMeasured] = useState(false);
 
     const selectedRowIndexRef = useRef(selectedRowIndex);
 
@@ -118,37 +122,49 @@ export default function MonthCalendar({
         selectedRowIndexRef.current = selectedRowIndex;
     }, [selectedRowIndex]);
 
-    const [originalHeight, setOriginalHeight] = useState(0);
-
-    useEffect(() => {
-        const height = rows.reduce((sum, _, i) => {
-            return sum + (rowHeightsRef.current[i] || 0);
-        }, 0);
-
-        if (height > 0) {
-            setOriginalHeight(height);
-            verticalShrink.setValue(height);
-            setMeasured(true);
-        }
-    }, [rows]);
-
+    const originalHeightRef = useRef(0);
     const verticalShrink = useRef(new Animated.Value(0)).current;
     const startHeightRef = useRef(0);
     const translateY = useRef(new Animated.Value(0)).current;
+    const isCollapsedState = useRef(false);
+
+    useEffect(() => {
+        // Reset measurements when month/rows change
+        rowHeightsRef.current = {};
+        originalHeightRef.current = 0;
+        startHeightRef.current = 0;
+        isCollapsedState.current = false;
+
+        verticalShrink.setValue(0);
+        translateY.setValue(0);
+
+        measuredRef.current = false;
+        setRowsMeasured(0);
+    }, [rows]);
 
     useEffect(() => {
         if (Object.keys(rowHeightsRef.current).length === rows.length) {
-            const totalHeight = Object.values(rowHeightsRef.current).reduce((sum, h) => sum + h, 0);
-            verticalShrink.setValue(totalHeight); // initialize Animated.Value now
-            setMeasured(true); // flag that layout is ready
-        }
-    }, [rows]);
+            const totalHeight = Object.values(rowHeightsRef.current)
+            .reduce((sum, h) => sum + h, 0);
 
-    const handleCollapse = (value) => {
+            verticalShrink.setValue(totalHeight);
+            startHeightRef.current = totalHeight;
+            isCollapsedState.current = false;
+
+            if (totalHeight === 0) {
+                measuredRef.current = false;
+            } else {
+                originalHeightRef.current = totalHeight;
+                measuredRef.current = true;
+            }
+        }
+    }, [rowsMeasured]);
+
+    const handleMove = (value) => {
         const selectedRowHeight = rowHeightsRef.current[selectedRowIndexRef.current];
         const shrinkTo = Math.max(
             selectedRowHeight,
-            Math.min(startHeightRef.current - value, originalHeight)
+            Math.min(startHeightRef.current - value, originalHeightRef.current)
         );
         let heightUpToSelectedRow = 0;
         for (let i = 0; i < selectedRowIndexRef.current; i++) {
@@ -156,34 +172,26 @@ export default function MonthCalendar({
         }
         let transTarget = heightUpToSelectedRow - heightUpToSelectedRow * (
             (shrinkTo - selectedRowHeight) /
-                (originalHeight - selectedRowHeight));
+                (originalHeightRef.current - selectedRowHeight));
+        // console.log("transTarget: ", -transTarget, "shrinkTo: ", shrinkTo);
 
         translateY.setValue(-transTarget);
         verticalShrink.setValue(shrinkTo);
     };
 
     const handleRelease = (value) => {
+        if (originalHeightRef.current === 0) return;
+
         const selectedRowHeight = rowHeightsRef.current[selectedRowIndexRef.current] || 0;
         const shrinkTo = selectedRowHeight;
 
         if (value === 0) return;
 
         // Decide snap direction
-        const threshold = (originalHeight - shrinkTo) / 2;
+        const threshold = (originalHeightRef.current - shrinkTo) / 2;
 
         const collapse = value > threshold;
         const expand = value < -threshold;
-
-        // Decide snap target
-        let targetHeight;
-
-        if (collapse) {
-            targetHeight = shrinkTo;
-        } else if (expand) {
-            targetHeight = originalHeight;
-        } else {
-            targetHeight = startHeightRef.current; // snap back if small movement
-        }
 
         // Compute target translateY
         let heightUpToSelectedRow = 0;
@@ -191,14 +199,31 @@ export default function MonthCalendar({
             heightUpToSelectedRow += rowHeightsRef.current[i] || 0;
         }
 
+        // Decide snap target
+        let targetHeight;
         let targetTrans;
-        if (targetHeight === shrinkTo) {
+
+        if (collapse) {
+            targetHeight = shrinkTo;
             targetTrans = heightUpToSelectedRow - heightUpToSelectedRow * (
                 (shrinkTo - selectedRowHeight) /
-                    (originalHeight - selectedRowHeight)
+                    (originalHeightRef.current - selectedRowHeight)
             );
-        } else {
+            isCollapsedState.current = true;
+        } else if (expand) {
+            targetHeight = originalHeightRef.current;
             targetTrans = 0;
+            isCollapsedState.current = false;
+        } else {
+            targetHeight = startHeightRef.current; // snap back if small movement
+            if (isCollapsedState.current) {
+                targetTrans = heightUpToSelectedRow - heightUpToSelectedRow * (
+                    (shrinkTo - selectedRowHeight) /
+                        (originalHeightRef.current - selectedRowHeight)
+                );
+            } else {
+                targetTrans = 0;
+            }
         }
 
         Animated.parallel([
@@ -217,14 +242,17 @@ export default function MonthCalendar({
     };
     useEffect(() => {
         onGrant((g) => {
+            if (!measuredRef.current) return;
             verticalShrink.stopAnimation((value) => {
                 startHeightRef.current = value;
             });
         });
         onMove((g) => {
-            handleCollapse(-g.dy);
+            if (!measuredRef.current) return;
+            handleMove(-g.dy);
         });
         onRelease((g) => {
+            if (!measuredRef.current) return;
             handleRelease(-g.dy);
         });
     }, []);
@@ -245,7 +273,7 @@ export default function MonthCalendar({
             </View>
             <Animated.View
                 style={{
-                    height: measured ? verticalShrink : undefined,
+                    height: Object.keys(rowHeightsRef.current).length === rows.length ? verticalShrink : undefined,
                     overflow: "hidden",
                 }}
             >
@@ -258,7 +286,16 @@ export default function MonthCalendar({
                             key={rowIndex}
                             style={styles.weekRow}
                             onLayout={(e) => {
-                                rowHeightsRef.current[rowIndex] = e.nativeEvent.layout.height;
+                                const height = e.nativeEvent.layout.height;
+
+                                if (
+                                    occurrences.length > 0 &&
+                                        (!rowHeightsRef.current[rowIndex] ||
+                                            height > rowHeightsRef.current[rowIndex])
+                                ) {
+                                    rowHeightsRef.current[rowIndex] = height;
+                                    setRowsMeasured((prev) => prev + 1);
+                                }
                             }}
                         >
                             {week.map((date, colIndex) => {
