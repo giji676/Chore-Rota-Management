@@ -114,7 +114,7 @@ export default function MonthCalendar({
 
     const measuredRef = useRef(false);
     const rowHeightsRef = useRef({});
-    const [rowsMeasured, setRowsMeasured] = useState(false);
+    const [rowsMeasured, setRowsMeasured] = useState(0);
 
     const selectedRowIndexRef = useRef(selectedRowIndex);
 
@@ -130,6 +130,7 @@ export default function MonthCalendar({
 
     useEffect(() => {
         // Reset measurements when month/rows change
+        setRowsMeasured(0);
         rowHeightsRef.current = {};
         originalHeightRef.current = 0;
         startHeightRef.current = 0;
@@ -139,8 +140,7 @@ export default function MonthCalendar({
         translateY.setValue(0);
 
         measuredRef.current = false;
-        setRowsMeasured(0);
-    }, [rows]);
+    }, [rows, occurrences]);
 
     useEffect(() => {
         if (Object.keys(rowHeightsRef.current).length === rows.length) {
@@ -286,15 +286,15 @@ export default function MonthCalendar({
                             key={rowIndex}
                             style={styles.weekRow}
                             onLayout={(e) => {
+                                if (rowsMeasured === rows.length) return; // All rows measured, skip
                                 const height = e.nativeEvent.layout.height;
 
                                 if (
-                                    occurrences.length > 0 &&
-                                        (!rowHeightsRef.current[rowIndex] ||
-                                            height > rowHeightsRef.current[rowIndex])
+                                    !rowHeightsRef.current[rowIndex] ||
+                                        rowHeightsRef.current[rowIndex] !== height
                                 ) {
                                     rowHeightsRef.current[rowIndex] = height;
-                                    setRowsMeasured((prev) => prev + 1);
+                                    setRowsMeasured(prev => prev + 1);
                                 }
                             }}
                         >
