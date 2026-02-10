@@ -34,7 +34,20 @@ export default function ProfileScreen({ route, navigation }) {
         <View style={styles.container}>
             <AppText style={styles.title}>Profile</AppText>
             <View style={{ gap: spacing.md }}>
-                <AppText>Email {!user?.is_verified && <>- Not verified</>}</AppText>
+                <AppText>
+                    Email
+                    {!user?.is_verified && (
+                        <>
+                            {" - "}
+                            <AppText
+                                onPress={() => navigation.navigate("VerifyEmail", {email: user?.email})}
+                                style={{ color: colors.primary, textDecorationLine: "underline" }}
+                            >
+                                Not verified
+                            </AppText>
+                        </>
+                    )}
+                </AppText>
                 <AppTextInput>{user?.email}</AppTextInput>
 
                 <AppText>Name</AppText>

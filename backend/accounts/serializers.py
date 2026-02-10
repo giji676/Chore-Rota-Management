@@ -39,5 +39,6 @@ class UserSerializer(serializers.ModelSerializer):
             "is_guest",
             "device_id",
             "is_active",
-            "is_staff"
+            "is_staff",
+            "is_verified",
         ]

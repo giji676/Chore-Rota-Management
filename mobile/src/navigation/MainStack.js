@@ -13,6 +13,7 @@ import EditHouseScreen from "../screens/EditHouseScreen";
 import EditChoreScreen from "../screens/EditChoreScreen";
 import ProfileButton from "../components/ProfileButton";
 import ProfileScreen from "../screens/ProfileScreen";
+import VerifyEmailScreen from "../screens/VerifyEmailScreen";
 import { dumpAsyncStorage } from "../utils/asyncDump";
 import { isTokenExpired, refreshAccessToken, guestLogin } from "../utils/auth";
 
@@ -98,6 +99,10 @@ export default function MainStack() {
             <Stack.Screen name="EditChore" component={EditChoreScreen} options={{
                 ...headerOpts,
                 headerRight: () => <ProfileButton />,
+            }} />
+            <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} options={{
+                presentation: "modal",
+                headerShown: false,
             }} />
         </Stack.Navigator>
     );

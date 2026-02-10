@@ -26,7 +26,7 @@ import AppButton from "../components/AppButton";
 // TODO: !!! check correct api caller is used for login/guest/register (api, authApi)
 // TODO: Make email case insensitive
 // TODO: Password field starts with upper case by defualt, change that to lower-default
-// TODO: Add resend verification email functionality
+// TODO: Add cooldown to resend
 
 export default function LoginScreen({ navigation }) {
     const [email, setEmail] = useState("");
