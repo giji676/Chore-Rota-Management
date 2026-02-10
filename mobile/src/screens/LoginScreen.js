@@ -9,6 +9,7 @@ import {
     KeyboardAvoidingView,
     ScrollView,
     Platform,
+    Alert,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from "../utils/api";
@@ -30,6 +31,7 @@ import AppButton from "../components/AppButton";
 export default function LoginScreen({ navigation }) {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [showVerifyButton, setShowVerifyButton] = useState(false);
 
     const [firstName, setFirstName] = useState("");
     const [lastName, setLastName] = useState("");
@@ -73,6 +75,10 @@ export default function LoginScreen({ navigation }) {
             await AsyncStorage.setItem("last_login", "registered");
             navigation.replace("HouseAccess");
         } catch (err) {
+            const message = getErrorMessage(err);
+            if (message.includes("verify your email")) {
+                setShowVerifyButton(true);
+            }
             setError(getErrorMessage(err));
         }
     };
@@ -138,6 +144,18 @@ export default function LoginScreen({ navigation }) {
             navigation.replace("HouseAccess");
         } catch (err) {
             setError(getErrorMessage(err));
+        }
+    };
+
+    const handleEmailVerificationResend = async () => {
+        const res = await api.post("accounts/resend-verification/", {email});
+        if (res.status === 200) {
+            Alert.alert(
+                "Verification Email Sent",
+                "A new verification email has been sent to your inbox. Please check your email to verify your account before logging in.",
+            )
+        } else {
+            setError("Failed to resend verification email. Please try again later.");
         }
     };
 
@@ -223,6 +241,11 @@ export default function LoginScreen({ navigation }) {
                 >
                     <View style={styles.modalBackdrop}>
                         <View style={styles.modalCard}>
+                            {/* <View style={{ width: "100%", justifyContent: "flex-end" }}> */}
+                            {/*     <AppButton */}
+                            {/*         title="Close" */}
+                            {/*     /> */}
+                            {/* </View> */}
                             <AppText style={styles.modalTitle}>Registration Successful!</AppText>
                             <AppText style={styles.modalText}>
                                 Please check your email to verify your account before logging in.
@@ -279,6 +302,13 @@ export default function LoginScreen({ navigation }) {
 
 
                 {error ? <AppText style={styles.error}>{error}</AppText> : null}
+                {showVerifyButton && (
+                    <AppButton
+                        title="Resend Verification Email"
+                        variant="secondary"
+                        onPress={handleEmailVerificationResend}
+                    />
+                )}
             </ScrollView>
         </KeyboardAvoidingView>
     );

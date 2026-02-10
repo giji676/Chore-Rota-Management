@@ -9,4 +9,5 @@ urlpatterns = [
     path("push-token/", views.SavePushTokenView.as_view(), name="push-token"),
     path("user/", views.UserView.as_view(), name="user"),
     path("verify-email/", views.VerifyEmailView.as_view(), name="verify-email"),
+    path("resend-verification/", views.ResendVerificationEmailView.as_view(), name="resend-verification"),
 ]

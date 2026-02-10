@@ -14,6 +14,36 @@ import secrets
 
 User = get_user_model()
 
+class ResendVerificationEmailView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get("email")
+        if not email:
+            return Response({"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            user = User.objects.get(email=email)
+            if user.is_verified:
+                return Response(
+                    {"error": "Email already verified. Please log in."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            else:
+                token = secrets.token_urlsafe(32)
+                user.verification_token = token
+                user.verification_sent_at = timezone.now()
+                user.save()
+                send_verification_email(user.email, token)
+                return Response(
+                    {"detail": "Verification email sent."},
+                    status=status.HTTP_200_OK
+                )
+        except User.DoesNotExist:
+            return Response(
+                {"error": "No account associated with this email."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
 class VerifyEmailView(APIView):
     permission_classes = [AllowAny]
 
