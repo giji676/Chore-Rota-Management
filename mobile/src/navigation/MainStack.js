@@ -11,6 +11,8 @@ import CreateHouseScreen from "../screens/CreateHouseScreen";
 import HouseDashboardScreen from "../screens/HouseDashboardScreen";
 import EditHouseScreen from "../screens/EditHouseScreen";
 import EditChoreScreen from "../screens/EditChoreScreen";
+import ProfileButton from "../components/ProfileButton";
+import ProfileScreen from "../screens/ProfileScreen";
 import { dumpAsyncStorage } from "../utils/asyncDump";
 import { isTokenExpired, refreshAccessToken, guestLogin } from "../utils/auth";
 
@@ -74,20 +76,28 @@ export default function MainStack() {
             <Stack.Screen name="Login" component={LoginScreen} options={{
                 ...headerOpts,
             }} />
+            <Stack.Screen name="Profile" component={ProfileScreen} options={{
+                ...headerOpts,
+            }} />
             <Stack.Screen name="HouseAccess" component={HouseAccessScreen} options={{
                 ...headerOpts,
+                headerRight: () => <ProfileButton />,
             }} />
             <Stack.Screen name="CreateHouse" component={CreateHouseScreen} options={{
                 ...headerOpts,
+                headerRight: () => <ProfileButton />,
             }} />
             <Stack.Screen name="HouseDashboard" component={HouseDashboardScreen} options={{
                 ...headerOpts,
+                headerRight: () => <ProfileButton />,
             }} />
             <Stack.Screen name="EditHouse" component={EditHouseScreen} options={{
                 ...headerOpts,
+                headerRight: () => <ProfileButton />,
             }} />
             <Stack.Screen name="EditChore" component={EditChoreScreen} options={{
                 ...headerOpts,
+                headerRight: () => <ProfileButton />,
             }} />
         </Stack.Navigator>
     );
