@@ -14,6 +14,28 @@ import secrets
 
 User = get_user_model()
 
+class ChangeEmailView(APIView):
+    permission_classes = [IsAuthenticated]
+    def post(self, request):
+        new_email = request.data.get("email")
+        if not new_email:
+            return Response({"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
+        # Check if the new email is already taken
+        if User.objects.filter(email=new_email).exists():
+            return Response({"error": "Email is already in use"}, status=status.HTTP_400_BAD_REQUEST)
+        user = request.user
+        user.email = new_email
+        user.is_verified = False  # Mark as unverified until they verify the new email
+        token = secrets.token_urlsafe(32)
+        user.verification_token = token
+        user.verification_sent_at = timezone.now()
+        user.save()
+        send_verification_email(new_email, token)
+        return Response(
+            {"detail": "Email updated. Please verify your new email address."},
+            status=status.HTTP_200_OK
+        )
+
 class ResendVerificationEmailView(APIView):
     permission_classes = [AllowAny]
 

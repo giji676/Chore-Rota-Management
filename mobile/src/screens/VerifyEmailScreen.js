@@ -1,6 +1,7 @@
 import { View, Alert } from "react-native";
 import { useState } from "react";
 
+import ChangeEmailScreen from "./ChangeEmailScreen";
 import AppText from "../components/AppText";
 import AppTextInput from "../components/AppTextInput";
 import AppButton from "../components/AppButton";
@@ -100,7 +101,7 @@ export default function VerifyEmailScreen({ route, navigation }) {
                 <AppButton
                     title="Change Email"
                     variant="secondary"
-                    onPress={() => navigation.goBack()}
+                    onPress={() => navigation.navigate("ChangeEmail", { email })}
                 />
 
                 <AppButton

@@ -275,7 +275,6 @@ export default function HouseDashboardScreen({ navigation, route }) {
         return [...uncompleted, ...completed];
     }, [displayDay]);
 
-
     const onGrantRef = useRef(null);
     const onMoveRef = useRef(null);
     const onReleaseRef = useRef(null);
