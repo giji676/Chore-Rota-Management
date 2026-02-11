@@ -9,7 +9,8 @@ export default function AppButton({
     variant = "primary",
     loading = false,
     disabled = false,
-    style,
+    textStyle,
+    btnStyle,
 }) {
     return (
         <Pressable
@@ -20,7 +21,7 @@ export default function AppButton({
                 styles[variant],
                 pressed && !disabled && styles.pressed,
                 disabled && styles.disabled,
-                style, // <--- merge user style here
+                btnStyle,
             ]}
         >
             {loading ? (
@@ -32,6 +33,7 @@ export default function AppButton({
                         style={[
                             styles.text,
                             variant === "secondary" && styles.secondaryText,
+                            textStyle,
                         ]}
                     >
                         {title}

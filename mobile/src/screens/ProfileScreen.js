@@ -19,6 +19,8 @@ export default function ProfileScreen({ route, navigation }) {
     const fetchUser = async () => {
         try {
             const res = await api.get("accounts/user/");
+
+            res.data.is_verified = false;
             setUser(res.data);
         } catch (error) {
             apiLogError("Failed to fetch user profile", error);
@@ -35,20 +37,20 @@ export default function ProfileScreen({ route, navigation }) {
             <AppText style={styles.title}>Profile</AppText>
             <View style={{ gap: spacing.md }}>
                 <AppText>
-                    Email
+                    Emai
                     {!user?.is_verified && (
                         <>
                             {" - "}
                             <AppText
                                 onPress={() => navigation.navigate("VerifyEmail", {email: user?.email})}
-                                style={{ color: colors.primary, textDecorationLine: "underline" }}
+                                style={{ color: colors.error, textDecorationLine: "underline" }}
                             >
                                 Not verified
                             </AppText>
                         </>
                     )}
                 </AppText>
-                <AppTextInput>{user?.email}</AppTextInput>
+                <AppText style={{ ...typography.body, borderBottomWidth: 1 }}>{user?.email}</AppText>
 
                 <AppText>Name</AppText>
                 <View style={{ flexDirection: "row" }}>
@@ -63,6 +65,7 @@ export default function ProfileScreen({ route, navigation }) {
                 title="Delete Account"
                 onPress={() => console.log("Delete account")}
                 variant="secondary"
+                textStyle={{ color: colors.error }}
             />
         </View>
     );
@@ -86,5 +89,10 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         borderBottomColor: colors.divider,
         marginVertical: spacing.xs,
+    },
+    underlinedText: {
+        ...typography.body,
+        borderBottomWidth: 1,
+        borderColor: colors.divider,
     },
 });
