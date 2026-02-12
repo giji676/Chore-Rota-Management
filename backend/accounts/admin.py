@@ -56,6 +56,7 @@ class UserAdmin(BaseUserAdmin):
         "email",
         "first_name",
         "last_name",
+        "avatar",
         "is_verified",
         "is_guest",
         "is_active",

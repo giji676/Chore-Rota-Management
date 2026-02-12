@@ -20,6 +20,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Load correct .env file
 PROJECT_ROOT = BASE_DIR.parent
 
+MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_URL = "/media/"
+
 match os.environ.get("ENV"):
     case "test":
         env_filename = ".env.test"

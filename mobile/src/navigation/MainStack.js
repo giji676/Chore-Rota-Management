@@ -17,12 +17,14 @@ import VerifyEmailScreen from "../screens/VerifyEmailScreen";
 import ChangeEmailScreen from "../screens/ChangeEmailScreen";
 import { dumpAsyncStorage } from "../utils/asyncDump";
 import { isTokenExpired, refreshAccessToken, guestLogin } from "../utils/auth";
+import api from "../utils/api";
 
 import { colors } from "../theme/index";
 const Stack = createNativeStackNavigator();
 
 export default function MainStack() {
     const [initialRoute, setInitialRoute] = useState(null);
+    const [user, setUser] = useState(null);
 
     useEffect(() => {
         const checkLogin = async () => {
@@ -57,12 +59,23 @@ export default function MainStack() {
 
         checkLogin();
     }, []);
+    
+    useEffect(() => {
+        const fetchUser = async () => {
+            let res = await api.get("accounts/user/");
+            if (!res.data?.avatar) {
+                res = await api.post("accounts/generate-avatar/");
+            }
+            setUser(res.data);
+        }
+        fetchUser();
+    }, []);
 
     if (!initialRoute) {
         return (
             <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
                 <ActivityIndicator size="large" />
-            </View>
+                </View>
         );
     }
 
@@ -83,23 +96,23 @@ export default function MainStack() {
             }} />
             <Stack.Screen name="HouseAccess" component={HouseAccessScreen} options={{
                 ...headerOpts,
-                headerRight: () => <ProfileButton />,
+                headerRight: () => <ProfileButton user={user}/>,
             }} />
             <Stack.Screen name="CreateHouse" component={CreateHouseScreen} options={{
                 ...headerOpts,
-                headerRight: () => <ProfileButton />,
+                headerRight: () => <ProfileButton user={user}/>,
             }} />
             <Stack.Screen name="HouseDashboard" component={HouseDashboardScreen} options={{
                 ...headerOpts,
-                headerRight: () => <ProfileButton />,
+                headerRight: () => <ProfileButton user={user}/>,
             }} />
             <Stack.Screen name="EditHouse" component={EditHouseScreen} options={{
                 ...headerOpts,
-                headerRight: () => <ProfileButton />,
+                headerRight: () => <ProfileButton user={user}/>,
             }} />
             <Stack.Screen name="EditChore" component={EditChoreScreen} options={{
                 ...headerOpts,
-                headerRight: () => <ProfileButton />,
+                headerRight: () => <ProfileButton user={user}/>,
             }} />
             <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} options={{
                 presentation: "modal",

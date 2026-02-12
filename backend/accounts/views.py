@@ -4,15 +4,33 @@ from rest_framework import status
 from django.contrib.auth import get_user_model, authenticate
 from django.utils import timezone
 from django.shortcuts import render, redirect
-from .serializers import RegisterSerializer, UserSerializer
-from .models import PushToken
-from .helpers.verify_email import send_verification_email
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from rest_framework.permissions import IsAuthenticated, AllowAny
 import secrets
 
+from .serializers import RegisterSerializer, UserSerializer
+from .models import PushToken
+from .helpers.verify_email import send_verification_email
+from .helpers.generate_avatar import generate_avatar
+
 
 User = get_user_model()
+
+class GenerateAvatarView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+
+        path = generate_avatar(
+            initials=f"{user.first_name[0]}{user.last_name[0]}",
+        )
+
+        user.avatar = path
+        user.save(update_fields=["avatar"])
+
+        serializer = UserSerializer(user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 class ChangeEmailView(APIView):
     permission_classes = [IsAuthenticated]

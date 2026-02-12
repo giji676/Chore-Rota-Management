@@ -11,4 +11,5 @@ urlpatterns = [
     path("verify-email/", views.VerifyEmailView.as_view(), name="verify-email"),
     path("resend-verification/", views.ResendVerificationEmailView.as_view(), name="resend-verification"),
     path("change-email/", views.ChangeEmailView.as_view(), name="change-email"),
+    path("generate-avatar/", views.GenerateAvatarView.as_view(), name="generate-avatar"),
 ]

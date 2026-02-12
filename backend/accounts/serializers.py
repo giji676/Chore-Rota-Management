@@ -36,6 +36,7 @@ class UserSerializer(serializers.ModelSerializer):
             "email",
             "first_name",
             "last_name",
+            "avatar",
             "is_guest",
             "device_id",
             "is_active",
