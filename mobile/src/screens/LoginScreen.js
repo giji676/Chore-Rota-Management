@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState } from "react";
 import { 
     Pressable,
     Modal,
@@ -11,24 +11,22 @@ import {
     Platform,
     Alert,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useAuth } from "../auth/useAuth";
 import api from "../utils/api";
-import Auth from "../utils/auth";
-import "react-native-get-random-values";
-import { v4 as uuidv4 } from "uuid";
 
-import { dumpAsyncStorage } from "../utils/asyncDump";
 import { colors, spacing, typography } from "../theme";
 import AppText from "../components/AppText";
 import AppTextInput from "../components/AppTextInput";
 import AppButton from "../components/AppButton";
 
-// TODO: !!! check correct api caller is used for login/guest/register (api, authApi)
-// TODO: Make email case insensitive
 // TODO: Password field starts with upper case by defualt, change that to lower-default
 // TODO: Add cooldown to resend
 
 export default function LoginScreen({ navigation }) {
+    const { login, guestLogin } = useAuth();
+
+    const [loading, setLoading] = useState(false);
+
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showVerifyButton, setShowVerifyButton] = useState(false);
@@ -68,18 +66,21 @@ export default function LoginScreen({ navigation }) {
             return;
         }
 
+        setLoading(true);
         try {
-            const res = await Auth.authApi.post("accounts/login/", { email, password });
-            await AsyncStorage.setItem("access_token", res.data.access_token);
-            await AsyncStorage.setItem("refresh_token", res.data.refresh_token);
-            await AsyncStorage.setItem("last_login", "registered");
-            navigation.replace("HouseAccess");
+            await login(email.toLowerCase(), password);
+            // DO NOT navigate
+            // AuthProvider state change will re-render navigator
         } catch (err) {
             const message = getErrorMessage(err);
+
             if (message.includes("verify your email")) {
                 setShowVerifyButton(true);
             }
-            setError(getErrorMessage(err));
+
+            setError(message);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -92,22 +93,17 @@ export default function LoginScreen({ navigation }) {
             return;
         }
 
+        setLoading(true);
         try {
-            // TODO: use Auth.authApi here?????
             await api.post("accounts/register/", {
-                email,
+                email: email.toLowerCase(),
                 password,
                 first_name: firstName,
                 last_name: lastName,
             });
 
-            // clear any stored tokens
-            await AsyncStorage.removeItem("access_token");
-            await AsyncStorage.removeItem("refresh_token");
-
             // show modal feedback
             setMessageModalVisible(true);
-
         } catch (err) {
             const message = getErrorMessage(err);
             if (message.includes("user with this email already exists")) {
@@ -117,31 +113,18 @@ export default function LoginScreen({ navigation }) {
             } else {
                 setError(message);
             }
+        } finally {
+            setLoading(false);
         }
     };
 
-    const handleGuest = async (firstName, lastName) => {
+    const handleGuest = async () => {
         setError("");
 
-        let device_id = await AsyncStorage.getItem("device_id");
-        if (!device_id) {
-            device_id = uuidv4();
-            await AsyncStorage.setItem("device_id", device_id);
-        }
-
         try {
-            const res = await api.post("accounts/guest/", {
-                device_id,
-                first_name: firstName,
-                last_name: lastName,
-            });
-
-            await AsyncStorage.setItem("access_token", res.data.access_token);
-            await AsyncStorage.setItem("refresh_token", res.data.refresh_token);
-            await AsyncStorage.setItem("last_login", "guest");
-
+            await guestLogin(guestFirstName, guestLastName);
             setGuestModalVisible(false);
-            navigation.replace("HouseAccess");
+            // DO NOT navigate
         } catch (err) {
             setError(getErrorMessage(err));
         }
@@ -206,6 +189,7 @@ export default function LoginScreen({ navigation }) {
                 />
 
                 <AppButton
+                    loading={loading}
                     title={isRegistering ? "Register" : "Login"}
                     onPress={isRegistering ? handleRegister : handleLogin}
                     loading={false}

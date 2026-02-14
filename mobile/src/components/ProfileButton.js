@@ -1,11 +1,16 @@
+import React, { useEffect } from "react";
 import { TouchableOpacity, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 
+import { useAuth } from "../auth/useAuth";
 import { colors } from "../theme";
 
-export default function ProfileButton({ user }) {
+function ProfileButton() {
+    const { user } = useAuth();
+
     if (!user) return null;
+
     const navigation = useNavigation();
     const avatarUrl = user.avatar ? `${process.env.EXPO_PUBLIC_URL}${user.avatar}` : null;
 
@@ -28,3 +33,4 @@ export default function ProfileButton({ user }) {
         </TouchableOpacity>
     );
 }
+export default React.memo(ProfileButton, (prev, next) => prev.user === next.user);

@@ -8,6 +8,7 @@ import { Ionicons } from "@expo/vector-icons";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 
 import api from "../utils/api";
+import { useAuth } from "../auth/useAuth";
 import { useActionSheet } from "@expo/react-native-action-sheet";
 import { jsonLog, apiLogSuccess, apiLogError } from "../utils/loggers";
 
@@ -17,25 +18,9 @@ import AppTextInput from "../components/AppTextInput";
 import AppButton from "../components/AppButton";
 
 export default function ProfileScreen({ route, navigation }) {
-    const [user, setUser] = useState();
+    const { user, logout } = useAuth();
 
     const avatarUrl = user?.avatar ? `${process.env.EXPO_PUBLIC_URL}${user.avatar}` : null;
-
-    const fetchUser = async () => {
-        try {
-            const res = await api.get("accounts/user/");
-
-            res.data.is_verified = false;
-            setUser(res.data);
-        } catch (error) {
-            apiLogError("Failed to fetch user profile", error);
-        }
-    };
-
-    useEffect(() => {
-        if (user) return;
-        fetchUser();
-    }, []);
 
     return (
         <>
@@ -89,6 +74,12 @@ export default function ProfileScreen({ route, navigation }) {
                 </View>
 
                 <View style={{ flex: 1 }}/>
+
+                <AppButton
+                    title="Logot"
+                    onPress={logout}
+                    variant="secondary"
+                />
 
                 <AppButton
                     title="Delete Account"
