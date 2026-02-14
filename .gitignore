@@ -8,6 +8,8 @@ celerybeat-schedule
 .env.*
 .coverage
 
+*.png
+
 db.sqlite3
 
 google-services.json
