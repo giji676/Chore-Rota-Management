@@ -156,7 +156,7 @@ export const AuthProvider = ({ children }) => {
             if (!isTokenExpired(access)) {
                 setAccessToken(access);
                 setAuthType(type);
-            } else if (!isTokenExpired(refresh)) {
+            } else if (isTokenExpired(refresh)) {
                 await refreshAccessToken(refresh, type);
             } else if (type === "guest") {
                 await attemptGuestRestore();

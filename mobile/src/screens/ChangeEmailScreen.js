@@ -22,7 +22,7 @@ export default function ChangeEmailScreen({ route, navigation }) {
                 setShowAlert(true);
             }
         } catch (err) {
-            console.log(err.response.data);
+            console.log("Error changing email:", err.response.data);
         }
     };
 

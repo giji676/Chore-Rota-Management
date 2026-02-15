@@ -28,7 +28,7 @@ export default function VerifyEmailScreen({ route, navigation }) {
             }
         } catch (err) {
             // console.log("Failed to resend verification email. Please try again later.");
-            console.log(err.response.data);
+            console.log("Failed to resend verification emial:", err.response.data);
         }
     };
 

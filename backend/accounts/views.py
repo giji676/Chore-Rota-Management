@@ -177,8 +177,8 @@ class RefreshTokenView(APIView):
 
         try:
             refresh = RefreshToken(refresh_token)
-            print(refresh)
-            return Response({"access_token": str(refresh.access_token)})
+            return Response({"access_token": str(refresh.access_token),
+                            "refresh_token": str(refresh)}, status=status.HTTP_200_OK)
         except TokenError as e:
             return Response({"error": "Invalid refresh token", "details": str(e)}, status=status.HTTP_401_UNAUTHORIZED)
 

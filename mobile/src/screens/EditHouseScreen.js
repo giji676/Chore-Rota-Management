@@ -81,7 +81,7 @@ export default function EditHouseScreen({ route, navigation }) {
                 );
                 setSuggestions(res.data.predictions);
             } catch (err) {
-                console.log(err.response?.data || err.message);
+                console.log("Error fetching address suggestions:", err.response?.data || err.message);
             } finally {
                 setLoadingSuggestions(false);
             }

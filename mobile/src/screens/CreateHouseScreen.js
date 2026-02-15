@@ -34,7 +34,7 @@ export default function CreateHouseScreen({ navigation }) {
                 const res = await api.get(`/address-autocomplete/?q=${encodeURIComponent(address)}`);
                 setSuggestions(res.data.predictions);
             } catch (err) {
-                console.log(err.response?.data || err.message);
+                console.log("Error fetching address suggestions:", err.response?.data || err.message);
             } finally {
                 setLoadingSuggestions(false);
             }
@@ -73,7 +73,7 @@ export default function CreateHouseScreen({ navigation }) {
             navigation.navigate("HouseDashboard", { house: response.data });
 
         } catch (err) {
-            console.log(err.response?.data || err.message);
+            console.log("Error creating house:", err.response?.data || err.message);
             setResult("Error: " + (err.response?.data?.error || err.message));
         }
     };
