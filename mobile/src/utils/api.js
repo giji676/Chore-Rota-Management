@@ -1,37 +1,16 @@
 import axios from "axios";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import Auth from "./auth";
+import { getTokens } from "../auth/authStorage";
 
 const api = axios.create({
     baseURL: process.env.EXPO_PUBLIC_API_URL,
 });
 
-// request interceptor for access token
 api.interceptors.request.use(async (config) => {
-    const token = await AsyncStorage.getItem("access_token");
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+    const { access } = await getTokens();
+    if (access) {
+        config.headers.Authorization = `Bearer ${access}`;
     }
     return config;
 });
-
-api.interceptors.response.use(
-    response => response,
-    async (error) => {
-        const originalRequest = error.config;
-
-        if (error.response?.status === 401 && !originalRequest._retry) {
-            originalRequest._retry = true;
-            const newAccessToken = await Auth.refreshAccessToken();
-
-            if (newAccessToken) {
-                originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-                return api(originalRequest);
-            }
-        }
-
-        return Promise.reject(error);
-    }
-);
 
 export default api;

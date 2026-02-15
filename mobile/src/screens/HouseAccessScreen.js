@@ -11,7 +11,6 @@ import { FontAwesome } from "@expo/vector-icons";
 
 import { useActionSheet } from "@expo/react-native-action-sheet";
 import api from "../utils/api";
-import logout from "../utils/logout";
 import { apiLogError, apiLogSuccess, jsonLog } from "../utils/loggers";
 import { colors, spacing, typography } from "../theme";
 import AppText from "../components/AppText";
@@ -120,15 +119,6 @@ export default function HouseAccessScreen({ navigation }) {
         </TouchableOpacity>
     );
 
-    const temp_logout = () => {
-        logout();
-        navigation.navigate("Login");
-    };
-
-    const temp_login_redirect = () => {
-        navigation.navigate("Login");
-    };
-
     const handleDeleteHouse = async (house) => {
         Alert.alert(
             "Confirm Delete",
@@ -208,15 +198,6 @@ export default function HouseAccessScreen({ navigation }) {
                     <AppText style={styles.resultText}>{result}</AppText>
                 </View>
             )}
-
-            <AppButton
-                title="Logout"
-                onPress={temp_logout}
-            />
-            <AppButton
-                title="LoginRedirect"
-                onPress={temp_login_redirect}
-            />
         </View>
     );
 }

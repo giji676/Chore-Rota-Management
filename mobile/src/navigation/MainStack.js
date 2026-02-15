@@ -1,9 +1,7 @@
-import React, { useEffect, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { NavigationContainer } from "@react-navigation/native";
 import { navigationRef } from "./NavigationService";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import LoginScreen from "../screens/LoginScreen";
 import HouseAccessScreen from "../screens/HouseAccessScreen";
@@ -15,69 +13,14 @@ import ProfileButton from "../components/ProfileButton";
 import ProfileScreen from "../screens/ProfileScreen";
 import VerifyEmailScreen from "../screens/VerifyEmailScreen";
 import ChangeEmailScreen from "../screens/ChangeEmailScreen";
-import { dumpAsyncStorage } from "../utils/asyncDump";
-import { isTokenExpired, refreshAccessToken, guestLogin } from "../utils/auth";
-import api from "../utils/api";
+import SplashScreen from "../screens/SplashScreen";
+import { useAuth } from "../auth/useAuth";
 
 import { colors } from "../theme/index";
 const Stack = createNativeStackNavigator();
 
 export default function MainStack() {
-    const [initialRoute, setInitialRoute] = useState(null);
-    const [user, setUser] = useState(null);
-
-    useEffect(() => {
-        const checkLogin = async () => {
-            // dumpAsyncStorage();
-            const lastLogin = await AsyncStorage.getItem("last_login");
-            if (lastLogin === "registered") {
-                const access = await AsyncStorage.getItem("access_token");
-                const refresh = await AsyncStorage.getItem("refresh_token");
-                if (access && !isTokenExpired(access)) {
-                    setInitialRoute("HouseAccess");
-                } else if (refresh && !isTokenExpired(refresh)) {
-                    const newAccess = await refreshAccessToken();
-                    console.log("Refreshed access token:", newAccess);
-                    if (newAccess) {
-                        setInitialRoute("HouseAccess");
-                    } else {
-                        setInitialRoute("Login");
-                    }
-                } else {
-                    setInitialRoute("Login");
-                }
-            } else if (lastLogin === "guest") {
-                const deviceId = await AsyncStorage.getItem("device_id");
-                const token = await guestLogin(deviceId);
-
-                setInitialRoute("HouseAccess");
-            } else {
-                console.log("no last_login");
-                setInitialRoute("Login");
-            }
-        };
-
-        checkLogin();
-    }, []);
-    
-    useEffect(() => {
-        const fetchUser = async () => {
-            let res = await api.get("accounts/user/");
-            if (!res.data?.avatar) {
-                res = await api.post("accounts/generate-avatar/");
-            }
-            setUser(res.data);
-        }
-        fetchUser();
-    }, []);
-
-    if (!initialRoute) {
-        return (
-            <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-                <ActivityIndicator size="large" />
-                </View>
-        );
-    }
+    const { accessToken, loading } = useAuth();
 
     const headerOpts = {
         headerStyle: { backgroundColor: colors.primary },
@@ -86,42 +29,49 @@ export default function MainStack() {
         // title: "",
     }
 
+    if (loading) return <SplashScreen />;
+
     return (
-        <Stack.Navigator initialRouteName={initialRoute}>
-            <Stack.Screen name="Login" component={LoginScreen} options={{
-                ...headerOpts,
-            }} />
-            <Stack.Screen name="Profile" component={ProfileScreen} options={{
-                ...headerOpts,
-            }} />
-            <Stack.Screen name="HouseAccess" component={HouseAccessScreen} options={{
-                ...headerOpts,
-                headerRight: () => <ProfileButton user={user}/>,
-            }} />
-            <Stack.Screen name="CreateHouse" component={CreateHouseScreen} options={{
-                ...headerOpts,
-                headerRight: () => <ProfileButton user={user}/>,
-            }} />
-            <Stack.Screen name="HouseDashboard" component={HouseDashboardScreen} options={{
-                ...headerOpts,
-                headerRight: () => <ProfileButton user={user}/>,
-            }} />
-            <Stack.Screen name="EditHouse" component={EditHouseScreen} options={{
-                ...headerOpts,
-                headerRight: () => <ProfileButton user={user}/>,
-            }} />
-            <Stack.Screen name="EditChore" component={EditChoreScreen} options={{
-                ...headerOpts,
-                headerRight: () => <ProfileButton user={user}/>,
-            }} />
-            <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} options={{
-                presentation: "modal",
-                headerShown: false,
-            }} />
-            <Stack.Screen name="ChangeEmail" component={ChangeEmailScreen} options={{
-                ...headerOpts,
-                // headerRight: () => <ProfileButton />,
-            }} />
+        <Stack.Navigator>
+            {!accessToken ? (
+                <Stack.Screen name="Login" component={LoginScreen} options={{
+                    ...headerOpts,
+                }} />
+            ) : (
+                    <>
+                        <Stack.Screen name="HouseAccess" component={HouseAccessScreen} options={{
+                            ...headerOpts,
+                            headerRight: () => <ProfileButton />,
+                        }} />
+                        <Stack.Screen name="Profile" component={ProfileScreen} options={{
+                            ...headerOpts,
+                        }} />
+                        <Stack.Screen name="CreateHouse" component={CreateHouseScreen} options={{
+                            ...headerOpts,
+                            headerRight: () => <ProfileButton />,
+                        }} />
+                        <Stack.Screen name="HouseDashboard" component={HouseDashboardScreen} options={{
+                            ...headerOpts,
+                            headerRight: () => <ProfileButton />,
+                        }} />
+                        <Stack.Screen name="EditHouse" component={EditHouseScreen} options={{
+                            ...headerOpts,
+                            headerRight: () => <ProfileButton />,
+                        }} />
+                        <Stack.Screen name="EditChore" component={EditChoreScreen} options={{
+                            ...headerOpts,
+                            headerRight: () => <ProfileButton />,
+                        }} />
+                        <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} options={{
+                            presentation: "modal",
+                            headerShown: false,
+                        }} />
+                        <Stack.Screen name="ChangeEmail" component={ChangeEmailScreen} options={{
+                            ...headerOpts,
+                            // headerRight: () => <ProfileButton />,
+                        }} />
+                    </>
+                )}
         </Stack.Navigator>
     );
 }
