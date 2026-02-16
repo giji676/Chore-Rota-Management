@@ -26,7 +26,7 @@ export default function MainStack() {
         headerStyle: { backgroundColor: colors.primary },
         headerTintColor: colors.background,
         headerTitleStyle: { fontWeight: "bold" },
-        // title: "",
+        title: "",
     }
 
     if (loading) return <SplashScreen />;

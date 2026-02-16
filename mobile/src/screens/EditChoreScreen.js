@@ -40,8 +40,8 @@ export default function EditChoreScreen({ route, navigation }) {
     ];
 
     const pickerCommonStyle = {
-        color: colors.textPrimary,        // text color
-        backgroundColor: colors.surface,  // container background
+        color: colors.textPrimary,
+        backgroundColor: colors.surface,
         marginTop: spacing.md,
         fontSize: typography.body.fontSize,
         fontFamily: typography.body.fontFamily,
@@ -273,13 +273,13 @@ export default function EditChoreScreen({ route, navigation }) {
                                 title="Set Date"
                                 variant="secondary"
                                 onPress={() => setPickerMode("date")}
-                                style={styles.selectDateTimeBtns}
+                                btnStyle={styles.selectDateTimeBtns}
                             />
                             <AppButton
                                 title="Set Time"
                                 variant="secondary"
                                 onPress={() => setPickerMode("time")}
-                                style={styles.selectDateTimeBtns}
+                                btnStyle={styles.selectDateTimeBtns}
                             />
                         </View>
                     )}

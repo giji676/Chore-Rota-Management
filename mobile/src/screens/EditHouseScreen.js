@@ -11,7 +11,9 @@ import {
     Pressable,
     ScrollView,
     Alert,
+    Image,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 import api from "../utils/api";
 import { useActionSheet } from "@expo/react-native-action-sheet";
@@ -156,6 +158,12 @@ export default function EditHouseScreen({ route, navigation }) {
                 style={styles.memberRow}
                 onLongPress={() => handleMemberOptions(item)}
             >
+                {item?.avatar && (
+                    <Image 
+                        source={{ uri: `${process.env.EXPO_PUBLIC_URL}${item.avatar}`  }}
+                        style={{ width: 32, height: 32, borderRadius: 50 }}
+                    />
+                )}
                 <AppText>
                     {item.label} • {ROLE_LABELS[item.role]}
                 </AppText>
@@ -320,6 +328,9 @@ const styles = StyleSheet.create({
         marginTop: spacing.lg,
     },
     memberRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: spacing.md,
         padding: spacing.sm,
     },
     suggestions: {

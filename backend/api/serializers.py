@@ -11,6 +11,7 @@ class HouseMemberSerializer(serializers.ModelSerializer):
     email = serializers.ReadOnlyField(source="user.email")
     first_name = serializers.ReadOnlyField(source="user.first_name")
     last_name = serializers.ReadOnlyField(source="user.last_name")
+    avatar = serializers.ReadOnlyField(source="user.avatar")
     is_guest = serializers.ReadOnlyField(source="user.is_guest")
     label = serializers.SerializerMethodField()
 
@@ -21,6 +22,7 @@ class HouseMemberSerializer(serializers.ModelSerializer):
             "email",
             "first_name",
             "last_name",
+            "avatar",
             "is_guest",
             "role",
             "joined_at",
