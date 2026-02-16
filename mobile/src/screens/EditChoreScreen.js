@@ -1,16 +1,8 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect, useLayoutEffect } from "react";
 import {
     View,
-    Text,
-    TextInput,
-    Button,
-    FlatList,
     StyleSheet,
     TouchableOpacity,
-    ActivityIndicator,
-    Pressable,
-    ScrollView,
-    Alert,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -22,6 +14,7 @@ import TimePicker from "../components/modals/TimePicker";
 import api from "../utils/api";
 import { jsonLog, apiLogSuccess, apiLogError } from "../utils/loggers";
 
+import EditHeader from "../components/EditHeader";
 import { colors, spacing, typography } from "../theme";
 import AppText from "../components/AppText";
 import AppTextInput from "../components/AppTextInput";
@@ -70,6 +63,36 @@ export default function EditChoreScreen({ route, navigation }) {
     const [pickerMode, setPickerMode] = useState(null);
     const [activeFeature, setActiveFeature] = useState(null); 
     const [showCustomPicker, setShowCustomPicker] = useState(false);
+
+    const handleSave = async () => {
+        const data = {
+            house_id: house.id,
+            chore_name: choreName,
+            chore_description: choreDescription,
+            chore_color: choreColor,
+            assignee_id: selectedMember.id,
+            repeat_delta: repeatDelta,
+            start_date: selectedDate.toISOString(),
+        };
+        try {
+            const res = await api.post("chores/schedule/create/", data);
+            navigation.pop();
+        } catch (err) {
+            apiLogError(err);
+        } finally {
+        }
+    };
+
+    useLayoutEffect(() => {
+        navigation.setOptions({
+            header: (props) => (
+                <EditHeader
+                    {...props}
+                    onSave={handleSave}
+                />
+            ),
+        });
+    }, [navigation, handleSave]);
 
     useEffect(() => {
         const label = findRepeatPresetKey(repeatDelta, repeatDeltaPresets);
@@ -166,25 +189,6 @@ export default function EditChoreScreen({ route, navigation }) {
         repeatDeltaLabel === "Custom" 
             ? `Every ${customNum} ${customUnit}${customNum > 1 ? "s" : ""}` 
             : repeatDeltaLabel;
-
-    const handleSave = async () => {
-        const data = {
-            house_id: house.id,
-            chore_name: choreName,
-            chore_description: choreDescription,
-            chore_color: choreColor,
-            assignee_id: selectedMember.id,
-            repeat_delta: repeatDelta,
-            start_date: selectedDate.toISOString(),
-        };
-        try {
-            const res = await api.post("chores/schedule/create/", data);
-            navigation.navigate("HouseDashboard", { house: house });
-        } catch (err) {
-            apiLogError(err);
-        } finally {
-        }
-    };
 
     return (
         <View style={styles.container}>
@@ -357,10 +361,6 @@ export default function EditChoreScreen({ route, navigation }) {
                 </TouchableOpacity>
             </View>
             <View style={styles.divider}/>
-            <AppButton
-                title="Save Changes"
-                onPress={handleSave}
-            />
         </View>
     );
 }

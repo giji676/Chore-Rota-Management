@@ -1,9 +1,6 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect, useLayoutEffect } from "react";
 import {
     View,
-    Text,
-    TextInput,
-    Button,
     FlatList,
     StyleSheet,
     TouchableOpacity,
@@ -19,10 +16,10 @@ import api from "../utils/api";
 import { useActionSheet } from "@expo/react-native-action-sheet";
 import { jsonLog, apiLogSuccess, apiLogError } from "../utils/loggers";
 
+import EditHeader from "../components/EditHeader";
 import { colors, spacing, typography } from "../theme";
 import AppText from "../components/AppText";
 import AppTextInput from "../components/AppTextInput";
-import AppButton from "../components/AppButton";
 
 export default function EditHouseScreen({ route, navigation }) {
     const { showActionSheetWithOptions } = useActionSheet();
@@ -47,6 +44,38 @@ export default function EditHouseScreen({ route, navigation }) {
         owner: "Admin",
         member: "Member",
     };
+
+    const handleSave = async () => {
+        try {
+            const data = {
+                name,
+                password,
+                address,
+                place_id: placeId,
+                max_members: parseInt(maxMembers),
+                house_version: house.version,
+            };
+
+            const res = await api.patch(`house/${house.id}/update/`, data);
+            apiLogSuccess(res);
+
+            navigation.pop();
+        } catch (err) {
+            apiLogError(err);
+            Alert.alert("Error", "Failed to save house");
+        }
+    };
+
+    useLayoutEffect(() => {
+        navigation.setOptions({
+            header: (props) => (
+                <EditHeader
+                    {...props}
+                    onSave={handleSave}
+                />
+            ),
+        });
+    }, [navigation, handleSave]);
 
     const fetchHouse = async () => {
         try {
@@ -97,27 +126,6 @@ export default function EditHouseScreen({ route, navigation }) {
         setAddress(item.description);
         setPlaceId(item.place_id);
         setSuggestions([]);
-    };
-
-    const handleSave = async () => {
-        try {
-            const data = {
-                name,
-                password,
-                address,
-                place_id: placeId,
-                max_members: parseInt(maxMembers),
-                house_version: house.version,
-            };
-
-            const res = await api.patch(`house/${house.id}/update/`, data);
-            apiLogSuccess(res);
-
-            navigation.goBack();
-        } catch (err) {
-            apiLogError(err);
-            Alert.alert("Error", "Failed to save house");
-        }
     };
 
     const handleDeleteMember = async (member) => {
@@ -217,8 +225,6 @@ export default function EditHouseScreen({ route, navigation }) {
             async (buttonIndex) => {
                 if (buttonIndex === cancelButtonIndex) return;
 
-                console.log("Selected role index:", buttonIndex);
-
                 const roleMap = {
                     0: "owner", // Admin
                     1: "member",
@@ -303,11 +309,6 @@ export default function EditHouseScreen({ route, navigation }) {
                 data={house?.members}
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={renderMemberItem}
-            />
-
-            <AppButton
-                title="Save Changes"
-                onPress={handleSave}
             />
         </View>
     );

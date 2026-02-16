@@ -1,4 +1,4 @@
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator } from "react-native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { NavigationContainer } from "@react-navigation/native";
 import { navigationRef } from "./NavigationService";
@@ -14,6 +14,7 @@ import ProfileScreen from "../screens/ProfileScreen";
 import VerifyEmailScreen from "../screens/VerifyEmailScreen";
 import ChangeEmailScreen from "../screens/ChangeEmailScreen";
 import SplashScreen from "../screens/SplashScreen";
+import EditHeader from "../components/EditHeader";
 import { useAuth } from "../auth/useAuth";
 
 import { colors } from "../theme/index";
@@ -27,7 +28,7 @@ export default function MainStack() {
         headerTintColor: colors.background,
         headerTitleStyle: { fontWeight: "bold" },
         title: "",
-    }
+    };
 
     if (loading) return <SplashScreen />;
 
@@ -54,21 +55,14 @@ export default function MainStack() {
                             ...headerOpts,
                             headerRight: () => <ProfileButton />,
                         }} />
-                        <Stack.Screen name="EditHouse" component={EditHouseScreen} options={{
-                            ...headerOpts,
-                            headerRight: () => <ProfileButton />,
-                        }} />
-                        <Stack.Screen name="EditChore" component={EditChoreScreen} options={{
-                            ...headerOpts,
-                            headerRight: () => <ProfileButton />,
-                        }} />
+                        <Stack.Screen name="EditHouse" component={EditHouseScreen} />
+                        <Stack.Screen name="EditChore" component={EditChoreScreen} />
                         <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} options={{
                             presentation: "modal",
                             headerShown: false,
                         }} />
                         <Stack.Screen name="ChangeEmail" component={ChangeEmailScreen} options={{
                             ...headerOpts,
-                            // headerRight: () => <ProfileButton />,
                         }} />
                     </>
                 )}

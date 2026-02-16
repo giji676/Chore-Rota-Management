@@ -104,18 +104,9 @@ export default function HouseAccessScreen({ navigation }) {
         <TouchableOpacity
             style={styles.houseItem}
             onPress={() => navigation.navigate("HouseDashboard", { house: item })}
+            onLongPress={() => handleHouseOptions(item)}
         >
             <AppText style={styles.houseName}>{item.name}</AppText>
-            <TouchableOpacity
-                style={styles.houseOptions}
-                onPress={() => handleHouseOptions(item)}
-            >
-                <FontAwesome
-                    name={"ellipsis-v"}
-                    size={spacing.lg}
-                    color={colors.textPrimary}
-                />
-            </TouchableOpacity>
         </TouchableOpacity>
     );
 
@@ -229,7 +220,11 @@ const styles = StyleSheet.create({
         alignItems: "center",
         marginBottom: spacing.sm,
     },
-    houseName: { ...typography.body, color: colors.textPrimary },
+    houseName: {
+        ...typography.h3,
+        fontWeight: "600",
+        color: colors.textPrimary
+    },
     houseOptions: {
         justifyContent: "center",
         alignItems: "center",
