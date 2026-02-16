@@ -16,6 +16,8 @@ import { Picker } from '@react-native-picker/picker';
 import * as Notifications from 'expo-notifications';
 import { registerForPushNotificationsAsync, configureAndroidChannel } from '../utils/notifications';
 import { useActionSheet } from "@expo/react-native-action-sheet";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 
 import api from '../utils/api';
 import { apiLogSuccess, apiLogError, jsonLog } from "../utils/loggers";
@@ -36,6 +38,7 @@ Notifications.setNotificationHandler({
 
 export default function HouseDashboardScreen({ navigation, route }) {
     const { showActionSheetWithOptions } = useActionSheet();
+    const insets = useSafeAreaInsets();
 
     const presetColors = [
         "#ff0000", "#00ff00", "#0000ff",
@@ -427,11 +430,18 @@ export default function HouseDashboardScreen({ navigation, route }) {
                 ))}
             </View>
 
-            <AppButton
-                title="Create Chore"
-                onPress={() => navigation.navigate("EditChore", { house })}
-                style={{ margin: spacing.lg }}
-            />
+            <View style={[styles.createBtnView, { marginBottom: insets.bottom }]}>
+                <Pressable 
+                    style={styles.createBtn}
+                    onPress={() => navigation.navigate("EditChore", { house })}
+                >
+                    <FontAwesome5
+                        name="plus"
+                        size={24}
+                        color="white"
+                    />
+                </Pressable>
+            </View>
         </View>
     );
 }
@@ -519,5 +529,18 @@ const styles = StyleSheet.create({
     filterTextActive: {
         color: colors.primary,
         fontWeight: "600",
+    },
+    createBtnView: {
+        width: "100%",
+        justifyContent: "center",
+        alignItems: "center"
+    },
+    createBtn: {
+        backgroundColor: colors.primary,
+        borderRadius: 50,
+        justifyContent: "center",
+        alignItems: "center",
+        aspectRatio: 1,
+        padding: spacing.md,
     },
 });
