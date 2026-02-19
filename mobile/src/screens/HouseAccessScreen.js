@@ -1,30 +1,42 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { 
     View,
     TouchableOpacity,
+    Pressable,
     StyleSheet,
     FlatList,
     ActivityIndicator,
     Alert,
+    Modal,
+    KeyboardAvoidingView,
+    Platform 
 } from "react-native";
-import { FontAwesome } from "@expo/vector-icons";
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 import { useActionSheet } from "@expo/react-native-action-sheet";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import api from "../utils/api";
 import { apiLogError, apiLogSuccess, jsonLog } from "../utils/loggers";
 import { colors, spacing, typography } from "../theme";
 import AppText from "../components/AppText";
 import AppTextInput from "../components/AppTextInput";
 import AppButton from "../components/AppButton";
+import BottomSheet from "../components/BottomSheet";
 
 export default function HouseAccessScreen({ navigation }) {
     const { showActionSheetWithOptions } = useActionSheet();
+    const insets = useSafeAreaInsets();
 
     const [joinCode, setJoinCode] = useState("");
     const [password, setPassword] = useState("");
     const [result, setResult] = useState("");
     const [houses, setHouses] = useState([]);
     const [loading, setLoading] = useState(true);
+
+    const [showYourHouseOptions, setShowYourHouseOptions] = useState(false);
+    const [showJoinModal, setShowJoinModal] = useState(false);
 
     // TODO: Figure out styling for ActionSheet
     // TODO: Figure out styling for Alert
@@ -136,88 +148,234 @@ export default function HouseAccessScreen({ navigation }) {
         );
     };
 
+    const ICON_SIZE = 20;
+
+    const YourHouseOptions = () => {
+        return (
+            <View
+                style={[
+                    styles.yourHouseOptionsContainer,
+                    { paddingBottom: insets.bottom + spacing.md }
+                ]}
+            >
+                <Pressable
+                    onPress={() => {
+                        setShowYourHouseOptions(false);
+                        setTimeout(() => setShowJoinModal(true), 200);
+                    }}
+                    style={({ pressed }) => [
+                        styles.yourHouseOptionsItem,
+                        pressed && styles.pressed
+                    ]}
+                >
+                    <View style={styles.yourHouseOptionsIcon}>
+                        <Ionicons
+                            name="enter-outline"
+                            size={ICON_SIZE}
+                            color="white"
+                        />
+                    </View>
+
+                    <AppText style={styles.optionText}>
+                        Join New House
+                    </AppText>
+                </Pressable>
+
+                <Pressable
+                    onPress={handleCreateHouse}
+                    style={({ pressed }) => [
+                        styles.yourHouseOptionsItem,
+                        pressed && styles.pressed
+                    ]}
+                >
+                    <View style={styles.yourHouseOptionsIcon}>
+                        <FontAwesome5
+                            name="plus"
+                            size={ICON_SIZE}
+                            color="white"
+                        />
+                    </View>
+
+                    <AppText style={styles.optionText}>
+                        Create New House
+                    </AppText>
+                </Pressable>
+            </View>
+        );
+    };
+
     return (
-        <View style={styles.container}>
-            <AppText style={styles.title}>Your Houses</AppText>
+        <>
+            <BottomSheet
+                visible={showYourHouseOptions}
+                onDismiss={() => setShowYourHouseOptions(false)}
+            >
+                <YourHouseOptions />
+            </BottomSheet>
 
-            {loading ? (
-                <ActivityIndicator size="large" style={{ marginVertical: spacing.lg }} color={colors.primary} />
-            ) : houses.length > 0 ? (
-                    <FlatList
-                        data={houses}
-                        keyExtractor={(item) => item.id.toString()}
-                        renderItem={renderHouseItem}
-                        style={{ marginBottom: spacing.lg }}
+            <Modal
+                visible={showJoinModal}
+                animationType="slide"
+                transparent
+                onRequestClose={() => setShowJoinModal(false)}
+            >
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === "ios" ? "padding" : undefined}
+                    style={styles.modalOverlay}
+                >
+                    <View style={styles.modalContent}>
+                        <AppText style={styles.modalTitle}>
+                            Join House
+                        </AppText>
+
+                        <AppTextInput
+                            placeholder="Enter join code"
+                            value={joinCode}
+                            onChangeText={setJoinCode}
+                            style={styles.input}
+                        />
+
+                        <AppTextInput
+                            placeholder="Enter password"
+                            value={password}
+                            onChangeText={setPassword}
+                            secureTextEntry
+                            style={styles.input}
+                        />
+
+                        <AppButton
+                            title="Join"
+                            onPress={async () => {
+                                await handleJoinHouse();
+                                setShowJoinModal(false);
+                            }}
+                        />
+
+                        <AppButton
+                            title="Cancel"
+                            variant="secondary"
+                            onPress={() => setShowJoinModal(false)}
+                        />
+                    </View>
+                </KeyboardAvoidingView>
+            </Modal>
+
+            <View style={styles.container}>
+                <Pressable
+                    onPress={() => setShowYourHouseOptions(true)}
+                    style={styles.titleContainer}
+                >
+                    <AppText style={styles.title}>Your Houses</AppText>
+                    <MaterialIcons
+                        name="keyboard-arrow-down"
+                        size={32}
+                        color={colors.textPrimary}
+                        style={styles.titleIcon}
                     />
-                ) : (
-                        <AppText style={{ textAlign: "center", marginBottom: spacing.lg }}>No houses yet</AppText>
-                    )}
+                </Pressable>
 
-            <AppText style={styles.title}>Join or Create a House</AppText>
+                {loading ? (
+                    <ActivityIndicator size="large" style={{ marginVertical: spacing.lg }} color={colors.primary} />
+                ) : houses.length > 0 ? (
+                        <FlatList
+                            data={houses}
+                            keyExtractor={(item) => item.id.toString()}
+                            renderItem={renderHouseItem}
+                            style={{ marginBottom: spacing.lg }}
+                        />
+                    ) : (
+                            <AppText style={{ textAlign: "center", marginBottom: spacing.lg }}>No houses yet</AppText>
+                        )}
 
-            <AppTextInput
-                placeholder="Enter join code"
-                placeholderTextColor={colors.textSecondary}
-                value={joinCode}
-                onChangeText={setJoinCode}
-                style={styles.input}
-            />
-            <AppTextInput
-                placeholder="Enter password"
-                placeholderTextColor={colors.textSecondary}
-                value={password}
-                onChangeText={setPassword}
-                style={styles.input}
-                secureTextEntry
-            />
+                <AppText style={styles.title}>Join or Create a House</AppText>
 
-            <AppButton
-                title="Join House"
-                onPress={handleJoinHouse}
-            />
+                <AppTextInput
+                    placeholder="Enter join code"
+                    placeholderTextColor={colors.textSecondary}
+                    value={joinCode}
+                    onChangeText={setJoinCode}
+                    style={styles.input}
+                />
+                <AppTextInput
+                    placeholder="Enter password"
+                    placeholderTextColor={colors.textSecondary}
+                    value={password}
+                    onChangeText={setPassword}
+                    style={styles.input}
+                    secureTextEntry
+                />
 
-            <AppText style={styles.or}>OR</AppText>
+                <AppButton
+                    title="Join House"
+                    onPress={handleJoinHouse}
+                />
 
-            <AppButton
-                title="Create New House"
-                onPress={handleCreateHouse}
-                variant="secondary"
-            />
+                <AppText style={styles.or}>OR</AppText>
 
-            {result !== "" && (
-                <View style={styles.resultBox}>
-                    <AppText style={styles.resultText}>{result}</AppText>
-                </View>
-            )}
-        </View>
+                <AppButton
+                    title="Create New House"
+                    onPress={handleCreateHouse}
+                    variant="secondary"
+                />
+
+                {result !== "" && (
+                    <View style={styles.resultBox}>
+                        <AppText style={styles.resultText}>{result}</AppText>
+                    </View>
+                )}
+            </View>
+        </>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, padding: spacing.lg, backgroundColor: colors.background },
-    title: { ...typography.h2, textAlign: "center", marginBottom: spacing.md, color: colors.textPrimary },
+    container: {
+        flex: 1,
+        padding: spacing.lg,
+        backgroundColor: colors.background
+    },
+    titleContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        marginBottom: spacing.md,
+    },
+    title: {
+        ...typography.h2,
+        textAlign: "center",
+        color: colors.textPrimary,
+    },
     input: {
         borderWidth: 1,
         marginBottom: spacing.md,
         ...typography.body,
         color: colors.textPrimary,
     },
-    buttonText: { ...typography.button, color: colors.background },
-    or: { textAlign: "center", marginVertical: spacing.lg, ...typography.body, color: colors.textSecondary },
+    buttonText: {
+        ...typography.button,
+        color: colors.background
+    },
+    or: {
+        textAlign: "center",
+        marginVertical: spacing.lg,
+        ...typography.body,
+        color: colors.textSecondary },
     resultBox: {
         marginTop: spacing.md,
         padding: spacing.md,
         backgroundColor: colors.surface,
         borderRadius: spacing.sm,
     },
-    resultText: { fontFamily: "monospace", ...typography.body, color: colors.textPrimary },
+    resultText: {
+        fontFamily: "monospace",
+        ...typography.body,
+        color: colors.textPrimary
+    },
     houseItem: {
         padding: spacing.md,
         backgroundColor: colors.surface,
         borderRadius: spacing.sm,
         flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
         marginBottom: spacing.sm,
     },
     houseName: {
@@ -225,12 +383,46 @@ const styles = StyleSheet.create({
         fontWeight: "600",
         color: colors.textPrimary
     },
-    houseOptions: {
+    yourHouseOptionsContainer: {
+        gap: spacing.sm,
+    },
+    yourHouseOptionsItem: {
+        flexDirection: "row",
+        gap: spacing.md,
+        alignItems: "center",
+        backgroundColor: colors.surface,
+        borderRadius: spacing.md,
+    },
+    yourHouseOptionsIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: spacing.sm,
+        backgroundColor: colors.primary,
         justifyContent: "center",
         alignItems: "center",
-        paddingHorizontal: spacing.md,
-        aspectRatio: 1,
-        borderRadius: spacing.sm,
-        backgroundColor: colors.accentSurface,
+    },
+    optionText: {
+        ...typography.body,
+        fontWeight: "600",
+    },
+    pressed: {
+        opacity: 0.7,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: "rgba(0,0,0,0.5)",
+        justifyContent: "center",
+        padding: spacing.lg,
+    },
+    modalContent: {
+        backgroundColor: colors.background,
+        borderRadius: spacing.md,
+        padding: spacing.lg,
+    },
+    modalTitle: {
+        ...typography.h2,
+        textAlign: "center",
+        marginBottom: spacing.md,
+        color: colors.textPrimary,
     },
 });
