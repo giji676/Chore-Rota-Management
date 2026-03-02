@@ -3,6 +3,7 @@ import {
     View,
     StyleSheet,
     Image,
+    Pressable,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
@@ -24,29 +25,34 @@ export default function ProfileScreen({ route, navigation }) {
 
     return (
         <>
-            <View style={styles.iconContainer}>
-                {user?.avatar ? (
-                    <Image 
-                        source={{ uri: avatarUrl }}
-                        style={styles.avatar}
-                        resizeMode="cover"
-                    />
-                ) : (
-                        <View style={styles.avatarFallback}>
-                            <Ionicons
-                                name="person-circle-outline"
-                                size={100}
-                                color={colors.surface}
-                            />
-                        </View>
-                    )}
-                <View style={styles.edit}>
+            <View style={styles.topContainer}>
+                <View style={styles.iconContainer}>
+                    {user?.avatar ? (
+                        <Image 
+                            source={{ uri: avatarUrl }}
+                            style={styles.avatar}
+                            resizeMode="cover"
+                        />
+                    ) : (
+                            <View style={styles.avatarFallback}>
+                                <Ionicons
+                                    name="person-circle-outline"
+                                    size={100}
+                                    color={colors.surface}
+                                />
+                            </View>
+                        )}
+                </View>
+                <Pressable
+                    onPress={() => navigation.navigate("EditProfile")}
+                    style={styles.editIcon}
+                >
                     <FontAwesome
                         name="pencil"
                         size={22}
                         color={colors.txtPrimary}
                     />
-                </View>
+                </Pressable>
             </View>
             <View style={styles.container}>
                 <View style={{ gap: spacing.md }}>
@@ -116,13 +122,14 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         borderColor: colors.divider,
     },
-    iconContainer: {
+    topContainer: {
         backgroundColor: colors.primary,
         width: "100%",
         justifyContent: "center",
         alignItems: "center",
+    },
+    iconContainer: {
         padding: 50,
-        gap: spacing.md,
     },
     avatar: {
         width: 100,
@@ -136,7 +143,10 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
     },
-    edit: {
+    editIcon: {
+        position: "absolute",
+        bottom: 20,
+        right: 20,
         backgroundColor: colors.surfaceRaised,
         borderRadius: spacing.md,
         width: 32,

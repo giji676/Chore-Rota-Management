@@ -111,6 +111,45 @@ class UserView(APIView):
         serialized = UserSerializer(user)
         return Response(serialized.data, status=status.HTTP_200_OK)
 
+    def put(self, request):
+        user = request.user
+        data = request.data
+        email = data.get("email")
+        first_name = data.get("first_name")
+        last_name = data.get("last_name")
+        bg_color = data.get("bg_color")
+        old_password = data.get("old_password")
+        new_password = data.get("new_password")
+
+        user.first_name = first_name
+        user.last_name = last_name
+        if email != user.email:
+            if User.objects.filter(email=email).exists():
+                return Response({"error": "Email is already in use"}, status=status.HTTP_400_BAD_REQUEST)
+            user.email = email
+            user.is_verified = False  # Mark as unverified until they verify the new email
+            token = secrets.token_urlsafe(32)
+            user.verification_token = token
+            user.verification_sent_at = timezone.now()
+            send_verification_email(email, token)
+            
+        if old_password and new_password:
+            user.set_password(new_password)
+
+        if bg_color:
+            path = generate_avatar(
+                initials=f"{user.first_name[0]}{user.last_name[0]}",
+                bg_color=bg_color
+            )
+
+            user.avatar = path
+        user.save()
+
+        serialized = UserSerializer(user)
+
+        return Response(serialized.data, status=status.HTTP_200_OK)
+
+
 class LoginView(APIView):
     permission_classes = [AllowAny]
 
