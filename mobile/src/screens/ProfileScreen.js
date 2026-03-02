@@ -4,9 +4,14 @@ import {
     StyleSheet,
     Image,
     Pressable,
+    ScrollView,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
+import {
+    Ionicons,
+    FontAwesome,
+    FontAwesome5,
+    MaterialCommunityIcons,
+} from "@expo/vector-icons";
 
 import api from "../utils/api";
 import { useAuth } from "../auth/useAuth";
@@ -55,28 +60,88 @@ export default function ProfileScreen({ route, navigation }) {
                 </Pressable>
             </View>
             <View style={styles.container}>
-                <View style={{ gap: spacing.md }}>
-                    <AppText>
-                        Email
-                        {!user?.is_verified && (
-                            <>
-                                {" - "}
-                                <AppText
-                                    onPress={() => navigation.navigate("VerifyEmail", {email: user?.email})}
-                                    style={{ color: colors.error, textDecorationLine: "underline" }}
-                                >
-                                    Not verified
-                                </AppText>
-                            </>
-                        )}
-                    </AppText>
-                    <AppText style={styles.fieldDisplay}>{user?.email}</AppText>
+                <View style={{ gap: spacing.lg }}>
+                    <View style={styles.profileField}>
+                        <MaterialCommunityIcons
+                            name="email-outline"
+                            size={spacing.xl}
+                            color="black"
+                        />
 
-                    <AppText>Name</AppText>
-                    <View style={{ flexDirection: "row", gap: spacing.md }}>
-                        <AppText style={styles.fieldDisplay}>{user?.first_name}</AppText>
-                        <AppText style={styles.fieldDisplay}>{user?.last_name}</AppText>
+                        <View style={{ flex: 1 }}>
+                            <AppText>
+                                Email
+                                {!user?.is_verified && (
+                                    <>
+                                        {" - "}
+                                        <AppText
+                                            onPress={() =>
+                                                navigation.navigate("VerifyEmail", {
+                                                    email: user?.email,
+                                                })
+                                            }
+                                            style={{
+                                                color: colors.error,
+                                                textDecorationLine: "underline",
+                                            }}
+                                        >
+                                            Not verified
+                                        </AppText>
+                                    </>
+                                )}
+                            </AppText>
+
+                            <ScrollView
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                contentContainerStyle={{ flexGrow: 1 }}
+                            >
+                                <AppText
+                                    style={styles.fieldDisplay}
+                                    numberOfLines={1}
+                                    ellipsizeMode="tail"
+                                >
+                                    {user?.email}
+                                </AppText>
+                            </ScrollView>
+                        </View>
                     </View>
+
+                    <View style={styles.profileField}>
+                        <FontAwesome5
+                            name="user"
+                            size={spacing.xl}
+                            color="black"
+                        />
+
+                        <View style={{ flex: 1 }}>
+                            <AppText>Name</AppText>
+
+                            <ScrollView
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                contentContainerStyle={{ flexGrow: 1 }}
+                            >
+                                <AppText
+                                    style={styles.fieldDisplay}
+                                    numberOfLines={1}
+                                    ellipsizeMode="tail"
+                                >
+                                    {user?.first_name} {user?.last_name}
+                                </AppText>
+                            </ScrollView>
+                        </View>
+                    </View>
+
+                    <Pressable
+                        style={styles.profileField}
+                        onPress={() => console.log("change password")}
+                    >
+                        <MaterialCommunityIcons name="lock-outline" size={spacing.xl} color="black" />
+                        <View>
+                            <AppText style={{ ...typography.body }}>Change Password</AppText>
+                        </View>
+                    </Pressable>
                 </View>
 
                 <View style={{ flex: 1 }}/>
@@ -160,5 +225,13 @@ const styles = StyleSheet.create({
         ...typography.body,
         borderBottomWidth: 1,
         paddingVertical: spacing.xs,
+    },
+    profileField: {
+        flexDirection: "row",
+        gap: spacing.md,
+        alignItems: "center",
+        backgroundColor: colors.surface,
+        padding: spacing.md,
+        borderRadius: spacing.md,
     },
 });

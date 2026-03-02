@@ -47,11 +47,6 @@ export default function EditProfileScreen({ navigation }) {
     const [lastName, setLastName] = useState(user?.last_name || "");
     const [selectedColor, setSelectedColor] = useState(user?.profile_color || PROFILE_COLORS[0]);
 
-    // Password change fields
-    const [oldPassword, setOldPassword] = useState("");
-    const [newPassword, setNewPassword] = useState("");
-    const [confirmPassword, setConfirmPassword] = useState("");
-
     const handleSave = async () => {
         if (newPassword && newPassword !== confirmPassword) {
             console.log("New password and confirm password do not match!");
@@ -63,7 +58,6 @@ export default function EditProfileScreen({ navigation }) {
             first_name: firstName,
             last_name: lastName,
             bg_color: selectedColor,
-            ...(oldPassword ? { old_password: oldPassword, new_password: newPassword } : {}),
         };
 
         try {
@@ -78,10 +72,13 @@ export default function EditProfileScreen({ navigation }) {
         navigation.setOptions({
             header: (props) => <EditHeader {...props} onSave={handleSave} />,
         });
-    }, [navigation, handleSave, email, firstName, lastName, selectedColor, oldPassword, newPassword, confirmPassword]);
+    }, [navigation, handleSave, email, firstName, lastName, selectedColor]);
 
     return (
-        <ScrollView style={styles.scroll}>
+        <ScrollView
+            style={styles.scroll}
+            contentContainerStyle={{ flexGrow: 1 }}
+        >
             <View style={styles.topContainer}>
                 <View style={styles.iconContainer}>
                     {user?.avatar ? (
@@ -129,35 +126,10 @@ export default function EditProfileScreen({ navigation }) {
                             />
                         ))}
                     </View>
-
-                    {/* Password Change */}
-                    <AppText>Change Password</AppText>
-                    <AppTextInput
-                        value={oldPassword}
-                        onChangeText={setOldPassword}
-                        placeholder="Old Password"
-                        secureTextEntry
-                        style={styles.fieldInput}
-                    />
-                    <AppTextInput
-                        value={newPassword}
-                        onChangeText={setNewPassword}
-                        placeholder="New Password"
-                        secureTextEntry
-                        style={styles.fieldInput}
-                    />
-                    <AppTextInput
-                        value={confirmPassword}
-                        onChangeText={setConfirmPassword}
-                        placeholder="Confirm New Password"
-                        secureTextEntry
-                        style={styles.fieldInput}
-                    />
                 </View>
 
                 <View style={{ flex: 1 }} />
 
-                {/* Buttons */}
                 <AppButton title="Log Out" onPress={logout} variant="secondary" />
                 <AppButton title="Delete Account" onPress={() => console.log("Delete account")} variant="secondary" textStyle={{ color: colors.error }} />
             </View>
