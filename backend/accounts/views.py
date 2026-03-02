@@ -12,6 +12,7 @@ from .serializers import RegisterSerializer, UserSerializer
 from .models import PushToken
 from .helpers.verify_email import send_verification_email
 from .helpers.generate_avatar import generate_avatar
+from .helpers.validate_password import validate_password
 
 
 User = get_user_model()
@@ -104,6 +105,29 @@ class VerifyEmailView(APIView):
         except User.DoesNotExist:
             return render(request, "verify_failed.html", {"error": "Invalid token"})
 
+class UserChangePasswordView(APIView):
+    permission_classes = [IsAuthenticated]
+    def put(self, request):
+        user = request.user
+        data = request.data
+        current_password = data.get("current_password")
+        new_password = data.get("new_password")
+        if not current_password or not new_password:
+            return Response({"error": "Password not provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if current_password and new_password:
+            if not user.check_password(current_password):
+                return Response({"error": "Wrong password"}, status=status.HTTP_400_BAD_REQUEST)
+
+            try:
+                validate_password(new_password)
+            except ValueError as e:
+                return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            user.set_password(new_password)
+
+        user.save()
+        return Response(status=status.HTTP_200_OK)
+
 class UserView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request):
@@ -118,11 +142,12 @@ class UserView(APIView):
         first_name = data.get("first_name")
         last_name = data.get("last_name")
         bg_color = data.get("bg_color")
-        old_password = data.get("old_password")
-        new_password = data.get("new_password")
 
-        user.first_name = first_name
-        user.last_name = last_name
+        if first_name:
+            user.first_name = first_name
+        if last_name:
+            user.last_name = last_name
+
         if email != user.email:
             if User.objects.filter(email=email).exists():
                 return Response({"error": "Email is already in use"}, status=status.HTTP_400_BAD_REQUEST)
@@ -133,9 +158,6 @@ class UserView(APIView):
             user.verification_sent_at = timezone.now()
             send_verification_email(email, token)
             
-        if old_password and new_password:
-            user.set_password(new_password)
-
         if bg_color:
             path = generate_avatar(
                 initials=f"{user.first_name[0]}{user.last_name[0]}",

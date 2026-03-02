@@ -12,6 +12,7 @@ import EditChoreScreen from "../screens/EditChoreScreen";
 import ProfileButton from "../components/ProfileButton";
 import ProfileScreen from "../screens/ProfileScreen";
 import EditProfileScreen from "../screens/EditProfileScreen";
+import ChangePasswordScreen from "../screens/ChangePasswordScreen";
 import VerifyEmailScreen from "../screens/VerifyEmailScreen";
 import ChangeEmailScreen from "../screens/ChangeEmailScreen";
 import SplashScreen from "../screens/SplashScreen";
@@ -63,6 +64,7 @@ export default function MainStack() {
                         <Stack.Screen name="EditHouse" component={EditHouseScreen} />
                         <Stack.Screen name="EditChore" component={EditChoreScreen} />
                         <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+                        <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
                         <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} options={{
                             presentation: "modal",
                             headerShown: false,

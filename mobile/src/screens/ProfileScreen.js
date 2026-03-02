@@ -135,7 +135,7 @@ export default function ProfileScreen({ route, navigation }) {
 
                     <Pressable
                         style={styles.profileField}
-                        onPress={() => console.log("change password")}
+                        onPress={() => navigation.navigate("ChangePassword")}
                     >
                         <MaterialCommunityIcons name="lock-outline" size={spacing.xl} color="black" />
                         <View>
