@@ -10,6 +10,7 @@ import {
 import AppText from "../components/AppText"
 import AppTextInput from "../components/AppTextInput";
 import EditHeader from "../components/EditHeader";
+import AppModal from "../components/modals/AppModal";
 
 import api from "../utils/api";
 import { colors, spacing, typography } from "../theme";
@@ -19,6 +20,8 @@ export default function ChangePasswordScreen({ navigation }) {
     const [currentPassword, setCurrentPassword] = useState("");
     const [newPassword, setNewPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
+
+    const [modalVisible, setModalVisible] = useState(false);
 
     const handleSave = async () => {
         if (newPassword && newPassword !== confirmPassword) {
@@ -32,7 +35,7 @@ export default function ChangePasswordScreen({ navigation }) {
 
         try {
             const res = await api.put("accounts/change-password/", payload);
-            console.log("Changed password succesfully");
+            setModalVisible(true);
         } catch (err) {
             const errorMsg = err.response?.data?.error;
             console.log("Failed to change password:", errorMsg);
@@ -47,7 +50,14 @@ export default function ChangePasswordScreen({ navigation }) {
 
     return (
         <View style={styles.container}>
+            <AppModal
+                visible={modalVisible}
+                onDismiss={() => setModalVisible(false)}
+            >
+                <AppText>Password changed successfully</AppText>
+            </AppModal>
             <AppText style={{ ...typography.h1 }}>Change Password</AppText>
+            <AppText style={{ ...typography.small }}>1. Enter your current password</AppText>
             <AppTextInput
                 value={currentPassword}
                 onChangeText={setCurrentPassword}
@@ -55,6 +65,7 @@ export default function ChangePasswordScreen({ navigation }) {
                 secureTextEntry
                 style={styles.fieldInput}
             />
+            <AppText style={{ ...typography.small }}>2. Enter a new password</AppText>
             <AppTextInput
                 value={newPassword}
                 onChangeText={setNewPassword}
@@ -62,6 +73,7 @@ export default function ChangePasswordScreen({ navigation }) {
                 secureTextEntry
                 style={styles.fieldInput}
             />
+            <AppText style={{ ...typography.small }}>3. Retype the new password</AppText>
             <AppTextInput
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}

@@ -22,12 +22,8 @@ import { useAuth } from "../auth/useAuth";
 import { colors } from "../theme/index";
 const Stack = createNativeStackNavigator();
 
-import { useEffect } from "react";
 export default function MainStack() {
     const { accessToken, loading } = useAuth();
-    useEffect(() => {
-        console.log("Access Token:", accessToken);
-    }, [accessToken]);
 
     const headerOpts = {
         headerStyle: { backgroundColor: colors.primary },
