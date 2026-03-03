@@ -57,7 +57,10 @@ export default function ChangePasswordScreen({ navigation }) {
                 <AppText>Password changed successfully</AppText>
             </AppModal>
             <AppText style={{ ...typography.h1 }}>Change Password</AppText>
-            <AppText style={{ ...typography.small }}>1. Enter your current password</AppText>
+            <View style={styles.currentPasswordLabelContainer}>
+                <AppText style={{ ...typography.body }}>Enter your current password</AppText>
+                <AppText style={styles.forgotPassword}>Forgot?</AppText>
+            </View>
             <AppTextInput
                 value={currentPassword}
                 onChangeText={setCurrentPassword}
@@ -65,7 +68,7 @@ export default function ChangePasswordScreen({ navigation }) {
                 secureTextEntry
                 style={styles.fieldInput}
             />
-            <AppText style={{ ...typography.small }}>2. Enter a new password</AppText>
+            <AppText style={{ ...typography.body }}>Choose your new password</AppText>
             <AppTextInput
                 value={newPassword}
                 onChangeText={setNewPassword}
@@ -73,7 +76,6 @@ export default function ChangePasswordScreen({ navigation }) {
                 secureTextEntry
                 style={styles.fieldInput}
             />
-            <AppText style={{ ...typography.small }}>3. Retype the new password</AppText>
             <AppTextInput
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
@@ -95,6 +97,14 @@ const styles = StyleSheet.create({
     fieldInput: {
         ...typography.body,
         borderBottomWidth: 1,
-        paddingVertical: spacing.xs,
+    },
+    currentPasswordLabelContainer: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+    },
+    forgotPassword: {
+        textDecorationLine: "underline",
+        color: colors.primary,
+        ...typography.body,
     },
 });
