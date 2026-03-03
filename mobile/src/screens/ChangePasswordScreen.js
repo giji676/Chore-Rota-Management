@@ -15,8 +15,10 @@ import AppModal from "../components/modals/AppModal";
 
 import api from "../utils/api";
 import { colors, spacing, typography } from "../theme";
+import { useAuth } from "../auth/useAuth";
 
 export default function ChangePasswordScreen({ navigation }) {
+    const { user } = useAuth();
     // Password change fields
     const [currentPassword, setCurrentPassword] = useState("");
     const [newPassword, setNewPassword] = useState("");
@@ -72,11 +74,19 @@ export default function ChangePasswordScreen({ navigation }) {
                 visible={forgotModalVisible}
                 onDismiss={() => setForgotModalVisible(false)}
             >
-                <AppText>We will send a password reset link to your email</AppText>
-                <AppButton
-                    title="SEND"
-                    onPress={handleResetEmailSend}
-                />
+                <View style={{ alignItems: "center", gap: 10 }}>
+                    <AppText style={{ ...typography.h3, textAlign: "center" }}>
+                        We will send a password reset link to your email
+                    </AppText>
+                    <AppText style={{ ...typography.h3, fontWeight: "bold" }}>
+                        {user.email}
+                    </AppText>
+                    <AppButton
+                        title="SEND"
+                        onPress={handleResetEmailSend}
+                        btnStyle={{ paddingHorizontal: spacing.xl }}
+                    />
+                </View>
             </AppModal>
             <AppText style={{ ...typography.h1 }}>Change Password</AppText>
             <View style={styles.currentPasswordLabelContainer}>

@@ -60,6 +60,6 @@ const styles = StyleSheet.create({
         backgroundColor: colors.surface,
         width: "80%",
         borderRadius: spacing.lg,
-        padding: spacing.md,
+        padding: spacing.lg,
     },
 });
