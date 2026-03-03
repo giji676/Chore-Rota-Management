@@ -55,6 +55,13 @@ class ChangeEmailView(APIView):
             status=status.HTTP_200_OK
         )
 
+class SendResetPasswordEmailView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        # TODO: Implement sending reset password email with token and expiration
+        return Response(status=status.HTTP_200_OK)
+
 class ResendVerificationEmailView(APIView):
     permission_classes = [AllowAny]
 

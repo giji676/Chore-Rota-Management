@@ -9,6 +9,7 @@ import {
 
 import AppText from "../components/AppText"
 import AppTextInput from "../components/AppTextInput";
+import AppButton from "../components/AppButton";
 import EditHeader from "../components/EditHeader";
 import AppModal from "../components/modals/AppModal";
 
@@ -21,7 +22,8 @@ export default function ChangePasswordScreen({ navigation }) {
     const [newPassword, setNewPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
 
-    const [modalVisible, setModalVisible] = useState(false);
+    const [successModalVisible, setSuccessModalVisible] = useState(false);
+    const [forgotModalVisible, setForgotModalVisible] = useState(false);
 
     const handleSave = async () => {
         if (newPassword && newPassword !== confirmPassword) {
@@ -35,10 +37,20 @@ export default function ChangePasswordScreen({ navigation }) {
 
         try {
             const res = await api.put("accounts/change-password/", payload);
-            setModalVisible(true);
+            setSuccessModalVisible(true);
+            setForgotModalVisible(false)
         } catch (err) {
             const errorMsg = err.response?.data?.error;
             console.log("Failed to change password:", errorMsg);
+        }
+    };
+
+    const handleResetEmailSend = async () => {
+        try {
+            const res = await api.get("accounts/send-reset-password-email/");
+        } catch (err) {
+            const errorMsg = err.response?.data?.error;
+            console.log("Failed to send password reset email:", errorMsg);
         }
     };
 
@@ -51,15 +63,27 @@ export default function ChangePasswordScreen({ navigation }) {
     return (
         <View style={styles.container}>
             <AppModal
-                visible={modalVisible}
-                onDismiss={() => setModalVisible(false)}
+                visible={successModalVisible}
+                onDismiss={() => setSuccessModalVisible(false)}
             >
                 <AppText>Password changed successfully</AppText>
+            </AppModal>
+            <AppModal
+                visible={forgotModalVisible}
+                onDismiss={() => setForgotModalVisible(false)}
+            >
+                <AppText>We will send a password reset link to your email</AppText>
+                <AppButton
+                    title="SEND"
+                    onPress={handleResetEmailSend}
+                />
             </AppModal>
             <AppText style={{ ...typography.h1 }}>Change Password</AppText>
             <View style={styles.currentPasswordLabelContainer}>
                 <AppText style={{ ...typography.body }}>Enter your current password</AppText>
-                <AppText style={styles.forgotPassword}>Forgot?</AppText>
+                <Pressable onPress={() => setForgotModalVisible(true)}>
+                    <AppText style={styles.forgotPassword}>Forgot?</AppText>
+                </Pressable>
             </View>
             <AppTextInput
                 value={currentPassword}
