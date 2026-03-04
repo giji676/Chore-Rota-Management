@@ -82,8 +82,7 @@ class CustomUserManager(BaseUserManager):
 
 class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
-    first_name = models.CharField(max_length=150)
-    last_name = models.CharField(max_length=150)
+    name = models.CharField(max_length=150)
     avatar = models.CharField(max_length=255, blank=True)
     is_guest = models.BooleanField(default=False)
     device_id = models.CharField(max_length=255, null=True, blank=True, unique=True)
@@ -97,7 +96,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     objects = CustomUserManager()
 
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ["first_name", "last_name"]
+    REQUIRED_FIELDS = ["name"]
 
     def __str__(self):
         return self.email

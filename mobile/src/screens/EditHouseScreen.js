@@ -173,7 +173,7 @@ export default function EditHouseScreen({ route, navigation }) {
                     />
                 )}
                 <AppText>
-                    {item.label} • {ROLE_LABELS[item.role]}
+                    {item.name} • {ROLE_LABELS[item.role]}
                 </AppText>
             </Pressable>
 
@@ -197,7 +197,7 @@ export default function EditHouseScreen({ route, navigation }) {
                 options,
                 cancelButtonIndex,
                 destructiveButtonIndex,
-                title: member.label ?? "Member",
+                title: member.name ?? "Member",
             },
             (buttonIndex) => {
                 if (buttonIndex === cancelButtonIndex) return;
@@ -220,7 +220,7 @@ export default function EditHouseScreen({ route, navigation }) {
             {
                 options: roleOptions,
                 cancelButtonIndex,
-                title: `Change role for ${member.label}`,
+                title: `Change role for ${member.name}`,
             },
             async (buttonIndex) => {
                 if (buttonIndex === cancelButtonIndex) return;

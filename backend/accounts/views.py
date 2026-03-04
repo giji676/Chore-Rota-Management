@@ -75,7 +75,7 @@ class GenerateAvatarView(APIView):
         user = request.user
 
         path = generate_avatar(
-            initials=f"{user.first_name[0]}{user.last_name[0]}",
+            initials=f"{user.name[0]}",
         )
 
         user.avatar = path
@@ -193,14 +193,11 @@ class UserView(APIView):
         user = request.user
         data = request.data
         email = data.get("email")
-        first_name = data.get("first_name")
-        last_name = data.get("last_name")
+        name = data.get("name")
         bg_color = data.get("bg_color")
 
-        if first_name:
-            user.first_name = first_name
-        if last_name:
-            user.last_name = last_name
+        if name:
+            user.name = name
 
         if email != user.email:
             if User.objects.filter(email=email).exists():
@@ -214,7 +211,7 @@ class UserView(APIView):
             
         if bg_color:
             path = generate_avatar(
-                initials=f"{user.first_name[0]}{user.last_name[0]}",
+                initials=f"{user.name[0]}",
                 bg_color=bg_color
             )
 
@@ -344,14 +341,12 @@ class GuestView(APIView):
             user = User.objects.get(device_id=device_id)
         except User.DoesNotExist:
             # Only create a new guest if name is provided
-            first_name = data.get("first_name")
-            last_name = data.get("last_name")
-            if first_name and last_name:
+            name = data.get("name")
+            if name:
                 user = User.objects.create(
                     device_id=device_id,
                     email=f"guest_{device_id[:8]}@example.com",
-                    first_name=first_name,
-                    last_name=last_name,
+                    name=name,
                     is_guest=True,
                 )
             else:

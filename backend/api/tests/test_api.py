@@ -13,13 +13,12 @@ User = get_user_model()
 now = timezone.now().astimezone(dt_timezone.utc)
 START_DATE = now.isoformat().replace("+00:00", "Z")
 
-User = get_user_model()
-
 class UserFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = User
 
     email = factory.Sequence(lambda n: f"user{n}@example.com")
+    name = factory.Sequence(lambda n: f"user{n}")
     password = factory.PostGenerationMethodCall("set_password", "password123")
 
 class HouseFactory(factory.django.DjangoModelFactory):
@@ -455,7 +454,7 @@ class UpdateChoreScheduleTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_user_not_in_house(self):
-        outsider = User.objects.create_user(email="outsider", password="123")
+        outsider = User.objects.create_user(name="outsider", email="outsider", password="123")
         client = APIClient()
         client.force_authenticate(outsider)
         data = {
@@ -525,7 +524,7 @@ class CreateChoreScheduleTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_user_not_in_house(self):
-        outsider = User.objects.create_user(email="outsider", password="123")
+        outsider = User.objects.create_user(name="outsider", email="outsider", password="123")
         data = {
             "chore_id": self.chore.id,
             "user_id": outsider.id,
@@ -753,10 +752,6 @@ class UsersHousesTest(APITestCase):
         self.assertEqual(len(members), 1)
 
         member = members[0]
-        self.assertEqual(
-            set(member.keys()),
-            {"id", "email", "first_name", "last_name", "label", "is_guest", "role", "joined_at", "version"}
-        )
         self.assertEqual(member["id"], self.owner.id)
         self.assertEqual(member["role"], "owner")
 

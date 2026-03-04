@@ -264,7 +264,7 @@ export default function EditChoreScreen({ route, navigation }) {
                         itemStyle={pickerCommonStyle}
                     >
                         {house.members.map((member) => (
-                            <Picker.Item key={member.id} label={member.label} value={member} />
+                            <Picker.Item key={member.id} label={member.name} value={member} />
                         ))}
                     </Picker>
                 </View>

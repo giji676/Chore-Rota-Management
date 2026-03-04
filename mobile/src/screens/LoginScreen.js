@@ -31,16 +31,14 @@ export default function LoginScreen({ navigation }) {
     const [password, setPassword] = useState("");
     const [showVerifyButton, setShowVerifyButton] = useState(false);
 
-    const [firstName, setFirstName] = useState("");
-    const [lastName, setLastName] = useState("");
+    const [name, setName] = useState("");
 
     const [error, setError] = useState("");
     const [messageModalVisible, setMessageModalVisible] = useState(false);
     const [isRegistering, setIsRegistering] = useState(false);
 
     const [guestModalVisible, setGuestModalVisible] = useState(false);
-    const [guestFirstName, setGuestFirstName] = useState("");
-    const [guestLastName, setGuestLastName] = useState("");
+    const [guestName, setGuestName] = useState("");
 
     const getErrorMessage = (err) => {
         if (!err.response) return "Network error. Please try again.";
@@ -88,7 +86,7 @@ export default function LoginScreen({ navigation }) {
     const handleRegister = async () => {
         setError("");
 
-        if (!email || !password || !firstName || !lastName) {
+        if (!email || !password || !name) {
             setError("All fields are required");
             return;
         }
@@ -98,8 +96,7 @@ export default function LoginScreen({ navigation }) {
             await api.post("accounts/register/", {
                 email: email.toLowerCase(),
                 password,
-                first_name: firstName,
-                last_name: lastName,
+                name: name,
             });
 
             // show modal feedback
@@ -122,7 +119,7 @@ export default function LoginScreen({ navigation }) {
         setError("");
 
         try {
-            await guestLogin(guestFirstName, guestLastName);
+            await guestLogin(guestName);
             setGuestModalVisible(false);
             // DO NOT navigate
         } catch (err) {
@@ -156,15 +153,9 @@ export default function LoginScreen({ navigation }) {
                 {(isRegistering) && (
                     <>
                         <AppTextInput
-                            placeholder="First name"
-                            value={firstName}
-                            onChangeText={setFirstName}
-                            style={styles.input}
-                        />
-                        <AppTextInput
-                            placeholder="Last name"
-                            value={lastName}
-                            onChangeText={setLastName}
+                            placeholder="Name"
+                            value={name}
+                            onChangeText={setName}
                             style={styles.input}
                         />
                     </>
@@ -254,18 +245,10 @@ export default function LoginScreen({ navigation }) {
                     <View style={styles.modalBackdrop}>
                         <View style={styles.modalCard}>
                             <AppText style={styles.modalTitle}>Continue as Guest</AppText>
-
                             <AppTextInput
-                                placeholder="First name"
-                                value={guestFirstName}
-                                onChangeText={setGuestFirstName}
-                                style={styles.input}
-                            />
-
-                            <AppTextInput
-                                placeholder="Last name"
-                                value={guestLastName}
-                                onChangeText={setGuestLastName}
+                                placeholder="Name"
+                                value={guestName}
+                                onChangeText={setGuestName}
                                 style={styles.input}
                             />
                             <View style={{ gap: 10 }}>
@@ -276,8 +259,8 @@ export default function LoginScreen({ navigation }) {
                                 />
                                 <AppButton
                                     title="Continue"
-                                    onPress={() => handleGuest(guestFirstName, guestLastName)}
-                                    disabled={!guestFirstName || !guestLastName}
+                                    onPress={() => handleGuest(guestName)}
+                                    disabled={!guestName}
                                 />
                             </View>
                         </View>

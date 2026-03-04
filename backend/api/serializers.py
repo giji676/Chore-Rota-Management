@@ -9,31 +9,22 @@ User = get_user_model()
 class HouseMemberSerializer(serializers.ModelSerializer):
     id = serializers.ReadOnlyField(source="user.id")
     email = serializers.ReadOnlyField(source="user.email")
-    first_name = serializers.ReadOnlyField(source="user.first_name")
-    last_name = serializers.ReadOnlyField(source="user.last_name")
+    name = serializers.ReadOnlyField(source="user.name")
     avatar = serializers.ReadOnlyField(source="user.avatar")
     is_guest = serializers.ReadOnlyField(source="user.is_guest")
-    label = serializers.SerializerMethodField()
 
     class Meta:
         model = HouseMember
         fields = [
             "id",
             "email",
-            "first_name",
-            "last_name",
+            "name",
             "avatar",
             "is_guest",
             "role",
             "joined_at",
-            "label",
             "version",
         ]
-
-    def get_label(self, obj):
-        first = obj.user.first_name or ""
-        last_initial = obj.user.last_name[0].upper() if obj.user.last_name else ""
-        return f"{first}{'.' + last_initial if last_initial else ''}"
 
 class ChoreSerializer(serializers.ModelSerializer):
     class Meta:
@@ -62,7 +53,6 @@ class ChoreScheduleSerializer(serializers.ModelSerializer):
 class ChoreOccurrenceSerializer(serializers.ModelSerializer):
     chore = serializers.SerializerMethodField()
     user = serializers.SerializerMethodField()
-    user_label = serializers.SerializerMethodField()
     repeat_label = serializers.CharField(source="schedule.repeat_label", read_only=True)
 
     class Meta:
@@ -72,7 +62,6 @@ class ChoreOccurrenceSerializer(serializers.ModelSerializer):
             "schedule",
             "chore",
             "user",
-            "user_label",
             "repeat_label",
             "due_date",
             "completed",
@@ -89,12 +78,6 @@ class ChoreOccurrenceSerializer(serializers.ModelSerializer):
     def get_user(self, obj):
         user = obj.schedule.user
         return UserSerializer(user).data
-
-    def get_user_label(self, obj):
-        user = obj.schedule.user
-        first = user.first_name or ""
-        last_initial = user.last_name[0].upper() if user.last_name else ""
-        return f"{first}{'.' + last_initial if last_initial else ''}"
 
 class HouseSerializer(serializers.ModelSerializer):
     members = serializers.SerializerMethodField()

@@ -50,7 +50,7 @@ class HouseAdmin(admin.ModelAdmin):
 class HouseMemberAdmin(admin.ModelAdmin):
     list_display = ("id", "user", "house", "role", "joined_at", "deleted_at_display")
     list_filter = ("role", "house", DeletedListFilter)
-    search_fields = ("user__first_name",)
+    search_fields = ("user__name",)
 
     def deleted_at_display(self, obj):
         return obj.deleted_at is not None
@@ -82,7 +82,7 @@ class ChoreScheduleAdmin(admin.ModelAdmin):
         "chore__house",
         "user"
     )
-    search_fields = ("chore__name", "user__first_name")
+    search_fields = ("chore__name", "user__name")
     readonly_fields = ("repeat_label",)
 
 

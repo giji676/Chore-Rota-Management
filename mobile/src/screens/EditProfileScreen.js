@@ -43,8 +43,7 @@ export default function EditProfileScreen({ navigation }) {
 
     // State for editable fields
     const [email, setEmail] = useState(user?.email || "");
-    const [firstName, setFirstName] = useState(user?.first_name || "");
-    const [lastName, setLastName] = useState(user?.last_name || "");
+    const [name, setName] = useState(user?.name || "");
     const [selectedColor, setSelectedColor] = useState(user?.profile_color || PROFILE_COLORS[0]);
 
     const handleSave = async () => {
@@ -55,8 +54,7 @@ export default function EditProfileScreen({ navigation }) {
 
         const payload = {
             email,
-            first_name: firstName,
-            last_name: lastName,
+            name: name,
             bg_color: selectedColor,
         };
 
@@ -72,7 +70,7 @@ export default function EditProfileScreen({ navigation }) {
         navigation.setOptions({
             header: (props) => <EditHeader {...props} onSave={handleSave} />,
         });
-    }, [navigation, handleSave, email, firstName, lastName, selectedColor]);
+    }, [navigation, handleSave, email, name, selectedColor]);
 
     return (
         <ScrollView
@@ -107,8 +105,7 @@ export default function EditProfileScreen({ navigation }) {
 
                     <AppText>Name</AppText>
                     <View style={{ flexDirection: "row", gap: spacing.md }}>
-                        <AppTextInput value={firstName} onChangeText={setFirstName} style={[styles.fieldInput, { flex: 1 }]} />
-                        <AppTextInput value={lastName} onChangeText={setLastName} style={[styles.fieldInput, { flex: 1 }]} />
+                        <AppTextInput value={name} onChangeText={setName} style={[styles.fieldInput, { flex: 1 }]} />
                     </View>
 
                     {/* Profile Color */}

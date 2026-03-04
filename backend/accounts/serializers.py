@@ -9,7 +9,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["email", "first_name", "last_name", "password"]
+        fields = ["email", "name", "password"]
 
     def create(self, validated_data):
         password = validated_data.pop("password")
@@ -25,8 +25,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
 class GuestSerializer(serializers.Serializer):
     device_id = serializers.CharField(max_length=255)
-    first_name = serializers.CharField(max_length=150)
-    last_name = serializers.CharField(max_length=150)
+    name = serializers.CharField(max_length=150)
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -34,8 +33,7 @@ class UserSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "email",
-            "first_name",
-            "last_name",
+            "name",
             "avatar",
             "is_guest",
             "device_id",

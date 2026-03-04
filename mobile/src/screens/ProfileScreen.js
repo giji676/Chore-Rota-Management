@@ -127,7 +127,7 @@ export default function ProfileScreen({ route, navigation }) {
                                     numberOfLines={1}
                                     ellipsizeMode="tail"
                                 >
-                                    {user?.first_name} {user?.last_name}
+                                    {user?.name}
                                 </AppText>
                             </ScrollView>
                         </View>

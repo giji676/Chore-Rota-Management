@@ -7,7 +7,7 @@ from .helpers.generate_avatar import generate_avatar
 def create_avatar(sender, instance, created, **kwargs):
     if created and not instance.avatar:
         path = generate_avatar(
-            initials=f"{instance.first_name[0]}{instance.last_name[0]}",
+            initials=f"{instance.name[0]}".upper(),
         )
         instance.avatar = path
         instance.save(update_fields=["avatar"])

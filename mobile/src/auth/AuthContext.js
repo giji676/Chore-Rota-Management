@@ -63,7 +63,7 @@ export const AuthProvider = ({ children }) => {
     // -----------------------
     // GUEST LOGIN
     // -----------------------
-    const guestLogin = async (firstName, lastName) => {
+    const guestLogin = async (name) => {
         let device_id = await getDeviceId();
 
         if (!device_id) {
@@ -73,8 +73,7 @@ export const AuthProvider = ({ children }) => {
 
         const res = await authApi.post("accounts/guest/", {
             device_id,
-            first_name: firstName,
-            last_name: lastName,
+            name: name,
         });
 
         const { access_token, refresh_token } = res.data;
