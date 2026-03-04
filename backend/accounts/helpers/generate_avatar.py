@@ -1,4 +1,4 @@
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageColor
 import hashlib
 import os
 import secrets
@@ -47,6 +47,16 @@ def generate_avatar(
     # Background color
     if bg_color is None:
         bg_color = _color_from_string(initials)
+    elif isinstance(bg_color, str):
+        try:
+            bg_color = ImageColor.getcolor(bg_color, "RGB")
+        except ValueError:
+            raise ValueError("Background color format not recognised")
+    elif isinstance(bg_color, tuple):
+        if len(bg_color) != 3 or not all(isinstance(c, int) for c in bg_color):
+            raise ValueError("Background color tuple must be (R, G, B) integers")
+    else:
+        raise TypeError("Background color must be None, str, or (R, G, B) tuple")
 
     # Create image
     mode = "RGBA" if circular else "RGB"

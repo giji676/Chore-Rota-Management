@@ -2,7 +2,7 @@ import secrets
 from rest_framework import serializers
 from django.utils import timezone
 from .models import User
-from .helpers.verify_email import send_verification_email
+from .helpers.email import send_verification_email
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True)

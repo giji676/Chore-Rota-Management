@@ -9,7 +9,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { colors, spacing } from "../theme";
 
 
-export default function EditHeader({ navigation, route, options, back, onSave }) {
+export default function EditHeader({ navigation, route, options, back, onBack, onSave }) {
     const insets = useSafeAreaInsets();
     const ICON_SIZE = 32;
     return (
@@ -19,7 +19,7 @@ export default function EditHeader({ navigation, route, options, back, onSave })
                 {back && (
                     <Pressable 
                         style={styles.edit}
-                        onPress={navigation.goBack}
+                        onPress={onBack ?? navigation.goBack}
                     >
                         <MaterialIcons
                             name="keyboard-arrow-left"

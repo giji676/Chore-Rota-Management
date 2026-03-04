@@ -9,12 +9,64 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 import secrets
 
 from .serializers import RegisterSerializer, UserSerializer
-from .models import PushToken
-from .helpers.verify_email import send_verification_email
+from .models import PushToken, PasswordResetToken
+from .helpers.email import send_verification_email, send_password_reset_email
 from .helpers.generate_avatar import generate_avatar
+from .helpers.validate_password import validate_password
 
 
 User = get_user_model()
+
+class ResetPasswordView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        token = request.GET.get("token")
+        return render(request, "password_reset.html", {"token": token})
+    
+    def post(self, request):
+        raw_token = request.data["token"]
+        new_password = request.data["new_password"]
+
+        token_hash = PasswordResetToken.hash_token(raw_token)
+
+        try:
+            token_obj = PasswordResetToken.objects.get(token_hash=token_hash)
+        except PasswordResetToken.DoesNotExist:
+            raise ValidationError("Invalid token")
+
+        if token_obj.is_expired:
+            raise ValidationError("Token expired")
+
+        if token_obj.is_used:
+            raise ValidationError("Token already used")
+
+        try:
+            validate_password(new_password)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Reset password
+        user = token_obj.user
+        user.set_password(new_password)
+        user.save()
+
+        # Mark token used
+        token_obj.mark_used()
+
+        return Response({"detail": "Password has been reset successfully."}, status=status.HTTP_200_OK)
+
+class SendResetPasswordEmailView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get("email")
+        reset_token = PasswordResetToken.create_token(user=request.user)
+        send_password_reset_email(email, reset_token)
+        return Response(
+            {"detail": "Password reset email has been sent."},
+            status=status.HTTP_200_OK
+        )
 
 class GenerateAvatarView(APIView):
     permission_classes = [IsAuthenticated]
@@ -34,6 +86,7 @@ class GenerateAvatarView(APIView):
 
 class ChangeEmailView(APIView):
     permission_classes = [IsAuthenticated]
+
     def post(self, request):
         new_email = request.data.get("email")
         if not new_email:
@@ -104,12 +157,74 @@ class VerifyEmailView(APIView):
         except User.DoesNotExist:
             return render(request, "verify_failed.html", {"error": "Invalid token"})
 
+class UserChangePasswordView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request):
+        user = request.user
+        data = request.data
+        current_password = data.get("current_password")
+        new_password = data.get("new_password")
+        if not current_password or not new_password:
+            return Response({"error": "Password not provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if current_password and new_password:
+            if not user.check_password(current_password):
+                return Response({"error": "Wrong password"}, status=status.HTTP_400_BAD_REQUEST)
+
+            try:
+                validate_password(new_password)
+            except ValueError as e:
+                return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            user.set_password(new_password)
+
+        user.save()
+        return Response(status=status.HTTP_200_OK)
+
 class UserView(APIView):
     permission_classes = [IsAuthenticated]
+
     def get(self, request):
         user = request.user
         serialized = UserSerializer(user)
         return Response(serialized.data, status=status.HTTP_200_OK)
+
+    def put(self, request):
+        user = request.user
+        data = request.data
+        email = data.get("email")
+        first_name = data.get("first_name")
+        last_name = data.get("last_name")
+        bg_color = data.get("bg_color")
+
+        if first_name:
+            user.first_name = first_name
+        if last_name:
+            user.last_name = last_name
+
+        if email != user.email:
+            if User.objects.filter(email=email).exists():
+                return Response({"error": "Email is already in use"}, status=status.HTTP_400_BAD_REQUEST)
+            user.email = email
+            user.is_verified = False  # Mark as unverified until they verify the new email
+            token = secrets.token_urlsafe(32)
+            user.verification_token = token
+            user.verification_sent_at = timezone.now()
+            send_verification_email(email, token)
+            
+        if bg_color:
+            path = generate_avatar(
+                initials=f"{user.first_name[0]}{user.last_name[0]}",
+                bg_color=bg_color
+            )
+
+            user.avatar = path
+        user.save()
+
+        serialized = UserSerializer(user)
+
+        return Response(serialized.data, status=status.HTTP_200_OK)
+
 
 class LoginView(APIView):
     permission_classes = [AllowAny]
@@ -129,11 +244,6 @@ class LoginView(APIView):
             return Response(
                 {"error": "Invalid credentials"},
                 status=status.HTTP_401_UNAUTHORIZED
-            )
-        if not user.is_verified:
-            return Response(
-                {"error": "Please verify your email before logging in."},
-                status=status.HTTP_403_FORBIDDEN
             )
 
         refresh = RefreshToken.for_user(user)
