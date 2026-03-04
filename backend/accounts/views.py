@@ -9,13 +9,64 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 import secrets
 
 from .serializers import RegisterSerializer, UserSerializer
-from .models import PushToken
-from .helpers.verify_email import send_verification_email
+from .models import PushToken, PasswordResetToken
+from .helpers.email import send_verification_email, send_password_reset_email
 from .helpers.generate_avatar import generate_avatar
 from .helpers.validate_password import validate_password
 
 
 User = get_user_model()
+
+class ResetPasswordView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        token = request.GET.get("token")
+        return render(request, "password_reset.html", {"token": token})
+    
+    def post(self, request):
+        raw_token = request.data["token"]
+        new_password = request.data["new_password"]
+
+        token_hash = PasswordResetToken.hash_token(raw_token)
+
+        try:
+            token_obj = PasswordResetToken.objects.get(token_hash=token_hash)
+        except PasswordResetToken.DoesNotExist:
+            raise ValidationError("Invalid token")
+
+        if token_obj.is_expired:
+            raise ValidationError("Token expired")
+
+        if token_obj.is_used:
+            raise ValidationError("Token already used")
+
+        try:
+            validate_password(new_password)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Reset password
+        user = token_obj.user
+        user.set_password(new_password)
+        user.save()
+
+        # Mark token used
+        token_obj.mark_used()
+
+        return Response({"detail": "Password has been reset successfully."}, status=status.HTTP_200_OK)
+
+class SendResetPasswordEmailView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get("email")
+        reset_token = PasswordResetToken.create_token(user=request.user)
+        send_password_reset_email(email, reset_token)
+        return Response(
+            {"detail": "Password reset email has been sent."},
+            status=status.HTTP_200_OK
+        )
 
 class GenerateAvatarView(APIView):
     permission_classes = [IsAuthenticated]
@@ -35,6 +86,7 @@ class GenerateAvatarView(APIView):
 
 class ChangeEmailView(APIView):
     permission_classes = [IsAuthenticated]
+
     def post(self, request):
         new_email = request.data.get("email")
         if not new_email:
@@ -54,13 +106,6 @@ class ChangeEmailView(APIView):
             {"detail": "Email updated. Please verify your new email address."},
             status=status.HTTP_200_OK
         )
-
-class SendResetPasswordEmailView(APIView):
-    permission_classes = [AllowAny]
-
-    def get(self, request):
-        # TODO: Implement sending reset password email with token and expiration
-        return Response(status=status.HTTP_200_OK)
 
 class ResendVerificationEmailView(APIView):
     permission_classes = [AllowAny]
@@ -114,6 +159,7 @@ class VerifyEmailView(APIView):
 
 class UserChangePasswordView(APIView):
     permission_classes = [IsAuthenticated]
+
     def put(self, request):
         user = request.user
         data = request.data
@@ -137,6 +183,7 @@ class UserChangePasswordView(APIView):
 
 class UserView(APIView):
     permission_classes = [IsAuthenticated]
+
     def get(self, request):
         user = request.user
         serialized = UserSerializer(user)

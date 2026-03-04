@@ -1,5 +1,64 @@
+import hashlib
+import secrets
+from datetime import timedelta
+from django.utils import timezone
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 from django.db import models
+
+
+class PasswordResetToken(models.Model):
+    user = models.ForeignKey("User", on_delete=models.CASCADE)
+    token_hash = models.CharField(max_length=64, unique=True, db_index=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["token_hash"]),
+            models.Index(fields=["expires_at"]),
+        ]
+
+    @classmethod
+    def create_token(cls, user, expiry_minutes=60):
+        """
+        Creates a reset token and returns the RAW token.
+        The raw token should be emailed to the user.
+        """
+
+        # Delete old unused tokens for this user
+        cls.objects.filter(user=user, used_at__isnull=True).delete()
+
+        raw_token = secrets.token_urlsafe(32)
+        token_hash = cls.hash_token(raw_token)
+
+        instance = cls.objects.create(
+            user=user,
+            token_hash=token_hash,
+            expires_at=timezone.now() + timedelta(minutes=expiry_minutes),
+        )
+
+        return raw_token
+
+    @staticmethod
+    def hash_token(raw_token: str) -> str:
+        return hashlib.sha256(raw_token.encode()).hexdigest()
+
+    @property
+    def is_expired(self):
+        return timezone.now() >= self.expires_at
+
+    @property
+    def is_used(self):
+        return self.used_at is not None
+
+    def mark_used(self):
+        self.used_at = timezone.now()
+        self.save(update_fields=["used_at"])
+
+    def __str__(self):
+        return f"PasswordResetToken(user={self.user_id}, expires_at={self.expires_at})"
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):

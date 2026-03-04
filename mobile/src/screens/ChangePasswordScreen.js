@@ -49,7 +49,7 @@ export default function ChangePasswordScreen({ navigation }) {
 
     const handleResetEmailSend = async () => {
         try {
-            const res = await api.get("accounts/send-reset-password-email/");
+            const res = await api.post("accounts/send-reset-password-email/", { email: user.email });
         } catch (err) {
             const errorMsg = err.response?.data?.error;
             console.log("Failed to send password reset email:", errorMsg);
