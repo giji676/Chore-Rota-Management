@@ -57,6 +57,8 @@ REST_FRAMEWORK = {
 # Application definition
 
 INSTALLED_APPS = [
+    "daphne",
+    "channels",
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -79,6 +81,15 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("127.0.0.1", 6379)],
+        },
+    },
+}
+
 ROOT_URLCONF = 'chores.urls'
 
 TEMPLATES = [
@@ -97,6 +108,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'chores.wsgi.application'
+ASGI_APPLICATION = 'chores.asgi.application'
 
 
 # Database

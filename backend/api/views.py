@@ -27,7 +27,10 @@ from .serializers import (
 from .helpers.occurrence_utils import generate_occurrences_for_schedule
 from .helpers.parse_datetime import parse_datetime
 from .helpers.generic_utils import check_version
+from .helpers.websockets import broadcast
 from .exceptions import Conflict
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 
 User = get_user_model()
 
@@ -302,6 +305,14 @@ class SheduleCreateView(APIView):
             start_date=start_date or timezone.now(),
             repeat_delta=repeat_delta or {},
         )
+
+        data = {
+            "chore_id": chore.id,
+            "schedule_id": schedule.id,
+        }
+        broadcast(group=f"house_{house.id}",
+                  event_type="object.update",
+                  data=data)
 
         return Response(
             {

@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 
 import api from '../utils/api';
+import socketUrl from '../utils/webSocketBase';
 import { apiLogSuccess, apiLogError, jsonLog } from "../utils/loggers";
 import MonthCalendar from "../components/MonthCalendar";
 import CheckBox from "../components/CheckBox";
@@ -79,6 +80,8 @@ export default function HouseDashboardScreen({ navigation, route }) {
     const hours = [...Array(24).keys()].map(n => n.toString().padStart(2, "0"));
     const minutes = [...Array(60).keys()].map(n => n.toString().padStart(2, "0"));
 
+    const socketRef = useRef();
+
     useEffect(() => {
         async function initNotifications() {
             try {
@@ -97,6 +100,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
     useEffect(() => {
         if (!house) return;
         fetchHouse();
+        setupWebSocket();
     }, []);
 
     useEffect(() => {
@@ -105,6 +109,33 @@ export default function HouseDashboardScreen({ navigation, route }) {
             if (!selectedMember && house.members.length > 0) setSelectedMember(house.members[0].id);
         }
     }, [assignModalVisible, house]);
+
+    const setupWebSocket = () => {
+        const socket = new WebSocket(socketUrl(`/ws/house/${house.id}/`));
+        socketRef.current = socket;
+
+        socket.onopen = (e) => {
+            socket.send(JSON.stringify({SYN: 0}));
+        };
+
+        socket.onerror = (e) => {
+            console.log("ws error", e);
+        };
+
+        socket.onmessage = (e) => {
+            const data = JSON.parse(e.data);
+            // TODO: It's loggin many lines on single change?
+            console.log("update", data);
+            // TEMP: Change it so only requests the updated item with id
+            if (data.event=="object.update") {
+                fetchHouse();
+            }
+        };
+
+        socket.onclose = () => {
+            console.log("ws closed");
+        };
+    };
 
     const fetchHouse = async () => {
         try {
@@ -399,11 +430,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
                                         }}>
                                             <AppText style={styles.choreName}>{occ.chore.name}</AppText>
                                             <AppText>-</AppText>
-                                            {
-                                            /* TODO: check occ.user_label exists */
-                                            /* it should probably be changed to occ.user.name after first/last name changes */
-                                            }
-                                            <AppText>{occ.user_jabel}</AppText>
+                                            <AppText>{occ.user.name}</AppText>
                                         </View>
                                         <AppText style={styles.dateText}>
                                             {new Date(occ.due_date).toLocaleString("en-GB", {
