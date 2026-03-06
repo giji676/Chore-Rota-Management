@@ -115,7 +115,6 @@ export default function HouseDashboardScreen({ navigation, route }) {
         socketRef.current = socket;
 
         socket.onopen = (e) => {
-            socket.send(JSON.stringify({SYN: 0}));
         };
 
         socket.onerror = (e) => {
@@ -124,8 +123,6 @@ export default function HouseDashboardScreen({ navigation, route }) {
 
         socket.onmessage = (e) => {
             const data = JSON.parse(e.data);
-            // TODO: It's loggin many lines on single change?
-            console.log("update", data);
             // TEMP: Change it so only requests the updated item with id
             if (data.event=="object.update") {
                 fetchHouse();
