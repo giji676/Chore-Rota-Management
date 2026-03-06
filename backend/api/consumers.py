@@ -20,6 +20,12 @@ class ApiConsumer(WebsocketConsumer):
             self.channel_name
         )
 
+    def schedule_update(self, event):
+        self.object_update(event)
+
+    def chore_update(self, event):
+        self.object_update(event)
+
     def object_update(self, event):
         self.send(text_data=json.dumps({
             "event": event["type"],

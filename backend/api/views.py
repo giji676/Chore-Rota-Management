@@ -306,13 +306,17 @@ class SheduleCreateView(APIView):
             repeat_delta=repeat_delta or {},
         )
 
-        data = {
-            "chore_id": chore.id,
-            "schedule_id": schedule.id,
-        }
-        broadcast(group=f"house_{house.id}",
-                  event_type="object.update",
-                  data=data)
+        broadcast(
+            group=f"house_{house.id}",
+            event_type="chore.update",
+            data=ChoreSerializer(chore).data
+        )
+
+        broadcast(
+            group=f"house_{house.id}",
+            event_type="schedule.update",
+            data=ChoreScheduleSerializer(schedule).data
+        )
 
         return Response(
             {

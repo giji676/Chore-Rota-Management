@@ -124,8 +124,13 @@ export default function HouseDashboardScreen({ navigation, route }) {
         socket.onmessage = (e) => {
             const data = JSON.parse(e.data);
             // TEMP: Change it so only requests the updated item with id
-            if (data.event=="object.update") {
-                fetchHouse();
+            switch (data.event) {
+                case "chore.update":
+                    // updateChores(data.data);
+                    break;
+                case "schedule.update":
+                    // updateSchedule(data.data);
+                    break;
             }
         };
 
