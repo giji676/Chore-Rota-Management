@@ -399,11 +399,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
                                         }}>
                                             <AppText style={styles.choreName}>{occ.chore.name}</AppText>
                                             <AppText>-</AppText>
-                                            {
-                                            /* TODO: check occ.user_label exists */
-                                            /* it should probably be changed to occ.user.name after first/last name changes */
-                                            }
-                                            <AppText>{occ.user_jabel}</AppText>
+                                            <AppText>{occ.user.name}</AppText>
                                         </View>
                                         <AppText style={styles.dateText}>
                                             {new Date(occ.due_date).toLocaleString("en-GB", {
