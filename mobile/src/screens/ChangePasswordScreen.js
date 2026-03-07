@@ -7,7 +7,7 @@ import {
     ScrollView,
 } from "react-native";
 
-import AppText from "../components/AppText"
+import AppText from "../components/AppText";
 import AppTextInput from "../components/AppTextInput";
 import AppButton from "../components/AppButton";
 import EditHeader from "../components/EditHeader";
@@ -94,7 +94,7 @@ export default function ChangePswdScreen({ navigation }) {
         <View style={styles.container}>
             <AppModal
                 visible={successModalVisible}
-                onDismiss={() => setSuccessModalVisible(false)}
+                onDismiss={navigation.goBack}
             >
                 <AppText>Password changed successfully</AppText>
             </AppModal>
