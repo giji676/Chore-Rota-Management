@@ -26,13 +26,13 @@ import AppButton from "../components/AppButton";
 export default function ProfileScreen({ route, navigation }) {
     const { user, logout } = useAuth();
 
-    const avatarUrl = user?.avatar ? `${process.env.EXPO_PUBLIC_URL}${user.avatar}` : null;
+    const avatarUrl = user?.avatar_image ? `${process.env.EXPO_PUBLIC_URL}${user.avatar_image}` : null;
 
     return (
         <>
             <View style={styles.topContainer}>
                 <View style={styles.iconContainer}>
-                    {user?.avatar ? (
+                    {user?.avatar_image ? (
                         <Image 
                             source={{ uri: avatarUrl }}
                             style={styles.avatar}
