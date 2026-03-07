@@ -27,6 +27,8 @@ export default function ChangePswdScreen({ navigation }) {
     const [successModalVisible, setSuccessModalVisible] = useState(false);
     const [forgotModalVisible, setForgotModalVisible] = useState(false);
 
+    const [resetEmailSent, setResetEmailSent] = useState(false);
+
     const [errors, setErrors] = useState({
         current: "",
         new: "",
@@ -77,7 +79,8 @@ export default function ChangePswdScreen({ navigation }) {
 
     const handleResetEmailSend = async () => {
         try {
-            const res = await api.post("accounts/send-reset-password-email/", { email: user.email });
+            await api.post("accounts/send-reset-password-email/", { email: user.email });
+            setResetEmailSent(true);
         } catch (err) {
             const errorMsg = err.response?.data?.error;
             console.log("Failed to send password reset email:", errorMsg);
@@ -100,21 +103,48 @@ export default function ChangePswdScreen({ navigation }) {
             </AppModal>
             <AppModal
                 visible={forgotModalVisible}
-                onDismiss={() => setForgotModalVisible(false)}
+                onDismiss={() => {
+                    setForgotModalVisible(false);
+                    setResetEmailSent(false);
+                }}
             >
-                <View style={{ alignItems: "center", gap: 10 }}>
-                    <AppText style={{ ...typography.h3, textAlign: "center" }}>
-                        We will send a password reset link to your email
-                    </AppText>
-                    <AppText style={{ ...typography.h3, fontWeight: "bold" }}>
-                        {user.email}
-                    </AppText>
-                    <AppButton
-                        title="SEND"
-                        onPress={handleResetEmailSend}
-                        btnStyle={{ paddingHorizontal: spacing.xl }}
-                    />
-                </View>
+                {!resetEmailSent ? (
+                    <View style={{ alignItems: "center", gap: 10 }}>
+                        <AppText style={{ ...typography.h3, textAlign: "center" }}>
+                            We will send a password reset link to your email
+                        </AppText>
+
+                        <AppText style={{ ...typography.h3, fontWeight: "bold" }}>
+                            {user.email}
+                        </AppText>
+
+                        <AppButton
+                            title="SEND"
+                            onPress={handleResetEmailSend}
+                            btnStyle={{ paddingHorizontal: spacing.xl }}
+                        />
+                    </View>
+                ) : (
+                        <View style={{ alignItems: "center", gap: 10 }}>
+                            <AppText style={{ ...typography.h3, textAlign: "center" }}>
+                                Password reset email sent successfully
+                            </AppText>
+
+                            <AppText style={{ ...typography.body, textAlign: "center" }}>
+                                Check your inbox for the reset link.
+                            </AppText>
+
+                            <AppButton
+                                title="OK"
+                                btnStyle={{ paddingHorizontal: spacing.xl }}
+                                onPress={() => {
+                                    setForgotModalVisible(false);
+                                    setResetEmailSent(false);
+                                    navigation.goBack();
+                                }}
+                            />
+                        </View>
+                    )}
             </AppModal>
             <AppText style={{ ...typography.h1 }}>Change Password</AppText>
             <View style={styles.currPswdLabelContainer}>
