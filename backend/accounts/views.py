@@ -8,6 +8,7 @@ from django.core.exceptions import ValidationError
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from rest_framework.permissions import IsAuthenticated, AllowAny
 import secrets
+from pathlib import Path
 
 from .serializers import RegisterSerializer, UserSerializer
 from .models import PushToken, PasswordResetToken
@@ -57,7 +58,6 @@ class ResetPasswordView(APIView):
 
         return Response({"detail": "Password has been reset successfully."}, status=status.HTTP_200_OK)
 
-
 class SendResetPasswordEmailView(APIView):
     permission_classes = [AllowAny]
 
@@ -84,13 +84,26 @@ class GenerateAvatarView(APIView):
 
     def post(self, request):
         user = request.user
+        bg_color = request.data.get("bg_color")
 
-        path = generate_avatar(
-            initials=f"{user.name[0]}",
-        )
+        if bg_color:
+            # delete old avatar file if it exists
+            if user.avatar_image:
+                old_path = Path(user.avatar_image)
+                if old_path.exists():
+                    old_path.unlink()
+                user.avatar_image = ""
 
-        user.avatar = path
-        user.save(update_fields=["avatar"])
+            path = generate_avatar(
+                initials=f"{user.name[0]}",
+                bg_color=bg_color
+            )
+
+            user.avatar_type = "generated"
+            user.avatar_color = bg_color
+            user.avatar_image = path
+
+        user.save()
 
         serializer = UserSerializer(user)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -219,6 +232,7 @@ class UserView(APIView):
     def put(self, request):
         user = request.user
         data = request.data
+
         email = data.get("email")
         name = data.get("name")
         bg_color = data.get("bg_color")
@@ -226,29 +240,41 @@ class UserView(APIView):
         if name:
             user.name = name
 
-        if email != user.email:
+        if email and email != user.email:
             if User.objects.filter(email=email).exists():
-                return Response({"error": "Email is already in use"}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {"error": "Email is already in use"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
             user.email = email
-            user.is_verified = False  # Mark as unverified until they verify the new email
+            user.is_verified = False
             token = secrets.token_urlsafe(32)
             user.verification_token = token
             user.verification_sent_at = timezone.now()
             send_verification_email(email, token)
-            
+
         if bg_color:
+            # delete old avatar file if it exists
+            if user.avatar_image:
+                old_path = Path(user.avatar_image)
+                if old_path.exists():
+                    old_path.unlink()
+                user.avatar_image = ""
+
             path = generate_avatar(
                 initials=f"{user.name[0]}",
                 bg_color=bg_color
             )
 
-            user.avatar = path
+            user.avatar_type = "generated"
+            user.avatar_color = bg_color
+            user.avatar_image = path
+
         user.save()
 
-        serialized = UserSerializer(user)
-
-        return Response(serialized.data, status=status.HTTP_200_OK)
-
+        serializer = UserSerializer(user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 class LoginView(APIView):
     permission_classes = [AllowAny]

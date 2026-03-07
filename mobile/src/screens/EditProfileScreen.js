@@ -39,7 +39,7 @@ const PROFILE_COLORS = [
 export default function EditProfileScreen({ navigation }) {
     const { user, setUser, logout } = useAuth();
 
-    const avatarUrl = user?.avatar ? `${process.env.EXPO_PUBLIC_URL}${user.avatar}` : null;
+    const avatarUrl = user?.avatar_image ? `${process.env.EXPO_PUBLIC_URL}${user.avatar_image}` : null;
 
     // State for editable fields
     const [email, setEmail] = useState(user?.email || "");
@@ -47,11 +47,6 @@ export default function EditProfileScreen({ navigation }) {
     const [selectedColor, setSelectedColor] = useState(user?.profile_color || PROFILE_COLORS[0]);
 
     const handleSave = async () => {
-        if (newPassword && newPassword !== confirmPassword) {
-            console.log("New password and confirm password do not match!");
-            return;
-        }
-
         const payload = {
             email,
             name: name,
@@ -79,7 +74,7 @@ export default function EditProfileScreen({ navigation }) {
         >
             <View style={styles.topContainer}>
                 <View style={styles.iconContainer}>
-                    {user?.avatar ? (
+                    {user?.avatar_image ? (
                         <Image
                             source={{ uri: avatarUrl }}
                             style={styles.avatar}
@@ -167,7 +162,6 @@ const styles = StyleSheet.create({
     fieldInput: {
         ...typography.body,
         borderBottomWidth: 1,
-        paddingVertical: spacing.xs,
     },
     colorsContainer: {
         flexDirection: "row",

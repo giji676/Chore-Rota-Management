@@ -2,6 +2,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageColor
 import hashlib
 import os
 import secrets
+from pathlib import Path
 from typing import Optional, Tuple
 
 # Path to default Inter font in your project
@@ -40,9 +41,13 @@ def generate_avatar(
         raise ValueError("Initials cannot be empty")
 
     # Generate filename if not provided
+    output_dir = Path("media/avatars")
+    output_dir.mkdir(parents=True, exist_ok=True)
+
     if output_path is None:
-        os.makedirs("media/avatars", exist_ok=True)
-        output_path = os.path.join("media/avatars", _generate_random_filename())
+        output_path = output_dir / _generate_random_filename()
+    else:
+        output_path = Path(output_path)
 
     # Background color
     if bg_color is None:
