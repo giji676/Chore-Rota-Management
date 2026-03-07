@@ -57,15 +57,25 @@ class ResetPasswordView(APIView):
 
         return Response({"detail": "Password has been reset successfully."}, status=status.HTTP_200_OK)
 
+
 class SendResetPasswordEmailView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
         email = request.data.get("email")
-        reset_token = PasswordResetToken.create_token(user=request.user)
-        send_password_reset_email(email, reset_token)
+
+        try:
+            user = User.objects.get(email=email)
+
+            reset_token = PasswordResetToken.create_token(user=user)
+            send_password_reset_email(email, reset_token)
+
+        except User.DoesNotExist:
+            # Do nothing to prevent email enumeration
+            pass
+
         return Response(
-            {"detail": "Password reset email has been sent."},
+            {"detail": "If an account with that email exists, a password reset email has been sent."},
             status=status.HTTP_200_OK
         )
 
