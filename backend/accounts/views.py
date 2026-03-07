@@ -163,23 +163,39 @@ class UserChangePasswordView(APIView):
     def put(self, request):
         user = request.user
         data = request.data
+
         current_password = data.get("current_password")
         new_password = data.get("new_password")
-        if not current_password or not new_password:
-            return Response({"error": "Password not provided"}, status=status.HTTP_400_BAD_REQUEST)
 
-        if current_password and new_password:
-            if not user.check_password(current_password):
-                return Response({"error": "Wrong password"}, status=status.HTTP_400_BAD_REQUEST)
+        errors = {}
 
-            try:
-                validate_password(new_password)
-            except ValueError as e:
-                return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-            user.set_password(new_password)
+        if not current_password:
+            errors["current"] = "Current password is required"
 
+        if not new_password:
+            errors["new"] = "New password is required"
+
+        if errors:
+            return Response({"errors": errors}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not user.check_password(current_password):
+            return Response(
+                {"errors": {"current": "Wrong current password"}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            validate_password(new_password)
+        except ValidationError as e:
+            return Response(
+                {"errors": {"new": e.messages}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user.set_password(new_password)
         user.save()
-        return Response(status=status.HTTP_200_OK)
+
+        return Response({"message": "Password updated successfully"}, status=status.HTTP_200_OK)
 
 class UserView(APIView):
     permission_classes = [IsAuthenticated]
