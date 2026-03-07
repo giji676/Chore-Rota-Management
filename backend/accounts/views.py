@@ -4,6 +4,7 @@ from rest_framework import status
 from django.contrib.auth import get_user_model, authenticate
 from django.utils import timezone
 from django.shortcuts import render, redirect
+from django.core.exceptions import ValidationError
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from rest_framework.permissions import IsAuthenticated, AllowAny
 import secrets

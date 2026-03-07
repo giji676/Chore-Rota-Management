@@ -55,8 +55,13 @@ export default function ChangePswdScreen({ navigation }) {
         try {
             const res = await api.put("accounts/change-password/", payload);
             setSuccessModalVisible(true);
-            setForgotModalVisible(false)
-        catch (err) {
+            setForgotModalVisible(false);
+            setErrors({
+                current: "",
+                new: "",
+                confirm: "",
+            });
+        } catch (err) {
             const backendErrors = err.response?.data?.errors;
 
             if (backendErrors) {
@@ -68,8 +73,9 @@ export default function ChangePswdScreen({ navigation }) {
                 });
             }
         }
+    };
 
-        const handleResetEmailSend = async () => {
+    const handleResetEmailSend = async () => {
         try {
             const res = await api.post("accounts/send-reset-password-email/", { email: user.email });
         } catch (err) {
@@ -90,7 +96,7 @@ export default function ChangePswdScreen({ navigation }) {
                 visible={successModalVisible}
                 onDismiss={() => setSuccessModalVisible(false)}
             >
-                <AppText>Pswd changed successfully</AppText>
+                <AppText>Password changed successfully</AppText>
             </AppModal>
             <AppModal
                 visible={forgotModalVisible}
@@ -110,7 +116,7 @@ export default function ChangePswdScreen({ navigation }) {
                     />
                 </View>
             </AppModal>
-            <AppText style={{ ...typography.h1 }}>Change Pswd</AppText>
+            <AppText style={{ ...typography.h1 }}>Change Password</AppText>
             <View style={styles.currPswdLabelContainer}>
                 <AppText style={{ ...typography.body }}>Enter your current password</AppText>
                 <Pressable onPress={() => setForgotModalVisible(true)}>
@@ -123,7 +129,7 @@ export default function ChangePswdScreen({ navigation }) {
             <AppTextInput
                 value={currPswd}
                 onChangeText={setCurrPswd}
-                placeholder="Current Pswd"
+                placeholder="Current Password"
                 secureTextEntry
                 style={styles.fieldInput}
             />
@@ -136,7 +142,7 @@ export default function ChangePswdScreen({ navigation }) {
             <AppTextInput
                 value={newPswd}
                 onChangeText={setNewPswd}
-                placeholder="New Pswd"
+                placeholder="New Password"
                 secureTextEntry
                 style={styles.fieldInput}
             />
@@ -146,7 +152,7 @@ export default function ChangePswdScreen({ navigation }) {
             <AppTextInput
                 value={confirmPswd}
                 onChangeText={setConfirmPswd}
-                placeholder="Confirm New Pswd"
+                placeholder="Confirm New Password"
                 secureTextEntry
                 style={styles.fieldInput}
             />
