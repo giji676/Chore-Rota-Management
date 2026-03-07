@@ -4,6 +4,7 @@ from rest_framework import status
 from django.contrib.auth import get_user_model, authenticate
 from django.utils import timezone
 from django.shortcuts import render, redirect
+from django.core.exceptions import ValidationError
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from rest_framework.permissions import IsAuthenticated, AllowAny
 import secrets
@@ -56,15 +57,25 @@ class ResetPasswordView(APIView):
 
         return Response({"detail": "Password has been reset successfully."}, status=status.HTTP_200_OK)
 
+
 class SendResetPasswordEmailView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
         email = request.data.get("email")
-        reset_token = PasswordResetToken.create_token(user=request.user)
-        send_password_reset_email(email, reset_token)
+
+        try:
+            user = User.objects.get(email=email)
+
+            reset_token = PasswordResetToken.create_token(user=user)
+            send_password_reset_email(email, reset_token)
+
+        except User.DoesNotExist:
+            # Do nothing to prevent email enumeration
+            pass
+
         return Response(
-            {"detail": "Password reset email has been sent."},
+            {"detail": "If an account with that email exists, a password reset email has been sent."},
             status=status.HTTP_200_OK
         )
 
@@ -163,23 +174,39 @@ class UserChangePasswordView(APIView):
     def put(self, request):
         user = request.user
         data = request.data
+
         current_password = data.get("current_password")
         new_password = data.get("new_password")
-        if not current_password or not new_password:
-            return Response({"error": "Password not provided"}, status=status.HTTP_400_BAD_REQUEST)
 
-        if current_password and new_password:
-            if not user.check_password(current_password):
-                return Response({"error": "Wrong password"}, status=status.HTTP_400_BAD_REQUEST)
+        errors = {}
 
-            try:
-                validate_password(new_password)
-            except ValueError as e:
-                return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-            user.set_password(new_password)
+        if not current_password:
+            errors["current"] = "Current password is required"
 
+        if not new_password:
+            errors["new"] = "New password is required"
+
+        if errors:
+            return Response({"errors": errors}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not user.check_password(current_password):
+            return Response(
+                {"errors": {"current": "Wrong current password"}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            validate_password(new_password)
+        except ValidationError as e:
+            return Response(
+                {"errors": {"new": e.messages}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user.set_password(new_password)
         user.save()
-        return Response(status=status.HTTP_200_OK)
+
+        return Response({"message": "Password updated successfully"}, status=status.HTTP_200_OK)
 
 class UserView(APIView):
     permission_classes = [IsAuthenticated]

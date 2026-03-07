@@ -18,6 +18,7 @@ import { colors, spacing, typography } from "../theme";
 import AppText from "../components/AppText";
 import AppTextInput from "../components/AppTextInput";
 import AppButton from "../components/AppButton";
+import AppModal from "../components/modals/AppModal";
 
 // TODO: Password field starts with upper case by defualt, change that to lower-default
 // TODO: Add cooldown to resend
@@ -39,6 +40,10 @@ export default function LoginScreen({ navigation }) {
 
     const [guestModalVisible, setGuestModalVisible] = useState(false);
     const [guestName, setGuestName] = useState("");
+
+    const [resetEmail, setResetEmail] = useState("");
+    const [forgotModalVisible, setForgotModalVisible] = useState(false);
+    const [resetEmailSent, setResetEmailSent] = useState(false);
 
     const getErrorMessage = (err) => {
         if (!err.response) return "Network error. Please try again.";
@@ -139,11 +144,71 @@ export default function LoginScreen({ navigation }) {
         }
     };
 
+    const handleResetEmailSend = async () => {
+        try {
+            await api.post("accounts/send-reset-password-email/", { email: resetEmail });
+            setResetEmailSent(true);
+        } catch (err) {
+            const errorMsg = err.response?.data?.error;
+            console.log("Failed to send password reset email:", errorMsg);
+        }
+    };
+
     return (
         <KeyboardAvoidingView
             style={{ flex: 1, backgroundColor: colors.background }}
             behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
+            <AppModal
+                visible={forgotModalVisible}
+                onDismiss={() => {
+                    setForgotModalVisible(false);
+                    setResetEmailSent(false);
+                }}
+            >
+                {!resetEmailSent ? (
+                    <View style={{ alignItems: "center", gap: spacing.md }}>
+                        <AppText style={{ ...typography.h2, textAlign: "center" }}>
+                            Forgot Your Password?
+                        </AppText>
+                        <AppText style={{ ...typography.h3, textAlign: "center" }}>
+                            We will send you a link to your email to reset your password.
+                        </AppText>
+
+                        <AppTextInput
+                            placeholder={"Enter your email"}
+                            value={resetEmail}
+                            onChangeText={setResetEmail}
+                            style={[styles.input, { width: "100%"}]}
+                        />
+
+                        <AppButton
+                            title="SEND"
+                            onPress={handleResetEmailSend}
+                            btnStyle={{ paddingHorizontal: spacing.xl, width: "100%" }}
+                        />
+                    </View>
+                ) : (
+                        <View style={{ alignItems: "center", gap: 10 }}>
+                            <AppText style={{ ...typography.h2, textAlign: "center" }}>
+                                Password reset email sent successfully
+                            </AppText>
+
+                            <AppText style={{ ...typography.h3, textAlign: "center" }}>
+                                Check your inbox for the reset link.
+                            </AppText>
+
+                            <AppButton
+                                title="OK"
+                                btnStyle={{ paddingHorizontal: spacing.xl }}
+                                onPress={() => {
+                                    setForgotModalVisible(false);
+                                    setResetEmailSent(false);
+                                }}
+                            />
+                        </View>
+                    )}
+            </AppModal>
             <ScrollView
                 contentContainerStyle={styles.container}
                 keyboardShouldPersistTaps="handled"
@@ -178,6 +243,12 @@ export default function LoginScreen({ navigation }) {
                     secureTextEntry
                     style={styles.input}
                 />
+
+                <View style={styles.forgotContainer}>
+                    <Pressable onPress={() => setForgotModalVisible(true)}>
+                        <AppText style={styles.forgotPswd}>Forgot?</AppText>
+                    </Pressable>
+                </View>
 
                 <AppButton
                     loading={loading}
@@ -379,5 +450,14 @@ const styles = StyleSheet.create({
         color: colors.textSecondary,
         fontWeight: "500",
         fontSize: typography.body.fontSize,
+    },
+    forgotContainer: {
+        width: "100%",
+        alignItems: "center",
+    },
+    forgotPswd: {
+        textDecorationLine: "underline",
+        color: colors.primary,
+        ...typography.body,
     },
 });

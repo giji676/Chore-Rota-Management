@@ -7,7 +7,7 @@ import {
     ScrollView,
 } from "react-native";
 
-import AppText from "../components/AppText"
+import AppText from "../components/AppText";
 import AppTextInput from "../components/AppTextInput";
 import AppButton from "../components/AppButton";
 import EditHeader from "../components/EditHeader";
@@ -17,39 +17,70 @@ import api from "../utils/api";
 import { colors, spacing, typography } from "../theme";
 import { useAuth } from "../auth/useAuth";
 
-export default function ChangePasswordScreen({ navigation }) {
+export default function ChangePswdScreen({ navigation }) {
     const { user } = useAuth();
-    // Password change fields
-    const [currentPassword, setCurrentPassword] = useState("");
-    const [newPassword, setNewPassword] = useState("");
-    const [confirmPassword, setConfirmPassword] = useState("");
+    // Pswd change fields
+    const [currPswd, setCurrPswd] = useState("");
+    const [newPswd, setNewPswd] = useState("");
+    const [confirmPswd, setConfirmPswd] = useState("");
 
     const [successModalVisible, setSuccessModalVisible] = useState(false);
     const [forgotModalVisible, setForgotModalVisible] = useState(false);
 
+    const [resetEmailSent, setResetEmailSent] = useState(false);
+
+    const [errors, setErrors] = useState({
+        current: "",
+        new: "",
+        confirm: ""
+    });
+
+    const setErr = (field, msg) => {
+        setErrors({
+            current: "",
+            new: "",
+            confirm: "",
+            [field]: msg
+        });
+    };
+
     const handleSave = async () => {
-        if (newPassword && newPassword !== confirmPassword) {
-            console.log("New password and confirm password do not match!");
+        if (newPswd && newPswd !== confirmPswd) {
+            setErr("confirm", "Passwords don't match");
             return;
         }
 
         const payload = {
-            ...(currentPassword ? { current_password: currentPassword, new_password: newPassword } : {}),
+            ...(currPswd ? { current_password: currPswd, new_password: newPswd } : {}),
         };
 
         try {
             const res = await api.put("accounts/change-password/", payload);
             setSuccessModalVisible(true);
-            setForgotModalVisible(false)
+            setForgotModalVisible(false);
+            setErrors({
+                current: "",
+                new: "",
+                confirm: "",
+            });
         } catch (err) {
-            const errorMsg = err.response?.data?.error;
-            console.log("Failed to change password:", errorMsg);
+            const backendErrors = err.response?.data?.errors;
+
+            if (backendErrors) {
+                setErrors({
+                    current: "",
+                    new: "",
+                    confirm: "",
+                    ...backendErrors,
+                });
+            }
         }
     };
 
     const handleResetEmailSend = async () => {
         try {
-            const res = await api.post("accounts/send-reset-password-email/", { email: user.email });
+            await api.post("accounts/send-reset-password-email/", { email: user.email });
+            setResetEmailSent(true);
         } catch (err) {
             const errorMsg = err.response?.data?.error;
             console.log("Failed to send password reset email:", errorMsg);
@@ -60,59 +91,97 @@ export default function ChangePasswordScreen({ navigation }) {
         navigation.setOptions({
             header: (props) => <EditHeader {...props} onSave={handleSave} />,
         });
-    }, [currentPassword, newPassword, confirmPassword]);
+    }, [currPswd, newPswd, confirmPswd]);
 
     return (
         <View style={styles.container}>
             <AppModal
                 visible={successModalVisible}
-                onDismiss={() => setSuccessModalVisible(false)}
+                onDismiss={navigation.goBack}
             >
                 <AppText>Password changed successfully</AppText>
             </AppModal>
             <AppModal
                 visible={forgotModalVisible}
-                onDismiss={() => setForgotModalVisible(false)}
+                onDismiss={() => {
+                    setForgotModalVisible(false);
+                    setResetEmailSent(false);
+                }}
             >
-                <View style={{ alignItems: "center", gap: 10 }}>
-                    <AppText style={{ ...typography.h3, textAlign: "center" }}>
-                        We will send a password reset link to your email
-                    </AppText>
-                    <AppText style={{ ...typography.h3, fontWeight: "bold" }}>
-                        {user.email}
-                    </AppText>
-                    <AppButton
-                        title="SEND"
-                        onPress={handleResetEmailSend}
-                        btnStyle={{ paddingHorizontal: spacing.xl }}
-                    />
-                </View>
+                {!resetEmailSent ? (
+                    <View style={{ alignItems: "center", gap: 10 }}>
+                        <AppText style={{ ...typography.h3, textAlign: "center" }}>
+                            We will send a password reset link to your email
+                        </AppText>
+
+                        <AppText style={{ ...typography.h3, fontWeight: "bold" }}>
+                            {user.email}
+                        </AppText>
+
+                        <AppButton
+                            title="SEND"
+                            onPress={handleResetEmailSend}
+                            btnStyle={{ paddingHorizontal: spacing.xl }}
+                        />
+                    </View>
+                ) : (
+                        <View style={{ alignItems: "center", gap: 10 }}>
+                            <AppText style={{ ...typography.h3, textAlign: "center" }}>
+                                Password reset email sent successfully
+                            </AppText>
+
+                            <AppText style={{ ...typography.body, textAlign: "center" }}>
+                                Check your inbox for the reset link.
+                            </AppText>
+
+                            <AppButton
+                                title="OK"
+                                btnStyle={{ paddingHorizontal: spacing.xl }}
+                                onPress={() => {
+                                    setForgotModalVisible(false);
+                                    setResetEmailSent(false);
+                                    navigation.goBack();
+                                }}
+                            />
+                        </View>
+                    )}
             </AppModal>
             <AppText style={{ ...typography.h1 }}>Change Password</AppText>
-            <View style={styles.currentPasswordLabelContainer}>
+            <View style={styles.currPswdLabelContainer}>
                 <AppText style={{ ...typography.body }}>Enter your current password</AppText>
                 <Pressable onPress={() => setForgotModalVisible(true)}>
-                    <AppText style={styles.forgotPassword}>Forgot?</AppText>
+                    <AppText style={styles.forgotPswd}>Forgot?</AppText>
                 </Pressable>
             </View>
+            {errors.current && (
+                <AppText style={styles.errMsg}>{errors.current}</AppText>
+            )}
             <AppTextInput
-                value={currentPassword}
-                onChangeText={setCurrentPassword}
+                value={currPswd}
+                onChangeText={setCurrPswd}
                 placeholder="Current Password"
                 secureTextEntry
                 style={styles.fieldInput}
             />
             <AppText style={{ ...typography.body }}>Choose your new password</AppText>
+            {errors.new && (
+                <AppText style={styles.errMsg}>
+                    {Array.isArray(errors.new) ? errors.new.join("\n") : errors.new}
+                </AppText>
+            )}
             <AppTextInput
-                value={newPassword}
-                onChangeText={setNewPassword}
+                value={newPswd}
+                onChangeText={setNewPswd}
                 placeholder="New Password"
                 secureTextEntry
                 style={styles.fieldInput}
             />
+            {errors.confirm && (
+                <AppText style={styles.errMsg}>{errors.confirm}</AppText>
+            )}
             <AppTextInput
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
+                value={confirmPswd}
+                onChangeText={setConfirmPswd}
                 placeholder="Confirm New Password"
                 secureTextEntry
                 style={styles.fieldInput}
@@ -132,13 +201,17 @@ const styles = StyleSheet.create({
         ...typography.body,
         borderBottomWidth: 1,
     },
-    currentPasswordLabelContainer: {
+    currPswdLabelContainer: {
         flexDirection: "row",
         justifyContent: "space-between",
     },
-    forgotPassword: {
+    forgotPswd: {
         textDecorationLine: "underline",
         color: colors.primary,
         ...typography.body,
+    },
+    errMsg: {
+        ...typography.body,
+        color: colors.error,
     },
 });
