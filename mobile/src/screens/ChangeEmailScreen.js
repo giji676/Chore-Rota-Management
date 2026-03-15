@@ -7,22 +7,32 @@ import AppText from "../components/AppText";
 import AppTextInput from "../components/AppTextInput";
 import AppButton from "../components/AppButton";
 import BottomSheet from "../components/BottomSheet";
+import { useAuth } from "../auth/useAuth";
 
 export default function ChangeEmailScreen({ route, navigation }) {
     if (!route.params?.email) return;
+
+    const { fetchUser } = useAuth();
 
     const email = route.params.email;
     const [newEmail, setNewEmail] = useState("");
     const [showAlert, setShowAlert] = useState(false);
 
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState();
+
     const handleConfirm = async () => {
         try {
+            setLoading(true);
             const res = await api.post("accounts/change-email/", { email: newEmail });
             if (res.status === 200) {
+                fetchUser();
                 setShowAlert(true);
             }
         } catch (err) {
-            console.log("Error changing email:", err.response.data);
+            setError(err.response?.data?.error);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -43,13 +53,17 @@ export default function ChangeEmailScreen({ route, navigation }) {
                     marginBottom: spacing.md
                 }}>
                     A verification email has been sent to your new email's inbox.
-                    Please check your email to verify your account before logging in.
+                    Please check your email to verify your account.
                 </AppText>
-                {/* TEMP: better title... */}
                 <AppButton
-                    title="Alright, Alright, Alrightt `puffs`"
+                    title="Dismiss"
                     variant="primary"
-                    onPress={() => setShowAlert(false)}
+                    onPress={() => {
+                        setShowAlert(false);
+                        navigation.navigate("VerifyEmail", {
+                            email: newEmail
+                        })
+                    }}
                 />
             </View>
         );
@@ -73,6 +87,9 @@ export default function ChangeEmailScreen({ route, navigation }) {
                 <AppText style={{ ...typography.h3, textAlign: "center" }}>
                     Enter your new email below
                 </AppText>
+                <AppText style={{ ...typography.body, color: colors.error }}>
+                    {error}
+                </AppText>
                 <AppTextInput
                     style={styles.emailInput}
                     placeholder="New email"
@@ -82,7 +99,7 @@ export default function ChangeEmailScreen({ route, navigation }) {
                 <AppButton
                     title="confirm"
                     variant="primary"
-                    style={{ padding: spacing.md }}
+                    disabled={loading}
                     onPress={() => handleConfirm()}
                 />
             </View>

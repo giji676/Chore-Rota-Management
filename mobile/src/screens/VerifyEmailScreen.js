@@ -15,20 +15,19 @@ export default function VerifyEmailScreen({ route, navigation }) {
     if (!email) return;
 
     const [showAlert, setShowAlert] = useState(false);
+    const [loading, setLoading] = useState(false);
 
     const resendEmail = async () => {
         try {
-            const res = await api.post("accounts/resend-verification/", {email});
+            setLoading(true);
+            const res = await api.post("accounts/resend-verification/", { email });
             if (res.status === 200) {
                 setShowAlert(true);
-                // Alert.alert(
-                //     "Verification Email Sent",
-                //     "A new verification email has been sent to your inbox. Please check your email to verify your account before logging in.",
-                // );
             }
         } catch (err) {
-            // console.log("Failed to resend verification email. Please try again later.");
-            console.log("Failed to resend verification emial:", err.response.data);
+            console.log("Failed to resend verification email:", err.response.data);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -51,11 +50,16 @@ export default function VerifyEmailScreen({ route, navigation }) {
                     A new verification email has been sent to your inbox.
                     Please check your email to verify your account before logging in.
                 </AppText>
-                {/* TEMP: better title... */}
                 <AppButton
-                    title="Alright, Alright, Alrightt `puffs`"
+                    title="Dismiss"
                     variant="primary"
-                    onPress={() => setShowAlert(false)}
+                    onPress={() => {
+                        setShowAlert(false);
+                        navigation.reset({
+                            index: 0,
+                            routes: [{ name: "Profile" }],
+                        });
+                    }}
                 />
             </View>
         );
@@ -70,7 +74,7 @@ export default function VerifyEmailScreen({ route, navigation }) {
                 <AlertContent />
             </BottomSheet>
 
-            <View style={{ flex: 1, justifyContent: "center", padding: 24 }}>
+            <View style={{ flex: 1, justifyContent: "center", padding: 24, gap: 10 }}>
                 <AppText 
                     variant="title"
                     style={{
@@ -82,7 +86,7 @@ export default function VerifyEmailScreen({ route, navigation }) {
                 </AppText>
 
                 <AppText style={{
-                    marginTop: 12,
+                    // marginTop: 12,
                     textAlign: "center",
                 }}>
                     Would you like to verify {
@@ -94,6 +98,7 @@ export default function VerifyEmailScreen({ route, navigation }) {
 
                 <AppButton
                     title="Verify Now"
+                    disabled={loading}
                     variant="primary"
                     onPress={resendEmail}
                 />
@@ -107,8 +112,12 @@ export default function VerifyEmailScreen({ route, navigation }) {
                 <AppButton
                     title="Close"
                     variant="secondary"
-                    style={{ marginTop: 24 }}
-                    onPress={() => navigation.goBack()}
+                    onPress={() => 
+                        navigation.reset({
+                            index: 0,
+                            routes: [{ name: "Profile" }],
+                        })
+                    }
                 />
             </View>
         </>

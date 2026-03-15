@@ -1,7 +1,7 @@
 import React from "react";
 import { Pressable, ActivityIndicator, StyleSheet } from "react-native";
 import AppText from "./AppText";
-import { colors } from "../theme";
+import { colors, spacing } from "../theme";
 
 export default function AppButton({
     title,
@@ -45,7 +45,7 @@ export default function AppButton({
 
 const styles = StyleSheet.create({
     base: {
-        paddingVertical: 14,
+        padding: spacing.md,
         borderRadius: 10,
         alignItems: "center",
     },
