@@ -56,6 +56,7 @@ export default function EditProfileScreen({ navigation }) {
         try {
             const res = await api.put("accounts/user/", payload);
             setUser(res.data);
+            navigation.goBack();
         } catch (err) {
             console.error("Failed to update profile:", err);
         }

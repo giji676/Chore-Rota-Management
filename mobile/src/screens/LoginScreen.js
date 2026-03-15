@@ -87,7 +87,6 @@ export default function LoginScreen({ navigation }) {
         }
     };
 
-
     const handleRegister = async () => {
         setError("");
 
