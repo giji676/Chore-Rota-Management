@@ -4,9 +4,11 @@ from rest_framework import status
 from django.contrib.auth import get_user_model, authenticate
 from django.utils import timezone
 from django.shortcuts import render, redirect
+from django.core.exceptions import ValidationError
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from rest_framework.permissions import IsAuthenticated, AllowAny
 import secrets
+from pathlib import Path
 
 from .serializers import RegisterSerializer, UserSerializer
 from .models import PushToken, PasswordResetToken
@@ -61,10 +63,19 @@ class SendResetPasswordEmailView(APIView):
 
     def post(self, request):
         email = request.data.get("email")
-        reset_token = PasswordResetToken.create_token(user=request.user)
-        send_password_reset_email(email, reset_token)
+
+        try:
+            user = User.objects.get(email=email)
+
+            reset_token = PasswordResetToken.create_token(user=user)
+            send_password_reset_email(email, reset_token)
+
+        except User.DoesNotExist:
+            # Do nothing to prevent email enumeration
+            pass
+
         return Response(
-            {"detail": "Password reset email has been sent."},
+            {"detail": "If an account with that email exists, a password reset email has been sent."},
             status=status.HTTP_200_OK
         )
 
@@ -73,13 +84,26 @@ class GenerateAvatarView(APIView):
 
     def post(self, request):
         user = request.user
+        bg_color = request.data.get("bg_color")
 
-        path = generate_avatar(
-            initials=f"{user.name[0]}",
-        )
+        if bg_color:
+            # delete old avatar file if it exists
+            if user.avatar_image:
+                old_path = Path(user.avatar_image)
+                if old_path.exists():
+                    old_path.unlink()
+                user.avatar_image = ""
 
-        user.avatar = path
-        user.save(update_fields=["avatar"])
+            path = generate_avatar(
+                initials=f"{user.name[0]}",
+                bg_color=bg_color
+            )
+
+            user.avatar_type = "generated"
+            user.avatar_color = bg_color
+            user.avatar_image = path
+
+        user.save()
 
         serializer = UserSerializer(user)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -163,23 +187,39 @@ class UserChangePasswordView(APIView):
     def put(self, request):
         user = request.user
         data = request.data
+
         current_password = data.get("current_password")
         new_password = data.get("new_password")
-        if not current_password or not new_password:
-            return Response({"error": "Password not provided"}, status=status.HTTP_400_BAD_REQUEST)
 
-        if current_password and new_password:
-            if not user.check_password(current_password):
-                return Response({"error": "Wrong password"}, status=status.HTTP_400_BAD_REQUEST)
+        errors = {}
 
-            try:
-                validate_password(new_password)
-            except ValueError as e:
-                return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-            user.set_password(new_password)
+        if not current_password:
+            errors["current"] = "Current password is required"
 
+        if not new_password:
+            errors["new"] = "New password is required"
+
+        if errors:
+            return Response({"errors": errors}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not user.check_password(current_password):
+            return Response(
+                {"errors": {"current": "Wrong current password"}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            validate_password(new_password)
+        except ValidationError as e:
+            return Response(
+                {"errors": {"new": e.messages}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user.set_password(new_password)
         user.save()
-        return Response(status=status.HTTP_200_OK)
+
+        return Response({"message": "Password updated successfully"}, status=status.HTTP_200_OK)
 
 class UserView(APIView):
     permission_classes = [IsAuthenticated]
@@ -192,6 +232,7 @@ class UserView(APIView):
     def put(self, request):
         user = request.user
         data = request.data
+
         email = data.get("email")
         name = data.get("name")
         bg_color = data.get("bg_color")
@@ -199,29 +240,41 @@ class UserView(APIView):
         if name:
             user.name = name
 
-        if email != user.email:
+        if email and email != user.email:
             if User.objects.filter(email=email).exists():
-                return Response({"error": "Email is already in use"}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {"error": "Email is already in use"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
             user.email = email
-            user.is_verified = False  # Mark as unverified until they verify the new email
+            user.is_verified = False
             token = secrets.token_urlsafe(32)
             user.verification_token = token
             user.verification_sent_at = timezone.now()
             send_verification_email(email, token)
-            
+
         if bg_color:
+            # delete old avatar file if it exists
+            if user.avatar_image:
+                old_path = Path(user.avatar_image)
+                if old_path.exists():
+                    old_path.unlink()
+                user.avatar_image = ""
+
             path = generate_avatar(
                 initials=f"{user.name[0]}",
                 bg_color=bg_color
             )
 
-            user.avatar = path
+            user.avatar_type = "generated"
+            user.avatar_color = bg_color
+            user.avatar_image = path
+
         user.save()
 
-        serialized = UserSerializer(user)
-
-        return Response(serialized.data, status=status.HTTP_200_OK)
-
+        serializer = UserSerializer(user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 class LoginView(APIView):
     permission_classes = [AllowAny]

@@ -12,13 +12,13 @@ function ProfileButton() {
     if (!user) return null;
 
     const navigation = useNavigation();
-    const avatarUrl = user.avatar ? `${process.env.EXPO_PUBLIC_URL}${user.avatar}` : null;
+    const avatarUrl = user.avatar_image ? `${process.env.EXPO_PUBLIC_URL}${user.avatar_image}` : null;
 
     return (
         <TouchableOpacity
             onPress={() => navigation.navigate("Profile")}
         >
-            {user?.avatar ? (
+            {user?.avatar_image ? (
                 <Image 
                     source={{ uri: avatarUrl }}
                     style={{ width: 42, height: 42, borderRadius: 50 }}

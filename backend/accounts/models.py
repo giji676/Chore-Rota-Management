@@ -83,7 +83,19 @@ class CustomUserManager(BaseUserManager):
 class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
     name = models.CharField(max_length=150)
-    avatar = models.CharField(max_length=255, blank=True)
+
+    avatar_type = models.CharField(
+        max_length=20,
+        choices=[
+            ("generated", "Generated"),
+            ("uploaded", "Uploaded"),
+        ],
+        default="generated",
+    )
+
+    avatar_color = models.CharField(max_length=7, default="#888888")
+    avatar_image = models.CharField(max_length=255, null=True, blank=True)
+
     is_guest = models.BooleanField(default=False)
     device_id = models.CharField(max_length=255, null=True, blank=True, unique=True)
     is_verified = models.BooleanField(default=False)

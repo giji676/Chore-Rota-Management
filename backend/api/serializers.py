@@ -7,20 +7,12 @@ from accounts.serializers import UserSerializer
 User = get_user_model()
 
 class HouseMemberSerializer(serializers.ModelSerializer):
-    id = serializers.ReadOnlyField(source="user.id")
-    email = serializers.ReadOnlyField(source="user.email")
-    name = serializers.ReadOnlyField(source="user.name")
-    avatar = serializers.ReadOnlyField(source="user.avatar")
-    is_guest = serializers.ReadOnlyField(source="user.is_guest")
+    user = UserSerializer(read_only=True)
 
     class Meta:
         model = HouseMember
         fields = [
-            "id",
-            "email",
-            "name",
-            "avatar",
-            "is_guest",
+            "user",
             "role",
             "joined_at",
             "version",
