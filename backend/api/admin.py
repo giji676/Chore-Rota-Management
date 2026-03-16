@@ -68,6 +68,7 @@ class ChoreAdmin(admin.ModelAdmin):
     list_filter = ("house",)
     search_fields = ("name",)
 
+"""
 @admin.register(ChoreSchedule)
 class ChoreScheduleAdmin(admin.ModelAdmin):
     list_display = (
@@ -123,3 +124,4 @@ class ChoreOccurrenceAdmin(admin.ModelAdmin):
         # start from default manager
         qs = super().get_queryset(request)
         return qs
+"""

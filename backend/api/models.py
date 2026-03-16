@@ -1,19 +1,11 @@
 import string
 import random
-from datetime import date, time
 from django.db import models
-from django.db.models.fields import return_None
 from django.utils import timezone
 from django.conf import settings
 from django.contrib.auth.hashers import make_password, check_password
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
-from dateutil.relativedelta import relativedelta
-from .helpers.repeat_utils import (
-    relativedelta_to_dict,
-    dict_to_relativedelta,
-    generate_repeat_label,
-)
 
 HEX_COLOR_VALIDATOR = RegexValidator(
     regex=r"^#(?:[0-9a-fA-F]{6})$",
@@ -46,7 +38,11 @@ class House(models.Model):
     all_objects = models.Manager()
     
     def add_member(self, user, role="member"):
-        if HouseMember.objects.filter(house=self, user=user).exists():
+        if HouseMember.objects.filter(
+            house=self,
+            user=user,
+            deleted_at__isnull=True
+        ).exists():
             raise ValidationError("User already in this house.")
 
         current_count = HouseMember.objects.filter(house=self).count()
@@ -110,39 +106,35 @@ class ChoreSchedule(models.Model):
         on_delete=models.CASCADE,
         related_name="schedules"
     )
-    # assignee for this chore schedule
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="chore_schedules"
+    start_date = models.DateTimeField()
+    repeat_unit = models.CharField(
+        max_length=10,
+        choices=[
+            ("day", "Day"),
+            ("week", "Week"),
+            ("month", "Month"),
+            ("year", "Year"),
+        ]
     )
-    start_date = models.DateTimeField(default=timezone.now)
-    # JSON with relativedelta fields
-    repeat_delta = models.JSONField(default=dict)
-    generate_occurrences = models.BooleanField(default=True)
+    repeat_interval = models.IntegerField(default=1)
+    constraints = models.JSONField(default=dict, blank=True)
+    end_date = models.DateTimeField(null=True, blank=True)
+
     deleted_at = models.DateTimeField(null=True, blank=True)
     version = models.IntegerField(default=0)
 
     objects = ActiveManager()
     all_objects = models.Manager()
 
-    @property
-    def delta(self) -> relativedelta:
-        return dict_to_relativedelta(self.repeat_delta)
-
-    @delta.setter
-    def delta(self, value: relativedelta):
-        self.repeat_delta = relativedelta_to_dict(value)
-
-    @property
-    def repeat_label(self) -> str:
-        return generate_repeat_label(self.delta)
-
-    def next_due_date(self, last_datetime):
-        return last_datetime + self.delta
+    class Meta:
+        indexes = [
+            models.Index(fields=["start_date"]),
+            models.Index(fields=["end_date"]),
+        ]
 
     def __str__(self):
-        return f"{self.user.name} ({self.repeat_label})"
+        return (f"{self.chore.name} starting at {self.start_date} "
+            f"every {self.repeat_interval} {self.repeat_unit} until {self.end_date}")
 
 class ChoreOccurrence(models.Model):
     schedule = models.ForeignKey(
@@ -150,44 +142,77 @@ class ChoreOccurrence(models.Model):
         on_delete=models.CASCADE,
         related_name="occurrences"
     )
+    assigned_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL
+    )
+    original_due_date = models.DateTimeField()
     due_date = models.DateTimeField()
-    # Change to only use _at, drop boolean?
-    completed = models.BooleanField(default=False)
     completed_at = models.DateTimeField(null=True, blank=True)
-    notification_sent = models.BooleanField(default=False)
+    skipped_at = models.DateTimeField(null=True, blank=True)
     notification_sent_at = models.DateTimeField(null=True, blank=True)
+
     deleted_at = models.DateTimeField(null=True, blank=True)
     version = models.IntegerField(default=0)
 
     objects = ActiveManager()
     all_objects = models.Manager()
 
-    def save(self, *args, **kwargs):
-        if self.completed and not self.completed_at:
-            self.completed_at = timezone.now()
+    class Meta:
+        indexes = [
+            models.Index(fields=["schedule", "original_due_date"]),
+            models.Index(fields=["due_date"]),
+            models.Index(fields=["notification_sent_at", "due_date"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["schedule", "original_due_date"],
+                name="unique_occurrence_override"
+            )
+        ]
 
-        if not self.completed:
-            self.completed_at = None
-
-        if self.notification_sent and not self.notification_sent_at:
-            self.notification_sent_at = timezone.now()
-
-        if not self.notification_sent:
-            self.notification_sent_at = None
-
-        super().save(*args, **kwargs)
+    def mark_completed(self):
+        self.completed_at = timezone.now()
+        self.save(update_fields=["completed_at"])
 
     def __str__(self):
-        try:
-            string = (
-                f"{self.schedule.chore.name} "
-                    f"for {self.schedule.user.name} "
-                    f"on {self.due_date}"
-            )
-        except:
-            string = (
-                f"{self.schedule.chore.name} "
-                    f"for {self.schedule.user.name} "
-                    f"on {self.due_date}"
-            )
-        return string
+        return (f"{self.schedule.chore.name} "
+                f"on {self.due_date}")
+
+class MemberAssignmentRule(models.Model):
+    schedule = models.OneToOneField(
+        ChoreSchedule,
+        on_delete=models.CASCADE,
+        related_name="assignment_rule"
+    )
+    rule_type = models.CharField(
+        max_length=20,
+        choices= [
+            ("fixed", "Fixed"),
+            ("rotation", "Rotation")
+        ]
+    )
+    rotation_offset = models.PositiveIntegerField(default=0)
+
+    def __str__(self):
+        return f"{self.schedule} with type: {self.rule_type}"
+
+class RotationMember(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="chore_rotations")
+    assignment_rule = models.ForeignKey(
+        MemberAssignmentRule,
+        on_delete=models.CASCADE,
+        related_name="rotation_members")
+    position = models.PositiveIntegerField()
+
+    class Meta:
+        unique_together = ("assignment_rule", "position")
+        ordering = ["position"]
+
+    def __str__(self):
+        return f"{self.user} at position {self.position}"
