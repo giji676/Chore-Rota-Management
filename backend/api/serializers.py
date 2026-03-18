@@ -6,6 +6,71 @@ from accounts.serializers import UserSerializer
 
 User = get_user_model()
 
+class HouseCreateSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = House
+        fields = [
+            "name",
+            "address",
+            "place_id",
+            "password",
+            "max_members",
+        ]
+        extra_kwargs = {
+            "address": {"required": False, "allow_null": True, "allow_blank": True},
+            "place_id": {"required": False, "allow_null": True, "allow_blank": True},
+        }
+
+    def validate(self, data):
+        address = data.get("address")
+        place_id = data.get("place_id")
+
+        # Normalize empty strings -> None
+        if address == "":
+            address = None
+        if place_id == "":
+            place_id = None
+
+        data["address"] = address
+        data["place_id"] = place_id
+
+        # Dependency validation
+        if address and not place_id:
+            raise serializers.ValidationError(
+                {"place_id": "place_id is required when address is provided"}
+            )
+
+        if place_id and not address:
+            raise serializers.ValidationError(
+                {"address": "address is required when place_id is provided"}
+            )
+
+        return data
+
+    def create(self, validated_data):
+        password = validated_data.pop("password")
+
+        house = House(**validated_data)
+        house.set_password(password)
+        house.save()
+
+        return house
+
+class HouseReadSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = House
+        fields = [
+            "id",
+            "name",
+            "address",
+            "place_id",
+            "join_code",
+            "max_members",
+            "version",
+        ]
+
 class ChoreCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Chore
