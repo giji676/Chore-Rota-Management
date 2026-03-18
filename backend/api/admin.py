@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
-from .models import House, HouseMember, Chore, ChoreSchedule, ChoreOccurrence
+from .models import *
 
 class DeletedListFilter(admin.SimpleListFilter):
     title = _("deleted")
@@ -121,6 +121,35 @@ class ChoreOccurrenceAdmin(admin.ModelAdmin):
         return obj.deleted_at is not None
     deleted_at_display.boolean = True
     deleted_at_display.short_description = "Deleted?"
+
+    def get_queryset(self, request):
+        # start from default manager
+        qs = super().get_queryset(request)
+        return qs
+
+@admin.register(MemberAssignmentRule)
+class MemberAssignmentRuleAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "schedule",
+        "rule_type",
+        "rotation_offset",
+    )
+
+    def get_queryset(self, request):
+        # start from default manager
+        qs = super().get_queryset(request)
+        return qs
+
+
+@admin.register(RotationMember)
+class RotationMemberAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "user",
+        "assignment_rule",
+        "position",
+    )
 
     def get_queryset(self, request):
         # start from default manager
