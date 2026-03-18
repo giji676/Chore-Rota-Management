@@ -71,6 +71,30 @@ class HouseReadSerializer(serializers.ModelSerializer):
             "version",
         ]
 
+class HouseMemberCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = HouseMember
+        fields = [
+            "user",
+            "house",
+            "role",
+        ]
+
+    def validate(self, data):
+        user = data["user"]
+        house = data["house"]
+
+        if HouseMember.objects.filter(
+            user=user,
+            house=house,
+            deleted_at__isnull=True
+        ).exists():
+            raise serializers.ValidationError(
+                "User is already a member of this house"
+            )
+
+        return data
+
 class ChoreCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Chore
