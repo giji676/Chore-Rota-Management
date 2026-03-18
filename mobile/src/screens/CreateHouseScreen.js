@@ -52,8 +52,8 @@ export default function CreateHouseScreen({ navigation }) {
     };
 
     const handleCreate = async () => {
-        if (!name || !address) {
-            setResult("Please fill all required fields.");
+        if (!name) {
+            setResult("Please fill in all the required fields.");
             return;
         }
 
@@ -65,13 +65,8 @@ export default function CreateHouseScreen({ navigation }) {
                 place_id: placeId,
                 max_members: parseInt(maxMembers) || 6,
             };
-
-            const response = await api.post("house/create/", payload);
-
-            setResult(JSON.stringify(response.data, null, 2));
-
-            navigation.navigate("HouseDashboard", { house: response.data });
-
+            const res = await api.post("houses/create/", payload);
+            navigation.navigate("HouseDashboard", { house: res.data });
         } catch (err) {
             console.log("Error creating house:", err.response?.data || err.message);
             setResult("Error: " + (err.response?.data?.error || err.message));
