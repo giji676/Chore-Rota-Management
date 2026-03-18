@@ -30,3 +30,51 @@ class ChoreOccurrenceManagementService:
             original_due_date=original_due_date,
             due_date=original_due_date,
         )
+
+class MemberAssignmentRuleService:
+    def create_rule(self, schedule, rule_type, rotation_offset=0):
+        # Prevent duplicate rule creation
+        if hasattr(schedule, "assignment_rule"):
+            raise ValueError("Schedule already has an assignment rule")
+
+        return MemberAssignmentRule.objects.create(
+            schedule=schedule,
+            rule_type=rule_type,
+            rotation_offset=rotation_offset,
+        )
+
+class RotationMemberService:
+    def create_rotation_member(self, assignment_rule, user, position):
+        return RotationMember.objects.create(
+            assignment_rule=assignment_rule,
+            user=user,
+            position=position,
+        )
+
+    def bulk_create_rotation_members(self, assignment_rule, members_data):
+        """
+        members_data = [
+            {"user": user1, "position": 1},
+            {"user": user2, "position": 2},
+        ]
+        """
+
+        # Validate that the assignment rule is a rotation
+        if assignment_rule.rule_type != "rotation":
+            raise ValueError("Cannot add rotation members to non-rotation rule")
+
+        # Validate that there are no duplicate positions
+        positions = [m["position"] for m in members_data]
+        if len(positions) != len(set(positions)):
+            raise ValueError("Duplicate positions in rotation members")
+
+        rotation_members = [
+            RotationMember(
+                assignment_rule=assignment_rule,
+                user=member["user"],
+                position=member["position"],
+            )
+            for member in members_data
+        ]
+
+        return RotationMember.objects.bulk_create(rotation_members)
