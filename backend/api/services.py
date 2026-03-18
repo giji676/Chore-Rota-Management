@@ -1,6 +1,27 @@
 from django.db import transaction
 from .models import *
 
+class HouseService:
+    @transaction.atomic
+    def create_house(self, data, user):
+        """
+        Creates a house and assigns the creator as owner.
+        """
+
+        password = data.pop("password")
+
+        house = House(**data)
+        house.set_password(password)
+        house.save()
+
+        # Add creator as owner
+        HouseMember.objects.create(
+            house=house,
+            user=user,
+            role="owner"
+        )
+
+        return house
 
 class ChoreManagementService:
     def create_chore(self, data, user):

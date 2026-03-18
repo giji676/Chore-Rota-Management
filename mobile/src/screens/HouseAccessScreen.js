@@ -75,7 +75,7 @@ export default function HouseAccessScreen({ navigation }) {
                 apiLogError(err);
             }
         }
-        fetchUser();
+        // fetchUser();
     }, []);
 
     useEffect(() => {
@@ -84,8 +84,9 @@ export default function HouseAccessScreen({ navigation }) {
 
     const fetchUserHouses = async () => {
         try {
-            const res = await api.get("houses/user/");
+            const res = await api.get("houses/generic/");
             setHouses(res.data);
+            jsonLog(res.data);
         } catch (err) {
             console.log("Failed to fetch user houses:", err.response?.data || err.message);
         } finally {
