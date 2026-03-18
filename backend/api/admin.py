@@ -67,28 +67,28 @@ class ChoreAdmin(admin.ModelAdmin):
     list_display = ("id", "name", "house", "color")
     list_filter = ("house",)
     search_fields = ("name",)
+# TODO: Setup admin for new models
 
-"""
 @admin.register(ChoreSchedule)
 class ChoreScheduleAdmin(admin.ModelAdmin):
     list_display = (
         "id",
         "chore",
-        "user",
-        "deleted_at_display",
         "start_date",
-        "repeat_label")
+        "repeat_unit",
+        "repeat_interval",
+        "constraints",
+        "end_date",
+        "deleted_at_display")
     list_filter = (
         DeletedListFilter,
         "chore__house",
-        "user"
     )
     search_fields = ("chore__name", "user__name")
-    readonly_fields = ("repeat_label",)
-
 
     def deleted_at_display(self, obj):
         return obj.deleted_at is not None
+
     deleted_at_display.boolean = True
     deleted_at_display.short_description = "Deleted?"
 
@@ -102,17 +102,19 @@ class ChoreOccurrenceAdmin(admin.ModelAdmin):
     list_display = (
         "id",
         "schedule",
+        "assigned_user",
+        "original_due_date",
         "due_date",
-        "deleted_at_display",
         "completed_at",
+        "skipped_at",
         "notification_sent_at",
+        "deleted_at",
+        "version",
+        "deleted_at_display",
     )
     list_filter = (
         DeletedListFilter,
         "schedule__chore__house",
-        "schedule__user",
-        "completed",
-        "notification_sent",
     )
 
     def deleted_at_display(self, obj):
@@ -124,4 +126,3 @@ class ChoreOccurrenceAdmin(admin.ModelAdmin):
         # start from default manager
         qs = super().get_queryset(request)
         return qs
-"""
