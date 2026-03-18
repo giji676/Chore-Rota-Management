@@ -21,8 +21,16 @@ class ActiveManager(models.Manager):
 
 class House(models.Model):
     name = models.CharField(max_length=100)
-    address = models.CharField(max_length=255)
-    place_id = models.CharField(max_length=255)
+    address = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True
+    )
+    place_id = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True
+    )
     join_code = models.CharField(max_length=8, unique=True, default=generate_join_code)
     password = models.CharField(max_length=128)
     max_members = models.PositiveIntegerField(default=6)
@@ -70,8 +78,16 @@ class HouseMember(models.Model):
         ("member", "Member"),
     ]
 
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    house = models.ForeignKey(House, on_delete=models.CASCADE)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="house_memberships"
+    )
+    house = models.ForeignKey(
+        House,
+        on_delete=models.CASCADE,
+        related_name="memberships"
+    )
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default="member")
     joined_at = models.DateTimeField(auto_now_add=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
