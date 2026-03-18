@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from .models import *
 
@@ -20,6 +21,24 @@ class HouseService:
             user=user,
             role="owner"
         )
+
+        return house
+
+    @transaction.atomic
+    def join_house(self, user, join_code, password=None):
+        """
+        Joins a user to a house using join_code.
+        Raises ValidationError on failure.
+        """
+        try:
+            house = House.objects.get(join_code=join_code, deleted_at__isnull=True)
+        except House.DoesNotExist:
+            raise ValidationError("Invalid join code.")
+
+        if house.password and not house.check_password(password):
+            raise ValidationError("Incorrect password.")
+
+        house.add_member(user)
 
         return house
 

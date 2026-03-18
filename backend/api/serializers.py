@@ -6,6 +6,11 @@ from accounts.serializers import UserSerializer
 
 User = get_user_model()
 
+
+class HouseJoinSerializer(serializers.Serializer):
+    join_code = serializers.CharField(max_length=8)
+    password = serializers.CharField(required=False, write_only=True)
+
 class HouseCreateSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
 

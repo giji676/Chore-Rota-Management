@@ -86,9 +86,8 @@ export default function HouseAccessScreen({ navigation }) {
         try {
             const res = await api.get("houses/generic/");
             setHouses(res.data);
-            jsonLog(res.data);
         } catch (err) {
-            console.log("Failed to fetch user houses:", err.response?.data || err.message);
+            console.log("Failed to fetch user houses:", err.response?.data.error);
         } finally {
             setLoading(false);
         }
@@ -101,11 +100,10 @@ export default function HouseAccessScreen({ navigation }) {
         }
 
         try {
-            const response = await api.post(`house/join/${joinCode}/`, { password });
-            setResult(JSON.stringify(response.data, null, 2));
-            navigation.navigate("HouseDashboard", { house: response.data });
-        } catch (error) {
-            setResult("Error: " + (error.response?.data?.error || error.message));
+            const res = await api.post("houses/join/", { join_code: joinCode, password });
+            navigation.navigate("HouseDashboard", { house: res.data });
+        } catch (err) {
+            setResult("Error: " + err.response?.data?.error);
         }
     };
 
@@ -139,7 +137,7 @@ export default function HouseAccessScreen({ navigation }) {
                             Alert.alert("House deleted successfully");
                         } catch (err) {
                             apiLogError(err);
-                            Alert.alert("Error", err.response?.data?.error || err.message);
+                            Alert.alert("Error", err.response?.data?.error);
                         } finally {
                             fetchUserHouses();
                         }
