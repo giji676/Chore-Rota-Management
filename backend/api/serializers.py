@@ -64,16 +64,34 @@ class HouseCreateSerializer(serializers.ModelSerializer):
         return house
 
 class HouseReadSerializer(serializers.ModelSerializer):
+    members = serializers.SerializerMethodField()
+
     class Meta:
         model = House
         fields = [
             "id",
             "name",
             "address",
+            "members",
             "place_id",
             "join_code",
             "max_members",
             "version",
+        ]
+
+    def get_members(self, obj):
+        members = HouseMember.objects.filter(house=obj)
+        return HouseMemberReadSerializer(members, many=True).data
+
+class HouseMemberReadSerializer(serializers.ModelSerializer):
+    user = UserSerializer(read_only=True)
+    class Meta:
+        model = HouseMember
+        fields = [
+            "id",
+            "user",
+            "role",
+            "joined_at",
         ]
 
 class HouseMemberCreateSerializer(serializers.ModelSerializer):
@@ -92,7 +110,6 @@ class HouseMemberCreateSerializer(serializers.ModelSerializer):
         if HouseMember.objects.filter(
             user=user,
             house=house,
-            deleted_at__isnull=True
         ).exists():
             raise serializers.ValidationError(
                 "User is already a member of this house"

@@ -56,7 +56,7 @@ export default function EditHouseScreen({ route, navigation }) {
                 house_version: house.version,
             };
 
-            const res = await api.patch(`house/${house.id}/update/`, data);
+            const res = await api.patch(`house/${house.id}/`, data);
             apiLogSuccess(res);
 
             navigation.pop();
@@ -79,7 +79,8 @@ export default function EditHouseScreen({ route, navigation }) {
 
     const fetchHouse = async () => {
         try {
-            const res = await api.get(`house/${houseId}/`);
+            const res = await api.get(`house/${houseId}/details/`);
+            jsonLog(res.data);
             setHouse(res.data);
 
             setName(res.data.name);
@@ -106,13 +107,17 @@ export default function EditHouseScreen({ route, navigation }) {
 
         const fetchSuggestions = async () => {
             setLoadingSuggestions(true);
+            // TEMP: Disables suggestions (google places api needs renewign)
+            setLoadingSuggestions(false);
+            return null;
+            // TEMP END
             try {
                 const res = await api.get(
                     `/address-autocomplete/?q=${encodeURIComponent(address)}`
                 );
                 setSuggestions(res.data.predictions);
             } catch (err) {
-                console.log("Error fetching address suggestions:", err.response?.data || err.message);
+                console.log("Error fetching address suggestions:", err.response?.data);
             } finally {
                 setLoadingSuggestions(false);
             }
@@ -150,7 +155,7 @@ export default function EditHouseScreen({ route, navigation }) {
                             );
                             Alert.alert("Member removed successfully");
                         } catch (err) {
-                            Alert.alert("Error", err.response?.data?.error || err.message);
+                            Alert.alert("Error", err.response?.data?.error);
                         } finally {
                             fetchHouse();
                         }
@@ -166,14 +171,14 @@ export default function EditHouseScreen({ route, navigation }) {
                 style={styles.memberRow}
                 onLongPress={() => handleMemberOptions(item)}
             >
-                {item?.avatar && (
+                {item?.user?.avatar && (
                     <Image 
-                        source={{ uri: `${process.env.EXPO_PUBLIC_URL}${item.avatar}`  }}
+                        source={{ uri: `${process.env.EXPO_PUBLIC_URL}${item.user.avatar_image}`  }}
                         style={{ width: 32, height: 32, borderRadius: 50 }}
                     />
                 )}
                 <AppText>
-                    {item.name} • {ROLE_LABELS[item.role]}
+                    {item.user.name} • {ROLE_LABELS[item.role]}
                 </AppText>
             </Pressable>
 

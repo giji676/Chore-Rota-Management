@@ -65,7 +65,7 @@ export default function CreateHouseScreen({ navigation }) {
                 place_id: placeId,
                 max_members: parseInt(maxMembers) || 6,
             };
-            const res = await api.post("houses/create/", payload);
+            const res = await api.post("house/create/", payload);
             navigation.navigate("HouseDashboard", { house: res.data });
         } catch (err) {
             console.log("Error creating house:", err.response?.data || err.message);

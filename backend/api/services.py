@@ -1,8 +1,45 @@
+from django.core.exceptions import PermissionDenied
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 from django.db import transaction
 from .models import *
 
 class HouseService:
+    @transaction.atomic
+    def update_house(self, house, user, data):
+        """
+        Updates a house. Only owners can update.
+        """
+        # Check ownership
+        membership = house.memberships.filter(user=user).first()
+        if not membership or membership.role != "owner":
+            raise PermissionDenied("Only owners can update the house.")
+
+        # Password handling
+        if "password" in data:
+            house.set_password(data.pop("password"))
+
+        for attr, value in data.items():
+            setattr(house, attr, value)
+        house.version += 1
+        house.save()
+
+        return house
+
+    @transaction.atomic
+    def delete_house(self, house, user):
+        """
+        Soft delete a house. Only owners can delete.
+        """
+        membership = house.memberships.filter(user=user).first()
+        if not membership or membership.role != "owner":
+            raise PermissionDenied("Only owners can delete the house.")
+
+        house.deleted_at = timezone.now()
+        house.version += 1
+        house.save()
+        return house
+
     @transaction.atomic
     def create_house(self, data, user):
         """
@@ -31,7 +68,7 @@ class HouseService:
         Raises ValidationError on failure.
         """
         try:
-            house = House.objects.get(join_code=join_code, deleted_at__isnull=True)
+            house = House.objects.get(join_code=join_code)
         except House.DoesNotExist:
             raise ValidationError("Invalid join code.")
 

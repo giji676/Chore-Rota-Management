@@ -84,7 +84,7 @@ export default function HouseAccessScreen({ navigation }) {
 
     const fetchUserHouses = async () => {
         try {
-            const res = await api.get("houses/generic/");
+            const res = await api.get("house/generic/");
             setHouses(res.data);
         } catch (err) {
             console.log("Failed to fetch user houses:", err.response?.data.error);
@@ -100,7 +100,7 @@ export default function HouseAccessScreen({ navigation }) {
         }
 
         try {
-            const res = await api.post("houses/join/", { join_code: joinCode, password });
+            const res = await api.post("house/join/", { join_code: joinCode, password });
             navigation.navigate("HouseDashboard", { house: res.data });
         } catch (err) {
             setResult("Error: " + err.response?.data?.error);
