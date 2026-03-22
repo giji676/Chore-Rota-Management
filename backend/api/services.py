@@ -5,7 +5,6 @@ from django.db import transaction
 from .models import *
 
 class HouseService:
-    @transaction.atomic
     def update_house(self, house, user, data):
         """
         Updates a house. Only owners can update.
@@ -26,7 +25,6 @@ class HouseService:
 
         return house
 
-    @transaction.atomic
     def delete_house(self, house, user):
         """
         Soft delete a house. Only owners can delete.

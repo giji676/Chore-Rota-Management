@@ -64,7 +64,7 @@ class House(models.Model):
         )
 
     def set_password(self, raw_password):
-            self.password= make_password(raw_password)
+        self.password = make_password(raw_password)
 
     def check_password(self, raw_password):
         return check_password(raw_password, self.password)
