@@ -62,9 +62,12 @@ class HouseService:
         Joins a user to a house using join_code.
         Raises ValidationError on failure.
         """
+        print("joining")
         try:
             house = House.objects.get(join_code=join_code)
         except House.DoesNotExist:
+            err = ValidationError("Invalid join code.")
+            print(err)
             raise ValidationError("Invalid join code.")
 
         if house.password and not house.check_password(password):
@@ -74,7 +77,7 @@ class HouseService:
 
         return house
 
-    def remove__member(self, house, member_id, user):
+    def remove_member(self, house, member_id, user):
         """
         Removes a member from the house. Only owners can remove members.
         """
@@ -84,7 +87,6 @@ class HouseService:
         member = house.memberships.filter(id=member_id).first()
         if not member:
             raise ValidationError("Member not found in this house.")
-        member.deleted_at = timezone.now()
         member.save()
         return member
 

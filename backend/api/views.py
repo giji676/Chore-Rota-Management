@@ -9,14 +9,14 @@ from .models import House
 from .serializers import *
 from .services import HouseService
 
-# class HouseMemberView(APIView):
-#     permission_classes = [IsAuthenticated]
-#     def delete(self, request, house_id, member_id):
-#         house = get_object_or_404(House, id=house_id)
-#         service = HouseService()
-#         service.remove_member(house, member_id, request.user)
-#         return Response(status=status.HTTP_204_NO_CONTENT)
-#
+class HouseMemberView(APIView):
+    permission_classes = [IsAuthenticated]
+    def delete(self, request, house_id, member_id):
+        house = get_object_or_404(House, id=house_id)
+        service = HouseService()
+        service.remove_member(house, member_id, request.user)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 class HouseDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -30,9 +30,12 @@ class HouseJoinView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        print("serializing")
         serializer = HouseJoinSerializer(data=request.data)
+        print("validating")
         serializer.is_valid(raise_exception=True)
 
+        print("validated")
         join_code = serializer.validated_data["join_code"]
         password = serializer.validated_data.get("password")
 

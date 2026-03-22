@@ -18,6 +18,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useActionSheet } from "@expo/react-native-action-sheet";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import api from "../utils/api";
+import getErrorMessage from "../utils/errorHandler";
 import { apiLogError, apiLogSuccess, jsonLog } from "../utils/loggers";
 import { colors, spacing, typography } from "../theme";
 import AppText from "../components/AppText";
@@ -78,7 +79,7 @@ export default function HouseAccessScreen({ navigation }) {
             const res = await api.get("house/generic/");
             setHouses(res.data);
         } catch (err) {
-            console.log("Failed to fetch user houses:", err.response?.data.error);
+            setResult("Error: ", getErrorMessage(err));
         } finally {
             setLoading(false);
         }
@@ -94,7 +95,7 @@ export default function HouseAccessScreen({ navigation }) {
             const res = await api.post("house/join/", { join_code: joinCode, password });
             navigation.navigate("HouseDashboard", { house: res.data });
         } catch (err) {
-            setResult("Error: " + err.response?.data?.error);
+            setResult("Error: " + getErrorMessage(err));
         }
     };
 
@@ -127,7 +128,7 @@ export default function HouseAccessScreen({ navigation }) {
                                 {data: {house_version: house.version}});
                             Alert.alert("House deleted successfully");
                         } catch (err) {
-                            Alert.alert("Error", err.response?.data?.detail);
+                            Alert.alert("Error", getErrorMessage(err));
                         } finally {
                             fetchUserHouses();
                         }
