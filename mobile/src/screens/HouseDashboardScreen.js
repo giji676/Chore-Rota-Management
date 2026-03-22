@@ -174,7 +174,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
                             const res = await api.delete(`occurrences/${occ.id}/delete/`, {data: data});
                             Alert.alert("Chore deleted successfully");
                         } catch (err) {
-                            Alert.alert("Error", err.response?.data?.error || err.message);
+                            Alert.alert("Error", err.response?.data?.detail);
                         } finally {
                             fetchHouse();
                         }
@@ -192,7 +192,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
                             const res = await api.delete(`occurrences/${occ.id}/delete/`, {data: data});
                             Alert.alert("All chores deleted successfully");
                         } catch (err) {
-                            Alert.alert("Error", err.response?.data?.error || err.message);
+                            Alert.alert("Error", err.response?.data?.detail);
                         } finally {
                             fetchHouse();
                         }

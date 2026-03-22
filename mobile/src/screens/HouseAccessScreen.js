@@ -127,8 +127,7 @@ export default function HouseAccessScreen({ navigation }) {
                                 {data: {house_version: house.version}});
                             Alert.alert("House deleted successfully");
                         } catch (err) {
-                            apiLogError(err);
-                            Alert.alert("Error", err.response?.data?.error);
+                            Alert.alert("Error", err.response?.data?.detail);
                         } finally {
                             fetchUserHouses();
                         }

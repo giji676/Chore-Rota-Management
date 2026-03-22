@@ -46,7 +46,7 @@ class ResetPasswordView(APIView):
         try:
             validate_password(new_password)
         except ValueError as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         # Reset password
         user = token_obj.user
@@ -75,7 +75,7 @@ class SendResetPasswordEmailView(APIView):
             pass
 
         return Response(
-            {"error": "If an account with that email exists, a password reset email has been sent."},
+            {"detail": "If an account with that email exists, a password reset email has been sent."},
             status=status.HTTP_200_OK
         )
 
@@ -114,10 +114,10 @@ class ChangeEmailView(APIView):
     def post(self, request):
         new_email = request.data.get("email")
         if not new_email:
-            return Response({"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
         # Check if the new email is already taken
         if User.objects.filter(email=new_email).exists():
-            return Response({"error": "Email is already in use"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "Email is already in use"}, status=status.HTTP_400_BAD_REQUEST)
         user = request.user
         user.email = new_email
         user.is_verified = False  # Mark as unverified until they verify the new email
@@ -137,12 +137,12 @@ class ResendVerificationEmailView(APIView):
     def post(self, request):
         email = request.data.get("email")
         if not email:
-            return Response({"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
         try:
             user = User.objects.get(email=email)
             if user.is_verified:
                 return Response(
-                    {"error": "Email already verified. Please log in."},
+                    {"detail": "Email already verified. Please log in."},
                     status=status.HTTP_400_BAD_REQUEST
                 )
             else:
@@ -157,7 +157,7 @@ class ResendVerificationEmailView(APIView):
                 )
         except User.DoesNotExist:
             return Response(
-                {"error": "No account associated with this email."},
+                {"detail": "No account associated with this email."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -167,19 +167,19 @@ class VerifyEmailView(APIView):
     def get(self, request):
         token = request.GET.get("token")
         if not token:
-            return render(request, "verify_failed.html", {"error": "Token is required"})
+            return render(request, "verify_failed.html", {"detail": "Token is required"})
 
         try:
             user = User.objects.get(verification_token=token)
             if timezone.now() - user.verification_sent_at > timezone.timedelta(hours=24):
-                return render(request, "verify_failed.html", {"error": "Token has expired"})
+                return render(request, "verify_failed.html", {"detail": "Token has expired"})
             
             user.is_verified = True
             user.verification_token = None
             user.save()
             return render(request, "verify_success.html")
         except User.DoesNotExist:
-            return render(request, "verify_failed.html", {"error": "Invalid token"})
+            return render(request, "verify_failed.html", {"detail": "Invalid token"})
 
 class UserChangePasswordView(APIView):
     permission_classes = [IsAuthenticated]
@@ -191,6 +191,7 @@ class UserChangePasswordView(APIView):
         current_password = data.get("current_password")
         new_password = data.get("new_password")
 
+        # TODO: Figure out proper DRF standard for returning list of errors
         errors = {}
 
         if not current_password:
@@ -200,11 +201,11 @@ class UserChangePasswordView(APIView):
             errors["new"] = "New password is required"
 
         if errors:
-            return Response({"errors": errors}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": errors}, status=status.HTTP_400_BAD_REQUEST)
 
         if not user.check_password(current_password):
             return Response(
-                {"errors": {"current": "Wrong current password"}},
+                {"detail": {"current": "Wrong current password"}},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -212,7 +213,7 @@ class UserChangePasswordView(APIView):
             validate_password(new_password)
         except ValidationError as e:
             return Response(
-                {"errors": {"new": e.messages}},
+                {"detail": {"new": e.messages}},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -243,7 +244,7 @@ class UserView(APIView):
         if email and email != user.email:
             if User.objects.filter(email=email).exists():
                 return Response(
-                    {"error": "Email is already in use"},
+                    {"detail": "Email is already in use"},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
@@ -285,14 +286,14 @@ class LoginView(APIView):
 
         if not email or not password:
             return Response(
-                {"error": "Email and password are required"},
+                {"detail": "Email and password are required"},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
         user = authenticate(request, email=email, password=password)
         if not user:
             return Response(
-                {"error": "Invalid credentials"},
+                {"detail": "Invalid credentials"},
                 status=status.HTTP_401_UNAUTHORIZED
             )
 
@@ -310,7 +311,7 @@ class SavePushTokenView(APIView):
         token_value = request.data.get("token")
 
         if not token_value:
-            return Response({"error": "Token missing"}, status=400)
+            return Response({"detail": "Token missing"}, status=400)
 
         # Upsert based on (user, token)
         token_obj, created = PushToken.objects.update_or_create(
@@ -333,14 +334,14 @@ class RefreshTokenView(APIView):
     def post(self, request):
         refresh_token = request.data.get("refresh_token")
         if not refresh_token:
-            return Response({"error": "refresh_token is required"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "refresh_token is required"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             refresh = RefreshToken(refresh_token)
             return Response({"access_token": str(refresh.access_token),
                             "refresh_token": str(refresh)}, status=status.HTTP_200_OK)
         except TokenError as e:
-            return Response({"error": "Invalid refresh token"}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({"detail": "Invalid refresh token"}, status=status.HTTP_401_UNAUTHORIZED)
 
 class RegisterView(APIView):
     permission_classes = [AllowAny]
@@ -348,14 +349,14 @@ class RegisterView(APIView):
     def post(self, request):
         email = request.data.get("email")
         if not email:
-            return Response({"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
 
         # Check if user exists
         try:
             existing_user = User.objects.get(email=email)
             if existing_user.is_verified:
                 return Response(
-                    {"error": "Email already registered. Please log in."},
+                    {"detail": "Email already registered. Please log in."},
                     status=status.HTTP_400_BAD_REQUEST
                 )
             else:
@@ -380,6 +381,7 @@ class RegisterView(APIView):
                 "access_token": str(refresh.access_token),
                 "refresh_token": str(refresh)
             })
+        # TODO: Make sure returned error key is consistent with previous ones (detail)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class GuestView(APIView):
@@ -404,7 +406,7 @@ class GuestView(APIView):
                 )
             else:
                 return Response(
-                    {"error": "User not found and name not provided"},
+                    {"detail": "User not found and name not provided"},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 

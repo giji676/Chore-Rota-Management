@@ -154,7 +154,7 @@ export default function EditHouseScreen({ route, navigation }) {
                             );
                             Alert.alert("Member removed successfully");
                         } catch (err) {
-                            Alert.alert("Error", err.response?.data?.error);
+                            Alert.alert("Error", err.response?.data?.detail);
                         } finally {
                             fetchHouse();
                         }

@@ -1,5 +1,5 @@
-from django.core.exceptions import PermissionDenied
-from django.core.exceptions import ValidationError
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import ValidationError
 from django.utils import timezone
 from django.db import transaction
 from .models import *
@@ -33,9 +33,7 @@ class HouseService:
         if not membership or membership.role != "owner":
             raise PermissionDenied("Only owners can delete the house.")
 
-        house.deleted_at = timezone.now()
-        house.version += 1
-        house.save()
+        house.delete()
         return house
 
     @transaction.atomic
@@ -76,6 +74,20 @@ class HouseService:
         house.add_member(user)
 
         return house
+
+    def remove__member(self, house, member_id, user):
+        """
+        Removes a member from the house. Only owners can remove members.
+        """
+        member = house.memberships.filter(user=user).first()
+        if not member or member.role != "owner":
+            raise PermissionDenied("Only owners can remove members.")
+        member = house.memberships.filter(id=member_id).first()
+        if not member:
+            raise ValidationError("Member not found in this house.")
+        member.deleted_at = timezone.now()
+        member.save()
+        return member
 
 class ChoreManagementService:
     def create_chore(self, data, user):
