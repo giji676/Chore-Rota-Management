@@ -13,6 +13,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 
 import api from "../utils/api";
+import getErrorMessage from "../utils/errorHandler";
 import { useActionSheet } from "@expo/react-native-action-sheet";
 import { jsonLog, apiLogSuccess, apiLogError } from "../utils/loggers";
 
@@ -61,7 +62,7 @@ export default function EditHouseScreen({ route, navigation }) {
             navigation.pop();
         } catch (err) {
             apiLogError(err);
-            Alert.alert("Error", "Failed to save house");
+            Alert.alert("Error", getErrorMessage(err));
         }
     };
 
@@ -79,7 +80,6 @@ export default function EditHouseScreen({ route, navigation }) {
     const fetchHouse = async () => {
         try {
             const res = await api.get(`house/${houseId}/details/`);
-            jsonLog(res.data);
             setHouse(res.data);
 
             setName(res.data.name);
@@ -244,8 +244,7 @@ export default function EditHouseScreen({ route, navigation }) {
                     );
                     fetchHouse();
                 } catch (err) {
-                    apiLogError(err);
-                    Alert.alert("Error", "Failed to update role");
+                    Alert.alert("Error", getErrorMessage(err));
                 }
             }
         );

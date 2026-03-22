@@ -1,10 +1,36 @@
-from rest_framework.exceptions import PermissionDenied
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from django.utils import timezone
 from django.db import transaction
 from .models import *
 
+# TODO: Check for conflicts!!
+# TODO: Check if deleted_at__isnull is necessary for .filter
+
 class HouseService:
+    def _check_owner(self, house, user):
+        membership = house.memberships.filter(
+            user=user,
+            deleted_at__isnull=True
+        ).first()
+
+        if not membership or membership.role != "owner":
+            raise PermissionDenied("Only owners can perform this action.")
+
+        return membership
+
+    def _get_member(self, house, member_id):
+        member = house.memberships.filter(
+            id=member_id,
+            deleted_at__isnull=True
+        ).first()
+
+        if not member:
+            raise ValidationError({
+                "member_id": ["Member not found in this house."]
+            })
+
+        return member
+
     def update_house(self, house, user, data):
         """
         Updates a house. Only owners can update.
@@ -62,12 +88,9 @@ class HouseService:
         Joins a user to a house using join_code.
         Raises ValidationError on failure.
         """
-        print("joining")
         try:
             house = House.objects.get(join_code=join_code)
         except House.DoesNotExist:
-            err = ValidationError("Invalid join code.")
-            print(err)
             raise ValidationError("Invalid join code.")
 
         if house.password and not house.check_password(password):
@@ -81,13 +104,23 @@ class HouseService:
         """
         Removes a member from the house. Only owners can remove members.
         """
-        member = house.memberships.filter(user=user).first()
-        if not member or member.role != "owner":
-            raise PermissionDenied("Only owners can remove members.")
-        member = house.memberships.filter(id=member_id).first()
-        if not member:
-            raise ValidationError("Member not found in this house.")
+        self._check_owner(house, user)
+        member = self._get_member(house, member_id)
+
+        member.delete()
+        return member
+
+
+    def update_member(self, house, member_id, role, user):
+        """
+        Update user role. Only owners can change role.
+        """
+        self._check_owner(house, user)
+        member = self._get_member(house, member_id)
+
+        member.role = role
         member.save()
+
         return member
 
 class ChoreManagementService:

@@ -6,7 +6,6 @@ from accounts.serializers import UserSerializer
 
 User = get_user_model()
 
-
 class HouseJoinSerializer(serializers.Serializer):
     join_code = serializers.CharField(max_length=8)
     password = serializers.CharField(required=False, write_only=True)
@@ -104,6 +103,9 @@ class HouseReadSerializer(serializers.ModelSerializer):
         members = HouseMember.objects.filter(house=obj)
         return HouseMemberReadSerializer(members, many=True).data
 
+class HouseMemberUpdateSerializer(serializers.Serializer):
+    role = serializers.ChoiceField(choices=HouseMember.ROLE_CHOICES)
+
 class HouseMemberReadSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     class Meta:
@@ -116,6 +118,7 @@ class HouseMemberReadSerializer(serializers.ModelSerializer):
         ]
 
 class HouseMemberCreateSerializer(serializers.ModelSerializer):
+    role = serializers.ChoiceField(choices=HouseMember.ROLE_CHOICES)
     class Meta:
         model = HouseMember
         fields = [
