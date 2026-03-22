@@ -42,9 +42,8 @@ class HouseAdmin(admin.ModelAdmin):
     deleted_at_display.short_description = "Deleted?"
 
     def get_queryset(self, request):
-        # start from default manager
-        qs = super().get_queryset(request)
-        return qs
+        # Use all_objects manager to include soft-deleted items
+        return self.model.all_objects.get_queryset()
 
 @admin.register(HouseMember)
 class HouseMemberAdmin(admin.ModelAdmin):
@@ -58,9 +57,7 @@ class HouseMemberAdmin(admin.ModelAdmin):
     deleted_at_display.short_description = "Deleted?"
 
     def get_queryset(self, request):
-        # start from default manager
-        qs = super().get_queryset(request)
-        return qs
+        return self.model.all_objects.get_queryset()
 
 @admin.register(Chore)
 class ChoreAdmin(admin.ModelAdmin):
@@ -93,9 +90,7 @@ class ChoreScheduleAdmin(admin.ModelAdmin):
     deleted_at_display.short_description = "Deleted?"
 
     def get_queryset(self, request):
-        # start from default manager
-        qs = super().get_queryset(request)
-        return qs
+        return self.model.all_objects.get_queryset()
 
 @admin.register(ChoreOccurrence)
 class ChoreOccurrenceAdmin(admin.ModelAdmin):
@@ -123,9 +118,7 @@ class ChoreOccurrenceAdmin(admin.ModelAdmin):
     deleted_at_display.short_description = "Deleted?"
 
     def get_queryset(self, request):
-        # start from default manager
-        qs = super().get_queryset(request)
-        return qs
+        return self.model.all_objects.get_queryset()
 
 @admin.register(MemberAssignmentRule)
 class MemberAssignmentRuleAdmin(admin.ModelAdmin):
@@ -137,10 +130,7 @@ class MemberAssignmentRuleAdmin(admin.ModelAdmin):
     )
 
     def get_queryset(self, request):
-        # start from default manager
-        qs = super().get_queryset(request)
-        return qs
-
+        return self.model.all_objects.get_queryset()
 
 @admin.register(RotationMember)
 class RotationMemberAdmin(admin.ModelAdmin):
