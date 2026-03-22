@@ -20,7 +20,6 @@ class HouseService:
 
         for attr, value in data.items():
             setattr(house, attr, value)
-        house.version += 1
         house.save()
 
         return house

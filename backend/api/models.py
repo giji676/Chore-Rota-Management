@@ -19,7 +19,37 @@ class ActiveManager(models.Manager):
     def get_queryset(self):
         return super().get_queryset().filter(deleted_at__isnull=True)
 
-class House(models.Model):
+class SoftDeleteModel(models.Model):
+    deleted_at = models.DateTimeField(null=True, blank=True)
+    version = models.IntegerField(default=0)
+
+    objects = ActiveManager()
+    all_objects = models.Manager()
+
+    class Meta:
+        abstract = True
+        base_manager_name = "all_objects"
+
+    def save(self, *args, **kwargs):
+        # Only increment version if object already exists
+        if self.pk:
+            self.version += 1
+        super().save(*args, **kwargs)
+
+    def delete(self, using=None, keep_parents=False, force=False):
+        """Soft delete unless force=True."""
+        if force:
+            return super().delete(using=using, keep_parents=keep_parents)
+
+        self.deleted_at = timezone.now()
+        self.save(update_fields=["deleted_at", "version"])
+
+    def restore(self):
+        """Restore a soft-deleted object."""
+        self.deleted_at = None
+        self.save(update_fields=["deleted_at", "version"])
+
+class House(SoftDeleteModel):
     name = models.CharField(max_length=100)
     address = models.CharField(
         max_length=255,
@@ -34,17 +64,12 @@ class House(models.Model):
     join_code = models.CharField(max_length=8, unique=True, default=generate_join_code)
     password = models.CharField(max_length=128)
     max_members = models.PositiveIntegerField(default=6)
-    deleted_at = models.DateTimeField(null=True, blank=True)
-    version = models.IntegerField(default=0)
     users = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
         through="HouseMember",
         related_name="houses"
     )
 
-    objects = ActiveManager()
-    all_objects = models.Manager()
-    
     def add_member(self, user, role="member"):
         if HouseMember.objects.filter(
             house=self,
@@ -72,7 +97,7 @@ class House(models.Model):
     def __str__(self):
         return self.name
 
-class HouseMember(models.Model):
+class HouseMember(SoftDeleteModel):
     ROLE_CHOICES = [
         ("owner", "Owner"),
         ("member", "Member"),
@@ -90,11 +115,6 @@ class HouseMember(models.Model):
     )
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default="member")
     joined_at = models.DateTimeField(auto_now_add=True)
-    deleted_at = models.DateTimeField(null=True, blank=True)
-    version = models.IntegerField(default=0)
-
-    objects = ActiveManager()
-    all_objects = models.Manager()
 
     class Meta:
         unique_together = ("user", "house")
@@ -102,21 +122,16 @@ class HouseMember(models.Model):
     def __str__(self):
         return f"{self.user.name} in {self.house.name}"
 
-class Chore(models.Model):
+class Chore(SoftDeleteModel):
     house = models.ForeignKey(House, on_delete=models.CASCADE, related_name="chores")
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True)
     color = models.CharField(max_length=7, validators=[HEX_COLOR_VALIDATOR], default="#3498db")
-    deleted_at = models.DateTimeField(null=True, blank=True)
-    version = models.IntegerField(default=0)
-
-    objects = ActiveManager()        # default: only active
-    all_objects = models.Manager()   # raw access to everything
 
     def __str__(self):
         return f"{self.name} ({self.house.name})"
 
-class ChoreSchedule(models.Model):
+class ChoreSchedule(SoftDeleteModel):
     chore = models.ForeignKey(
         Chore,
         on_delete=models.CASCADE,
@@ -136,12 +151,6 @@ class ChoreSchedule(models.Model):
     constraints = models.JSONField(default=dict, blank=True)
     end_date = models.DateTimeField(null=True, blank=True)
 
-    deleted_at = models.DateTimeField(null=True, blank=True)
-    version = models.IntegerField(default=0)
-
-    objects = ActiveManager()
-    all_objects = models.Manager()
-
     class Meta:
         indexes = [
             models.Index(fields=["start_date"]),
@@ -152,7 +161,7 @@ class ChoreSchedule(models.Model):
         return (f"{self.chore.name} starting at {self.start_date} "
             f"every {self.repeat_interval} {self.repeat_unit} until {self.end_date}")
 
-class ChoreOccurrence(models.Model):
+class ChoreOccurrence(SoftDeleteModel):
     schedule = models.ForeignKey(
         ChoreSchedule,
         on_delete=models.CASCADE,
@@ -169,12 +178,6 @@ class ChoreOccurrence(models.Model):
     completed_at = models.DateTimeField(null=True, blank=True)
     skipped_at = models.DateTimeField(null=True, blank=True)
     notification_sent_at = models.DateTimeField(null=True, blank=True)
-
-    deleted_at = models.DateTimeField(null=True, blank=True)
-    version = models.IntegerField(default=0)
-
-    objects = ActiveManager()
-    all_objects = models.Manager()
 
     class Meta:
         indexes = [
@@ -197,7 +200,7 @@ class ChoreOccurrence(models.Model):
         return (f"{self.schedule.chore.name} "
                 f"on {self.due_date}")
 
-class MemberAssignmentRule(models.Model):
+class MemberAssignmentRule(SoftDeleteModel):
     schedule = models.OneToOneField(
         ChoreSchedule,
         on_delete=models.CASCADE,
@@ -215,7 +218,7 @@ class MemberAssignmentRule(models.Model):
     def __str__(self):
         return f"{self.schedule} with type: {self.rule_type}"
 
-class RotationMember(models.Model):
+class RotationMember(SoftDeleteModel):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
