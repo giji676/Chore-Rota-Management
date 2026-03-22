@@ -56,8 +56,7 @@ export default function EditHouseScreen({ route, navigation }) {
                 house_version: house.version,
             };
 
-            const res = await api.patch(`house/${house.id}/`, data);
-            apiLogSuccess(res);
+            const res = await api.patch(`house/${house.id}/update/`, data);
 
             navigation.pop();
         } catch (err) {

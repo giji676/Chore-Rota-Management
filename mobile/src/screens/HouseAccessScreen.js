@@ -25,6 +25,8 @@ import AppTextInput from "../components/AppTextInput";
 import AppButton from "../components/AppButton";
 import BottomSheet from "../components/BottomSheet";
 
+// TODO: House list not updating after coming back from edit screen
+
 export default function HouseAccessScreen({ navigation }) {
     const { showActionSheetWithOptions } = useActionSheet();
     const insets = useSafeAreaInsets();
@@ -66,17 +68,6 @@ export default function HouseAccessScreen({ navigation }) {
             }
         );
     };
-
-    useEffect(() => {
-        const fetchUser = async () => {
-            try {
-                await api.get("accounts/user/");
-            } catch (err) {
-                apiLogError(err);
-            }
-        }
-        // fetchUser();
-    }, []);
 
     useEffect(() => {
         fetchUserHouses();
