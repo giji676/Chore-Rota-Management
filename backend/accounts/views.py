@@ -75,7 +75,7 @@ class SendResetPasswordEmailView(APIView):
             pass
 
         return Response(
-            {"detail": "If an account with that email exists, a password reset email has been sent."},
+            {"error": "If an account with that email exists, a password reset email has been sent."},
             status=status.HTTP_200_OK
         )
 
@@ -158,7 +158,7 @@ class ResendVerificationEmailView(APIView):
         except User.DoesNotExist:
             return Response(
                 {"error": "No account associated with this email."},
-                status=status.HTTP_404_NOT_FOUND
+                status=status.HTTP_400_BAD_REQUEST
             )
 
 class VerifyEmailView(APIView):
@@ -340,7 +340,7 @@ class RefreshTokenView(APIView):
             return Response({"access_token": str(refresh.access_token),
                             "refresh_token": str(refresh)}, status=status.HTTP_200_OK)
         except TokenError as e:
-            return Response({"error": "Invalid refresh token", "details": str(e)}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({"error": "Invalid refresh token"}, status=status.HTTP_401_UNAUTHORIZED)
 
 class RegisterView(APIView):
     permission_classes = [AllowAny]
@@ -404,7 +404,7 @@ class GuestView(APIView):
                 )
             else:
                 return Response(
-                    {"detail": "User not found and name not provided"},
+                    {"error": "User not found and name not provided"},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 

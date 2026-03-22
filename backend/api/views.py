@@ -33,7 +33,7 @@ class HouseJoinView(APIView):
         try:
             house = service.join_house(request.user, join_code, password)
         except ValidationError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         response_serializer = HouseReadSerializer(house)
         return Response(response_serializer.data, status=status.HTTP_200_OK)
@@ -64,7 +64,7 @@ class HouseView(APIView):
         try:
             updated_house = service.update_house(house, request.user, serializer.validated_data)
         except PermissionDenied as e:
-            return Response({"detail": str(e)}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"error": str(e)}, status=status.HTTP_403_FORBIDDEN)
 
         response_serializer = HouseReadSerializer(updated_house)
         return Response(response_serializer.data)
@@ -76,7 +76,7 @@ class HouseView(APIView):
         try:
             service.delete_house(house, request.user)
         except PermissionDenied as e:
-            return Response({"detail": str(e)}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"error": str(e)}, status=status.HTTP_403_FORBIDDEN)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 

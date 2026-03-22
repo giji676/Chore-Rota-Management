@@ -8,4 +8,5 @@ urlpatterns = [
     path("house/generic/", views.HouseListGenericView.as_view(), name="house-list-generic"),
     path("house/<int:id>/details/", views.HouseDetailView.as_view(), name="house-details"),
     path("house/<int:id>/update/", views.HouseView.as_view(), name="house-update"),
+    path("house/<int:id>/delete/", views.HouseView.as_view(), name="house-delete"),
 ]
