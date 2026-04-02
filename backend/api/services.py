@@ -8,6 +8,7 @@ from .serializers import *
 # TODO: Check if deleted_at__isnull is necessary for .filter
 
 class ChoreService:
+    @transaction.atomic
     def create_chore(self, house, data, user):
         """
         Create a chore and its nested models.
