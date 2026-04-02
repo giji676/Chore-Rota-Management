@@ -2,9 +2,55 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from django.utils import timezone
 from django.db import transaction
 from .models import *
+from .serializers import *
 
 # TODO: Check for conflicts!!
 # TODO: Check if deleted_at__isnull is necessary for .filter
+
+class ChoreService:
+    def create_chore(self, house, data, user):
+        """
+        Create a chore and its nested models.
+        """
+        schedule_data = data.pop("schedule")
+        assignment_data = schedule_data.pop("assignment")
+        rotation_members_data = assignment_data.pop("rotation_members", [])
+
+        # 1. Chore
+        chore_serializer = ChoreSerializer(data=data)
+        chore_serializer.is_valid(raise_exception=True)
+        chore = Chore.objects.create(
+            house=house,
+            **chore_serializer.validated_data
+        )
+
+        # 2. Schedule
+        schedule_serializer = ScheduleSerializer(data=schedule_data)
+        schedule_serializer.is_valid(raise_exception=True)
+        schedule = ChoreSchedule.objects.create(
+            chore=chore,
+            **schedule_serializer.validated_data
+        )
+
+        # 3. Assignment Rule (OneToOne)
+        assignment_serializer = MemberAssignmentRuleSerializer(data=assignment_data)
+        assignment_serializer.is_valid(raise_exception=True)
+        assignment = MemberAssignmentRule.objects.create(
+            schedule=schedule,
+            **assignment_serializer.validated_data
+        )
+
+        # 4. Rotation Members
+        for member_data in rotation_members_data:
+            member_serializer = RotationMemberSerializer(data=member_data)
+            member_serializer.is_valid(raise_exception=True)
+
+            RotationMember.objects.create(
+                assignment_rule=assignment,
+                **member_serializer.validated_data
+            )
+
+        return chore
 
 class HouseService:
     def _check_owner(self, house, user):
@@ -95,9 +141,7 @@ class HouseService:
 
         if house.password and not house.check_password(password):
             raise ValidationError("Incorrect password.")
-
         house.add_member(user)
-
         return house
 
     def remove_member(self, house, member_id, user):
@@ -106,10 +150,8 @@ class HouseService:
         """
         self._check_owner(house, user)
         member = self._get_member(house, member_id)
-
         member.delete()
         return member
-
 
     def update_member(self, house, member_id, role, user):
         """
@@ -117,10 +159,8 @@ class HouseService:
         """
         self._check_owner(house, user)
         member = self._get_member(house, member_id)
-
         member.role = role
         member.save()
-
         return member
 
 class ChoreManagementService:

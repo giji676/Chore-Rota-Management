@@ -9,4 +9,6 @@ urlpatterns = [
     path("house/<int:id>/update/", views.HouseView.as_view(), name="house-update"),
     path("house/<int:id>/delete/", views.HouseView.as_view(), name="house-delete"),
     path("house/<int:house_id>/member/<int:member_id>/update/", views.HouseMemberView.as_view(), name="house-member-update"),
+
+    path("chore/create/<int:house_id>/", views.CreateChoreView.as_view(), name="chore-create"),
 ]

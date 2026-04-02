@@ -6,6 +6,32 @@ from accounts.serializers import UserSerializer
 
 User = get_user_model()
 
+class ChoreSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Chore
+        fields = ["name", "description", "color"]
+
+class ScheduleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ChoreSchedule
+        fields = [
+            "start_date",
+            "end_date",
+            "repeat_unit",
+            "repeat_interval",
+            "constraints"
+        ]
+
+class MemberAssignmentRuleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MemberAssignmentRule
+        fields = ["rule_type", "rotation_offset"]
+
+class RotationMemberSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RotationMember
+        fields = ["user", "position"]
+
 class HouseJoinSerializer(serializers.Serializer):
     join_code = serializers.CharField(max_length=8)
     password = serializers.CharField(required=False, write_only=True)

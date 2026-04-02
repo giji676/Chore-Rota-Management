@@ -1,13 +1,28 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework import status
 from rest_framework.generics import ListAPIView
 from django.shortcuts import get_object_or_404
 
 from .models import House
 from .serializers import *
-from .services import HouseService
+from .services import HouseService, ChoreService
+
+class CreateChoreView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request, house_id):
+        house = get_object_or_404(House.objects, id=house_id)
+        service = ChoreService()
+        chore = service.create_chore(
+            house=house,
+            data=request.data,
+            user=request.user
+        )
+        response_serializer = ChoreSerializer(chore)
+        # TEMP: Update response with generated occurences?
+        return Response({"chore": "created"}, status=status.HTTP_201_CREATED)
 
 class HouseMemberView(APIView):
     permission_classes = [IsAuthenticated]

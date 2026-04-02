@@ -4,7 +4,7 @@ from django.db import models
 from django.utils import timezone
 from django.conf import settings
 from django.contrib.auth.hashers import make_password, check_password
-from django.core.exceptions import ValidationError
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from django.core.validators import RegexValidator
 
 HEX_COLOR_VALIDATOR = RegexValidator(
