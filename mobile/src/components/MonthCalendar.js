@@ -75,7 +75,7 @@ export default function MonthCalendar({
 
         for (let i = 0; i < emptyBefore; i++) days.push(null);
         for (let d = 1; d <= last.getDate(); d++) {
-            days.push(new Date(year, month, d));
+            days.push(`${year}-${String(month+1).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
         }
 
         return days;
@@ -107,7 +107,7 @@ export default function MonthCalendar({
     const selectedRowIndex = useMemo(() => {
         return rows.findIndex(week =>
             week.some(
-                date => date && date.toISOString().split("T")[0] === selectedDay
+                date => date && date === selectedDay
             )
         );
     }, [rows, selectedDay]);
@@ -298,10 +298,11 @@ export default function MonthCalendar({
                                 }
                             }}
                         >
-                            {week.map((date, colIndex) => {
-                                if (!date) return <View key={colIndex} style={styles.dayCell} />;
+                            {week.map((raw_date, colIndex) => {
+                                if (!raw_date) return <View key={colIndex} style={styles.dayCell} />;
 
-                                const key = date.toISOString().split("T")[0];
+                                const date = new Date(raw_date);
+                                const key = raw_date
                                 const occs = occByDate[key] || [];
                                 const isSelected = key === selectedDay;
                                 const isToday = key === new Date().toISOString().split("T")[0];

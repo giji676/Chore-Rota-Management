@@ -66,6 +66,9 @@ export default function HouseDashboardScreen({ navigation, route }) {
     const [repeatDelta, setRepeatDelta] = useState({days: 7});
     const [newCompleted, setNewCompleted] = useState();
 
+    // TEMP:
+    const [update, setUpdate] = useState();
+
     const [selectedOcc, setSelectedOcc] = useState();
     const [choreFilter, setChoreFilter] = useState("all"); 
     // const currentUserId = route.params?.userId;
@@ -247,8 +250,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
 
         return house.occurrences.filter(
             occ => occ.user.id === currentUserId
-        );
-    }, [house, choreFilter, currentUserId]);
+        ); }, [house, choreFilter, currentUserId]);
 
     const occurrencesByDate = useMemo(() => {
         const map = {};
@@ -374,6 +376,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
         const res = await api.get("chore/occurrences/37/?from=" + from_date.toISOString().split('T')[0] + "&to=" + to_date.toISOString().split('T')[0]);
         // console.log(res.data);
         setHouse({occurrences: res.data});
+        setUpdate(prev => !prev);
     };
 
     return (
