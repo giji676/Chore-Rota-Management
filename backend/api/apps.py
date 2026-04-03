@@ -6,5 +6,7 @@ class ApiConfig(AppConfig):
     name = 'api'
 
     def ready(self):
+        # TODO: fix
+        pass
         import api.tasks
         import api.signals

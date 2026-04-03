@@ -6,6 +6,42 @@ from accounts.serializers import UserSerializer
 
 User = get_user_model()
 
+class OccurrenceReaderSerializer(serializers.ModelSerializer):
+    chore = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ChoreOccurrence
+        fields = [
+            "id",
+            "schedule",
+            "chore",
+            "original_due_date",
+            "due_date",
+            "assigned_user",
+            "completed_at",
+            "skipped_at",
+            "notification_sent_at",
+            "version",
+        ]
+
+    def get_chore(self, obj):
+        return ChoreSerializer(obj.schedule.chore).data
+
+class OccurrenceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ChoreOccurrence
+        fields = [
+            "id",
+            "schedule",
+            "original_due_date",
+            "due_date",
+            "assigned_user",
+            "completed_at",
+            "skipped_at",
+            "notification_sent_at",
+            "version",
+        ]
+
 class ChoreSerializer(serializers.ModelSerializer):
     class Meta:
         model = Chore

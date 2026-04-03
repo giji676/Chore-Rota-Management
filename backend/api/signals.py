@@ -3,6 +3,7 @@ from django.dispatch import receiver
 from .models import ChoreSchedule, ChoreOccurrence
 from .helpers.occurrence_utils import generate_occurrences_for_schedule, generate_next_occurrence_after
 
+"""
 @receiver(pre_save, sender=ChoreOccurrence)
 def chore_occurrence_pre_save(sender, instance, **kwargs):
     # store whether it was completed previously
@@ -33,3 +34,5 @@ def chore_occurrence_post_save(sender, instance, created, **kwargs):
 def schedule_post_save(sender, instance, created, **kwargs):
     if created and not instance.deleted_at:
         generate_occurrences_for_schedule(instance)
+
+"""

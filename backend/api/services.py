@@ -1,11 +1,111 @@
 from rest_framework.exceptions import PermissionDenied, ValidationError
+import datetime
+from dateutil.relativedelta import relativedelta
 from django.utils import timezone
 from django.db import transaction
 from .models import *
 from .serializers import *
+import time
 
 # TODO: Check for conflicts!!
 # TODO: Check if deleted_at__isnull is necessary for .filter
+
+def timeit(func):
+    def myinner(*args, **kwargs):
+        start_time = time.time()
+        res = func(*args, **kwargs)
+        end_time = time.time()
+        print("time:", end_time - start_time)
+        return res
+    return myinner
+
+class OccurrenceService:
+    def get_occurrences(self, house, from_date, to_date):
+        """
+        Get any already generated/saved occurences,
+        and generate the rest without saving them
+        """
+        saved = self._get_saved_occurrences(house, from_date, to_date)
+        generated = self._generate_occurrences(house, saved, from_date, to_date)
+        return saved + generated
+
+    def _get_saved_occurrences(self, house, from_date, to_date):
+        return list(ChoreOccurrence.objects.filter(
+            schedule__chore__house=house,
+            due_date__date__range=(from_date, to_date),
+        ))
+
+    def _make_aware_safe(self, dt):
+        if timezone.is_naive(dt):
+            return timezone.make_aware(dt)
+        return dt
+
+    @timeit
+    def _generate_occurrences(self, house, saved, from_date, to_date):
+        saved_dates = {occ.original_due_date for occ in saved}
+        from_date = self._make_aware_safe(datetime.datetime.fromisoformat(from_date))
+        to_date = self._make_aware_safe(datetime.datetime.fromisoformat(to_date))
+        schedules = (
+            ChoreSchedule.objects
+            .filter(
+                chore__house=house,
+                start_date__lte=to_date
+            )
+            .select_related("chore")
+            .prefetch_related("assignment_rule__rotation_members")
+        )
+        occurrences = []
+        for schedule in schedules:
+            repeat_multipler = None
+            match(schedule.repeat_unit.lower()):
+                case "day":
+                    repeat_multipler = 1
+                case "week":
+                    repeat_multipler = 7
+                case "month":
+                    repeat_multipler = 31
+                case "year":
+                    repeat_multipler = 356
+
+            delta_days = (from_date - schedule.start_date).days
+            step_days = repeat_multipler * schedule.repeat_interval
+
+            offset = max(0, delta_days // step_days)
+            max_iterations = 1000  # safety cap
+
+            while offset < max_iterations:
+                if schedule.repeat_unit == "month":
+                    due_date = schedule.start_date + relativedelta(months=offset * schedule.repeat_interval)
+                elif schedule.repeat_unit == "year":
+                    due_date = schedule.start_date + relativedelta(years=offset * schedule.repeat_interval)
+                else:
+                    due_date = schedule.start_date + datetime.timedelta(days=step_days * offset)
+
+                if (schedule.end_date and due_date > schedule.end_date) or due_date > to_date:
+                    break
+
+                offset += 1
+
+                if due_date in saved_dates:
+                    print(due_date)
+                    continue
+
+                rule = getattr(schedule, "assignment_rule", None)
+                if not rule:
+                    continue
+
+                rot_member = rule.rotation_members.first()
+                if not rot_member:
+                    continue
+
+                occurrence = ChoreOccurrence(
+                    schedule=schedule,
+                    due_date=due_date,
+                    original_due_date=due_date,
+                    assigned_user=rot_member.user
+                ) # Not saved to database without .objects.create || .save
+                occurrences.append(occurrence)
+        return occurrences
 
 class ChoreService:
     @transaction.atomic

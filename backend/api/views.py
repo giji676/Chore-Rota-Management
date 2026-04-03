@@ -7,10 +7,22 @@ from django.shortcuts import get_object_or_404
 
 from .models import House
 from .serializers import *
-from .services import HouseService, ChoreService
+from .services import HouseService, ChoreService, OccurrenceService
+
+class GetOccurrencesView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, house_id):
+        house = get_object_or_404(House.objects, id=house_id)
+        from_date = request.GET.get("from")
+        to_date = request.GET.get("to")
+        service = OccurrenceService()
+        occurrences = service.get_occurrences(house=house, from_date=from_date, to_date=to_date)
+        occurrence_serializer = OccurrenceReaderSerializer(occurrences, many=True)
+        return Response(occurrence_serializer.data, status=status.HTTP_200_OK)
 
 class CreateChoreView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request, house_id):
         house = get_object_or_404(House.objects, id=house_id)

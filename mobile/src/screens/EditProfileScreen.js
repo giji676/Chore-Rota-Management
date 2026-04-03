@@ -17,6 +17,9 @@ import AppTextInput from "../components/AppTextInput";
 import AppButton from "../components/AppButton";
 import EditHeader from "../components/EditHeader";
 
+// TODO: After profile change -> going back to profile screen, back button dissapears
+// so the user is stuck on profile screen
+
 const PROFILE_COLORS = [
     "#FF6B6B", // red
     "#4ECDC4", // teal

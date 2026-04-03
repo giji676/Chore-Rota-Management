@@ -29,6 +29,8 @@ import { colors, spacing, typography } from "../theme";
 import AppText from "../components/AppText";
 import AppButton from "../components/AppButton";
 
+const DEFAULT_COLOR = "#ff0000";
+
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
         shouldShowBanner: true,
@@ -340,6 +342,40 @@ export default function HouseDashboardScreen({ navigation, route }) {
         setExpandedOccId(prev => (prev === occId ? null : occId));
     };
 
+    const handleTest = async () => {
+        const data = { 
+            "name": "chore_name",
+            "description": "chore_description",
+            "color": "#aabbcc",
+            "schedule": {
+                "start_date": "2026-03-30T12:30",
+                "repeat_unit": "day",
+                "repeat_interval": 1,
+                "assignment": {
+                    "rule_type": "fixed",
+                    "rotation_offset": 0,
+                    "rotation_members": [{
+                        "user": 32,
+                        "position": 0
+                    }]
+                }
+            }
+        }
+        const res = await api.post("chore/create/37/", data);
+        console.log(res.data);
+    };
+
+    const handleTest2 = async () => {
+        const from_date = new Date();
+        from_date.setDate(from_date.getDate() - 15);
+        const to_date = new Date();
+        to_date.setDate(to_date.getDate() + 15);
+
+        const res = await api.get("chore/occurrences/37/?from=" + from_date.toISOString().split('T')[0] + "&to=" + to_date.toISOString().split('T')[0]);
+        // console.log(res.data);
+        setHouse({occurrences: res.data});
+    };
+
     return (
         <View 
             {...panResponder.panHandlers}
@@ -432,7 +468,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
                                         }}>
                                             <AppText style={styles.choreName}>{occ.chore.name}</AppText>
                                             <AppText>-</AppText>
-                                            <AppText>{occ.user.name}</AppText>
+                                            <AppText>{occ.assigned_user}</AppText>
                                         </View>
                                         <AppText style={styles.dateText}>
                                             {new Date(occ.due_date).toLocaleString("en-GB", {
@@ -466,10 +502,22 @@ export default function HouseDashboardScreen({ navigation, route }) {
             <View style={[styles.createBtnView, { marginBottom: insets.bottom }]}>
                 <Pressable 
                     style={styles.createBtn}
-                    onPress={() => navigation.navigate("EditChore", { house })}
+                    // onPress={() => navigation.navigate("EditChore", { house })}
+                    onPress={handleTest}
                 >
                     <FontAwesome5
                         name="plus"
+                        size={24}
+                        color="white"
+                    />
+                </Pressable>
+                <Pressable 
+                    style={styles.createBtn}
+                    // onPress={() => navigation.navigate("EditChore", { house })}
+                    onPress={handleTest2}
+                >
+                    <FontAwesome5
+                        name="minus"
                         size={24}
                         color="white"
                     />
