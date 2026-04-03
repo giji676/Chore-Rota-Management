@@ -1,6 +1,6 @@
 from typing import Protocol
 from api.exceptions import Conflict
-
+import time
 
 class VersionedModel(Protocol):
     version: int
@@ -27,3 +27,13 @@ def check_version(
 
     if obj.version != client_version:
         raise Conflict(f"{name} has been modified.")
+
+def timeit(func):
+    def myinner(*args, **kwargs):
+        start_time = time.time()
+        res = func(*args, **kwargs)
+        run_time = time.time() - start_time
+        print(f"{func.__name__} run time: {run_time}")
+        return res
+    return myinner
+

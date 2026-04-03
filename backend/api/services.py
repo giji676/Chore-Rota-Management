@@ -5,19 +5,10 @@ from django.utils import timezone
 from django.db import transaction
 from .models import *
 from .serializers import *
-import time
+from .helpers.generic_utils import timeit
 
 # TODO: Check for conflicts!!
 # TODO: Check if deleted_at__isnull is necessary for .filter
-
-def timeit(func):
-    def myinner(*args, **kwargs):
-        start_time = time.time()
-        res = func(*args, **kwargs)
-        end_time = time.time()
-        print("time:", end_time - start_time)
-        return res
-    return myinner
 
 class OccurrenceService:
     def get_occurrences(self, house, from_date, to_date):
