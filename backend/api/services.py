@@ -63,6 +63,7 @@ class OccurrenceService:
         occurrences = []
         for schedule in schedules:
             start_date = schedule.start_date.date()
+            end_date = schedule.end_date.date() if schedule.end_date else None
             repeat_multipler = None
             match(schedule.repeat_unit.lower()):
                 case "day":
@@ -90,9 +91,8 @@ class OccurrenceService:
                 else:
                     due_date = start_date + datetime.timedelta(days=step_days * offset)
 
-                if due_date > to_date:
-                    break
-
+                if due_date > to_date: break
+                if end_date and due_date > end_date: break
                 if due_date < from_date:
                     offset += 1
                     continue

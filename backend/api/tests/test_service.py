@@ -88,10 +88,26 @@ class TestOccurrenceService(TestCase):
             from_date=from_date,
             to_date=to_date)
 
-        # [print(occ.due_date) for occ in occurrences]
-
         self.assertNotEqual(occurrences, [])
         self.assertEqual(len(occurrences), range_length+1) # +1 for inclusive end date
+        for occ in occurrences:
+            self.assertFalse(occ.due_date < from_date_raw)
+            self.assertFalse(occ.due_date > to_date_raw)
+
+    def test_occurrences_with_end_date(self):
+        self.schedule.end_date = self.schedule.start_date + dt.timedelta(days=5)
+        self.schedule.save()
+        range_length = 9
+        from_date_raw = self.schedule.start_date
+        to_date_raw = self.schedule.start_date + dt.timedelta(days=range_length)
+        from_date = from_date_raw.date().isoformat()
+        to_date = to_date_raw.date().isoformat()
+        occurrences = self.service.get_occurrences(
+            house=self.house,
+            from_date=from_date,
+            to_date=to_date)
+        self.assertNotEqual(occurrences, [])
+        self.assertEqual(len(occurrences), 6) # 5 days + start date
         for occ in occurrences:
             self.assertFalse(occ.due_date < from_date_raw)
             self.assertFalse(occ.due_date > to_date_raw)
