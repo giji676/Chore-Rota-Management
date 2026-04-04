@@ -269,16 +269,42 @@ export default function HouseDashboardScreen({ navigation, route }) {
         : [];
 
     const goToPrevMonth = () => {
-        setCurrentMonth(
-            (prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1)
+        setCurrentMonth(prev =>
+            new Date(prev.getFullYear(), prev.getMonth() - 1, 1)
         );
     };
 
     const goToNextMonth = () => {
-        setCurrentMonth(
-            (prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1)
+        setCurrentMonth(prev =>
+            new Date(prev.getFullYear(), prev.getMonth() + 1, 1)
         );
     };
+
+    const fetchOccurrences = async (date) => {
+        const yyyy = date.getFullYear();
+        const mm = (date.getMonth() + 1).toString().padStart(2, "0");
+
+        const start_dd = "01";
+        const end_dd = new Date(
+            date.getFullYear(),
+            date.getMonth() + 1,
+            0
+        ).getDate().toString().padStart(2, "0");
+
+        const from_date = `${yyyy}-${mm}-${start_dd}`;
+        const to_date = `${yyyy}-${mm}-${end_dd}`;
+
+        const res = await api.get(
+            `chore/occurrences/37/?from=${from_date}&to=${to_date}`
+        );
+
+        setHouse({ occurrences: res.data });
+        setUpdate(prev => !prev);
+    };
+
+    useEffect(() => {
+        fetchOccurrences(currentMonth);
+    }, [currentMonth]);
 
     const handleOccurrenceLongPress = (occ) => {
         const options = ["Edit Chore", "Delete", "Cancel"];
@@ -365,22 +391,6 @@ export default function HouseDashboardScreen({ navigation, route }) {
         }
         const res = await api.post("chore/create/37/", data);
         console.log(res.data);
-    };
-
-    const handleTest2 = async () => {
-        const date = new Date();
-
-        const yyyy = date.getFullYear();
-        const mm = (date.getMonth() + 1).toString().padStart(2, "0");
-        const start_dd = "01";
-        const end_dd = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate().toString().padStart(2, "0");
-
-        const from_date = `${yyyy}-${mm}-${start_dd}`;
-        const to_date = `${yyyy}-${mm}-${end_dd}`;
-
-        const res = await api.get(`chore/occurrences/37/?from=${from_date}&to=${to_date}`);
-        setHouse({occurrences: res.data});
-        setUpdate(prev => !prev);
     };
 
     return (
@@ -514,17 +524,6 @@ export default function HouseDashboardScreen({ navigation, route }) {
                 >
                     <FontAwesome5
                         name="plus"
-                        size={24}
-                        color="white"
-                    />
-                </Pressable>
-                <Pressable 
-                    style={styles.createBtn}
-                    // onPress={() => navigation.navigate("EditChore", { house })}
-                    onPress={handleTest2}
-                >
-                    <FontAwesome5
-                        name="minus"
                         size={24}
                         color="white"
                     />
