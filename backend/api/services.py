@@ -1,5 +1,6 @@
 from rest_framework.exceptions import PermissionDenied, ValidationError
 import datetime
+import math
 from dateutil.relativedelta import relativedelta
 from django.utils import timezone
 from django.db import transaction
@@ -9,6 +10,17 @@ from .helpers.generic_utils import timeit
 
 # TODO: Check for conflicts!!
 # TODO: Check if deleted_at__isnull is necessary for .filter
+
+"""
+Make naive datetimes timezone aware,
+using the current timezone.
+If already aware, return as is.
+"""
+def make_aware_safe(dt):
+    if timezone.is_naive(dt):
+        return timezone.make_aware(dt)
+    return dt
+
 
 class OccurrenceService:
     def get_occurrences(self, house, from_date, to_date):
@@ -21,21 +33,24 @@ class OccurrenceService:
         return saved + generated
 
     def _get_saved_occurrences(self, house, from_date, to_date):
+        """ Get a list of already saved occurrences for a house within a date range """
+        from_date = datetime.date.fromisoformat(from_date)
+        to_date = datetime.date.fromisoformat(to_date)
         return list(ChoreOccurrence.objects.filter(
             schedule__chore__house=house,
             due_date__date__range=(from_date, to_date),
         ))
 
-    def _make_aware_safe(self, dt):
-        if timezone.is_naive(dt):
-            return timezone.make_aware(dt)
-        return dt
-
     @timeit
     def _generate_occurrences(self, house, saved, from_date, to_date):
-        saved_dates = {occ.original_due_date for occ in saved}
-        from_date = self._make_aware_safe(datetime.datetime.fromisoformat(from_date))
-        to_date = self._make_aware_safe(datetime.datetime.fromisoformat(to_date))
+        """
+        Generate occurrences for all schedules in the house,
+        within a date range, excluding already saved occurrences.
+        Does not save generated occurrences to the database.
+        """
+        saved_dates = {occ.original_due_date.date() for occ in saved}
+        from_date = datetime.date.fromisoformat(from_date)
+        to_date = datetime.date.fromisoformat(to_date)
         schedules = (
             ChoreSchedule.objects
             .filter(
@@ -47,6 +62,7 @@ class OccurrenceService:
         )
         occurrences = []
         for schedule in schedules:
+            start_date = schedule.start_date.date()
             repeat_multipler = None
             match(schedule.repeat_unit.lower()):
                 case "day":
@@ -56,29 +72,34 @@ class OccurrenceService:
                 case "month":
                     repeat_multipler = 31
                 case "year":
-                    repeat_multipler = 356
+                    repeat_multipler = 365
 
-            delta_days = (from_date - schedule.start_date).days
+            delta_days = (from_date - start_date).days
             step_days = repeat_multipler * schedule.repeat_interval
 
-            offset = max(0, delta_days // step_days)
+            offset = max(0, math.ceil(delta_days / step_days))
             max_iterations = 1000  # safety cap
 
             while offset < max_iterations:
                 if schedule.repeat_unit == "month":
-                    due_date = schedule.start_date + relativedelta(months=offset * schedule.repeat_interval)
+                    due_date = start_date + relativedelta(
+                        months=offset * schedule.repeat_interval)
                 elif schedule.repeat_unit == "year":
-                    due_date = schedule.start_date + relativedelta(years=offset * schedule.repeat_interval)
+                    due_date = start_date + relativedelta(
+                        years=offset * schedule.repeat_interval)
                 else:
-                    due_date = schedule.start_date + datetime.timedelta(days=step_days * offset)
+                    due_date = start_date + datetime.timedelta(days=step_days * offset)
 
-                if (schedule.end_date and due_date > schedule.end_date) or due_date > to_date:
+                if due_date > to_date:
                     break
+
+                if due_date < from_date:
+                    offset += 1
+                    continue
 
                 offset += 1
 
                 if due_date in saved_dates:
-                    print(due_date)
                     continue
 
                 rule = getattr(schedule, "assignment_rule", None)
@@ -89,10 +110,14 @@ class OccurrenceService:
                 if not rot_member:
                     continue
 
+                due_datetime = datetime.datetime.combine(
+                    due_date,
+                    schedule.start_date.timetz()  # preserves time + tz
+                )
                 occurrence = ChoreOccurrence(
                     schedule=schedule,
-                    due_date=due_date,
-                    original_due_date=due_date,
+                    due_date=due_datetime,
+                    original_due_date=due_datetime,
                     assigned_user=rot_member.user
                 ) # Not saved to database without .objects.create || .save
                 occurrences.append(occurrence)

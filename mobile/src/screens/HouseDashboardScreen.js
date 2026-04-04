@@ -105,7 +105,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
     useEffect(() => {
         if (!house) return;
         fetchHouse();
-        setupWebSocket();
+        // setupWebSocket();
     }, []);
 
     useEffect(() => {
@@ -368,13 +368,17 @@ export default function HouseDashboardScreen({ navigation, route }) {
     };
 
     const handleTest2 = async () => {
-        const from_date = new Date();
-        from_date.setDate(from_date.getDate() - 15);
-        const to_date = new Date();
-        to_date.setDate(to_date.getDate() + 15);
+        const date = new Date();
 
-        const res = await api.get("chore/occurrences/37/?from=" + from_date.toISOString().split('T')[0] + "&to=" + to_date.toISOString().split('T')[0]);
-        // console.log(res.data);
+        const yyyy = date.getFullYear();
+        const mm = (date.getMonth() + 1).toString().padStart(2, "0");
+        const start_dd = "01";
+        const end_dd = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate().toString().padStart(2, "0");
+
+        const from_date = `${yyyy}-${mm}-${start_dd}`;
+        const to_date = `${yyyy}-${mm}-${end_dd}`;
+
+        const res = await api.get(`chore/occurrences/37/?from=${from_date}&to=${to_date}`);
         setHouse({occurrences: res.data});
         setUpdate(prev => !prev);
     };
