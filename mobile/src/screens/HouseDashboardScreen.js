@@ -300,7 +300,6 @@ export default function HouseDashboardScreen({ navigation, route }) {
         const res = await api.get(
             `chore/occurrences/37/?from=${from_date}&to=${to_date}`
         );
-        jsonLog(res.data);
 
         setHouse({ occurrences: res.data });
         setUpdate(prev => !prev);
@@ -308,6 +307,25 @@ export default function HouseDashboardScreen({ navigation, route }) {
 
     useEffect(() => {
         fetchOccurrences(currentMonth);
+    }, [currentMonth]);
+
+    useEffect(() => {
+        const today = new Date();
+        const isCurrentMonth = 
+            currentMonth.getFullYear() === today.getFullYear() &&
+            currentMonth.getMonth() === today.getMonth();
+        
+        if (isCurrentMonth) {
+            // Current month: select today
+            setDisplayDayKey(today.toISOString().split("T")[0]);
+        } else {
+            // Other months: select 1st of the month
+            const firstDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+            const year = firstDay.getFullYear();
+            const month = String(firstDay.getMonth() + 1).padStart(2, '0');
+            const day = String(firstDay.getDate()).padStart(2, '0');
+            setDisplayDayKey(`${year}-${month}-${day}`);
+        }
     }, [currentMonth]);
 
     const handleOccurrenceLongPress = (occ) => {

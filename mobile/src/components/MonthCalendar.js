@@ -39,10 +39,6 @@ export default function MonthCalendar({
     });
     const currentDate = new Date().getDate();
 
-    useEffect(() => {
-        onDayPress(currentMonth.toISOString().split("T")[0]);
-    }, [currentMonth]);
-
     /* HORIZONTAL SWIPE HANDLER */
     const panResponder = useRef(
         PanResponder.create({
