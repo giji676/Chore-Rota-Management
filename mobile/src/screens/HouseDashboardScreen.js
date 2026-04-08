@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 
 import api from '../utils/api';
+import { useAuth } from '../auth/useAuth';
 import socketUrl from '../utils/webSocketBase';
 import { apiLogSuccess, apiLogError, jsonLog } from "../utils/loggers";
 import MonthCalendar from "../components/MonthCalendar";
@@ -40,6 +41,7 @@ Notifications.setNotificationHandler({
 });
 
 export default function HouseDashboardScreen({ navigation, route }) {
+    const { user } = useAuth();
     const { showActionSheetWithOptions } = useActionSheet();
     const insets = useSafeAreaInsets();
 
@@ -71,8 +73,6 @@ export default function HouseDashboardScreen({ navigation, route }) {
 
     const [selectedOcc, setSelectedOcc] = useState();
     const [choreFilter, setChoreFilter] = useState("all"); 
-    // const currentUserId = route.params?.userId;
-    const currentUserId = 15;
 
     const [occurrenceEditModalVisible, setOccurrenceEditModalVisible] = useState(false);
 
@@ -249,8 +249,8 @@ export default function HouseDashboardScreen({ navigation, route }) {
         }
 
         return house.occurrences.filter(
-            occ => occ.user.id === currentUserId
-        ); }, [house, choreFilter, currentUserId]);
+            occ => occ.assigned_user.id === user.id
+        ); }, [house, choreFilter]);
 
     const occurrencesByDate = useMemo(() => {
         const map = {};
@@ -280,6 +280,9 @@ export default function HouseDashboardScreen({ navigation, route }) {
         );
     };
 
+    // TODO: Fetch from prev month to next month?
+    // and on month change fetch the nest/previous
+    // so buffer of 1 month is kept locally
     const fetchOccurrences = async (date) => {
         const yyyy = date.getFullYear();
         const mm = (date.getMonth() + 1).toString().padStart(2, "0");
@@ -297,6 +300,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
         const res = await api.get(
             `chore/occurrences/37/?from=${from_date}&to=${to_date}`
         );
+        jsonLog(res.data);
 
         setHouse({ occurrences: res.data });
         setUpdate(prev => !prev);
@@ -485,7 +489,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
                                         }}>
                                             <AppText style={styles.choreName}>{occ.chore.name}</AppText>
                                             <AppText>-</AppText>
-                                            <AppText>{occ.assigned_user}</AppText>
+                                            <AppText>{occ.assigned_user.name}</AppText>
                                         </View>
                                         <AppText style={styles.dateText}>
                                             {new Date(occ.due_date).toLocaleString("en-GB", {

@@ -41,7 +41,7 @@ class OccurrenceService:
             due_date__date__range=(from_date, to_date),
         ))
 
-    @timeit
+    # @timeit
     def _generate_occurrences(self, house, saved, from_date, to_date):
         """
         Generate occurrences for all schedules in the house,

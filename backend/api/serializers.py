@@ -6,8 +6,14 @@ from accounts.serializers import UserSerializer
 
 User = get_user_model()
 
+class OccurrenceUserReaderSerualizer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["id", "name", "avatar_image"]
+
 class OccurrenceReaderSerializer(serializers.ModelSerializer):
     chore = serializers.SerializerMethodField()
+    assigned_user = OccurrenceUserReaderSerualizer(read_only=True)
 
     class Meta:
         model = ChoreOccurrence
