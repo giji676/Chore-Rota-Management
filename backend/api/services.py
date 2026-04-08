@@ -48,7 +48,10 @@ class OccurrenceService:
         within a date range, excluding already saved occurrences.
         Does not save generated occurrences to the database.
         """
-        saved_dates = {occ.original_due_date.date() for occ in saved}
+        saved_keys = {
+            (occ.schedule_id, occ.original_due_date.date())
+            for occ in saved
+        }
         from_date = datetime.date.fromisoformat(from_date)
         to_date = datetime.date.fromisoformat(to_date)
         schedules = (
@@ -99,7 +102,7 @@ class OccurrenceService:
 
                 offset += 1
 
-                if due_date in saved_dates:
+                if (schedule.id, due_date) in saved_keys:
                     continue
 
                 rule = getattr(schedule, "assignment_rule", None)
@@ -120,6 +123,13 @@ class OccurrenceService:
                     original_due_date=due_datetime,
                     assigned_user=rot_member.user
                 ) # Not saved to database without .objects.create || .save
+                """
+                As these objects aren't saved to db, they don't get ids
+                so temp_id is set manually. Handeled by serializer in
+                to_representation funciton. Which sets the id to temp_id
+                if id not present
+                """
+                occurrence.temp_id = f"{schedule.id}-{due_date.isoformat()}"
                 occurrences.append(occurrence)
         return occurrences
 

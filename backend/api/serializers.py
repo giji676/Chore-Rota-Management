@@ -33,6 +33,16 @@ class OccurrenceReaderSerializer(serializers.ModelSerializer):
     def get_chore(self, obj):
         return ChoreSerializer(obj.schedule.chore).data
 
+    def to_representation(self, instance):
+        """
+        Overrides inherited fn.
+        If id is not present (incase of in memory generated/not seved to db)
+        objects, with temp_id.
+        """
+        data = super().to_representation(instance)
+        data["id"] = instance.id or getattr(instance, "temp_id", None)
+        return data
+
 class OccurrenceSerializer(serializers.ModelSerializer):
     class Meta:
         model = ChoreOccurrence
