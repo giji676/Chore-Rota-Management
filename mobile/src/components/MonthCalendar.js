@@ -1,20 +1,15 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
     View,
-    Text,
     StyleSheet,
     TouchableOpacity,
-    ScrollView,
     PanResponder,
     Animated,
-    Easing,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
-import { jsonLog } from "../utils/loggers";
 import { colors, spacing, typography } from "../theme";
 import AppText from "../components/AppText";
-import AppButton from "../components/AppButton";
 
 const DEFAULT_COLOR = "#3498db";
 const SWIPE_THRESHOLD = 50;
@@ -37,7 +32,6 @@ export default function MonthCalendar({
         month: "long",
         year: "numeric",
     });
-    const currentDate = new Date().getDate();
 
     /* HORIZONTAL SWIPE HANDLER */
     const panResponder = useRef(

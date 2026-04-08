@@ -3,16 +3,10 @@ import {
     Pressable,
     Alert,
     View,
-    Text,
-    Button,
     StyleSheet,
-    Modal,
     PanResponder,
-    Animated,
     LayoutAnimation,
 } from 'react-native';
-import WheelPicker from "react-native-wheel-scrollview-picker";
-import { Picker } from '@react-native-picker/picker';
 import * as Notifications from 'expo-notifications';
 import { registerForPushNotificationsAsync, configureAndroidChannel } from '../utils/notifications';
 import { useActionSheet } from "@expo/react-native-action-sheet";
@@ -28,7 +22,6 @@ import CheckBox from "../components/CheckBox";
 
 import { colors, spacing, typography } from "../theme";
 import AppText from "../components/AppText";
-import AppButton from "../components/AppButton";
 
 const DEFAULT_COLOR = "#ff0000";
 
@@ -45,45 +38,15 @@ export default function HouseDashboardScreen({ navigation, route }) {
     const { showActionSheetWithOptions } = useActionSheet();
     const insets = useSafeAreaInsets();
 
-    const presetColors = [
-        "#ff0000", "#00ff00", "#0000ff",
-        "#ffff00", "#ff00ff", "#00ffff",
-        "#000000", "#ffffff", "#ffa500",
-        "#7600bc", "#a0a0a0", "#1f7d53"
-    ];
-
     const [house, setHouse] = useState(route.params.house);
     const [displayDayKey, setDisplayDayKey] = useState(new Date().toISOString().split("T")[0]);
-    const [newChoreName, setNewChoreName] = useState('');
-    const [newChoreDescription, setNewChoreDescription] = useState('');
-    const [newChoreColor, setNewChoreColor] = useState(presetColors[0]);
 
-    const [assignModalVisible, setAssignModalVisible] = useState(false);
-    const [selectedDay, setSelectedDay] = useState('mon');
-    const [selectedHour, setSelectedHour] = useState(12);
-    const [selectedMinute, setSelectedMinute] = useState(30);
-    const [selectedMember, setSelectedMember] = useState('');
-    const [selectedChore, setSelectedChore] = useState();
-    const [selectedDate, setSelectedDate] = useState(new Date());
-    const [repeatDelta, setRepeatDelta] = useState({days: 7});
-    const [newCompleted, setNewCompleted] = useState();
-
-    // TEMP:
-    const [update, setUpdate] = useState();
-
-    const [selectedOcc, setSelectedOcc] = useState();
     const [choreFilter, setChoreFilter] = useState("all"); 
-
-    const [occurrenceEditModalVisible, setOccurrenceEditModalVisible] = useState(false);
-
     const [expandedOccId, setExpandedOccId] = useState(null);
 
     const [currentMonth, setCurrentMonth] = useState(
         new Date(new Date().getFullYear(), new Date().getMonth(), 1)
     );
-
-    const hours = [...Array(24).keys()].map(n => n.toString().padStart(2, "0"));
-    const minutes = [...Array(60).keys()].map(n => n.toString().padStart(2, "0"));
 
     const socketRef = useRef();
 
@@ -107,13 +70,6 @@ export default function HouseDashboardScreen({ navigation, route }) {
         fetchHouse();
         // setupWebSocket();
     }, []);
-
-    useEffect(() => {
-        if (assignModalVisible && house) {
-            if (!selectedChore && house.chores.length > 0) setSelectedChore(house.chores[0].id);
-            if (!selectedMember && house.members.length > 0) setSelectedMember(house.members[0].id);
-        }
-    }, [assignModalVisible, house]);
 
     const setupWebSocket = () => {
         const socket = new WebSocket(socketUrl(`/ws/house/${house.id}/`));
@@ -205,40 +161,6 @@ export default function HouseDashboardScreen({ navigation, route }) {
                 }
             ]
         );
-    };
-
-    // TODO: Check selectedDate is being set correctly?
-    // TODO: Move to EditChoreScreen
-    const handleEditOccurrence = async (occ) => {
-        const schedule = house.schedules.find(s => s.id === occ.schedule);
-        const data = {
-            house_id: house.id,
-            chore_id: occ.chore.id,
-            schedule_id: occ.schedule,
-            occurrence_id: occ.id,
-            assignee_id: selectedMember.id,
-
-            house_version: house.version,
-            chore_version: occ.chore.version,
-            schedule_version: schedule.version,
-            occurrence_version: occ.version,
-
-            chore_name: newChoreName,
-            chore_description: newChoreDescription,
-            chore_color: newChoreColor,
-            chore_color: newChoreColor,
-
-            repeat_delta: repeatDelta,
-            start_date: selectedDate.toISOString(),
-        }
-        try {
-            const res = await api.post("chores/occurrence/update/", data);
-            fetchHouse();
-            setOccurrenceEditModalVisible(false);
-            // apiLogSuccess(res);
-        } catch (err) {
-            apiLogError(err);
-        }
     };
 
     const filteredOccurrences = useMemo(() => {
