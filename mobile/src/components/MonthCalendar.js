@@ -322,7 +322,7 @@ export default function MonthCalendar({
                                                     styles.choreBar,
                                                     {
                                                         backgroundColor: occ.chore?.color || DEFAULT_COLOR,
-                                                        opacity: occ.completed ? 0.4 : 1,
+                                                        opacity: occ.completed_at ? 0.4 : 1,
                                                     },
                                                 ]}
                                             />

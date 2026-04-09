@@ -96,11 +96,11 @@ class ChoreScheduleAdmin(admin.ModelAdmin):
 class ChoreOccurrenceAdmin(admin.ModelAdmin):
     list_display = (
         "id",
-        "schedule",
-        "assigned_user",
-        "original_due_date",
-        "due_date",
         "completed_at",
+        "due_date",
+        "assigned_user",
+        "schedule",
+        "original_due_date",
         "skipped_at",
         "notification_sent_at",
         "deleted_at",

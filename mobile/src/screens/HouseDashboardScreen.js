@@ -110,10 +110,11 @@ export default function HouseDashboardScreen({ navigation, route }) {
     };
 
     const handleCheckOccurrence = async (occ) => {
-        await api.patch(`occurrences/${occ.id}/update/`, {
-            "occurrence_version": occ.version,
-            completed: !occ.completed 
-        });
+        // TODO: change to use completed_at?
+        // await api.patch(`occurrences/${occ.id}/update/`, {
+        //     "occurrence_version": occ.version,
+        //     completed: !occ.completed 
+        // });
         fetchHouse();
     };
 
@@ -222,6 +223,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
         const res = await api.get(
             `chore/occurrences/37/?from=${from_date}&to=${to_date}`
         );
+        // jsonLog(res.data);
 
         setHouse({ occurrences: res.data });
         setUpdate(prev => !prev);
@@ -275,11 +277,11 @@ export default function HouseDashboardScreen({ navigation, route }) {
         if (!displayDay) return [];
 
         const uncompleted = displayDay
-        .filter(occ => !occ.completed)
+        .filter(occ => !occ.completed_at)
         .sort((a, b) => getDueTime(a) - getDueTime(b));
 
         const completed = displayDay
-        .filter(occ => occ.completed)
+        .filter(occ => occ.completed_at)
         .sort((a, b) => getDueTime(a) - getDueTime(b));
 
         return [...uncompleted, ...completed];
@@ -416,7 +418,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
                                             styles.choreBar,
                                             {
                                                 backgroundColor: occ.chore?.color || DEFAULT_COLOR,
-                                                opacity: occ.completed ? 0.4 : 1,
+                                                opacity: occ.completed_at ? 0.4 : 1,
                                             },
                                         ]}
                                     >
@@ -440,7 +442,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
                                     </View>
                                     <CheckBox
                                         onPress={() => handleCheckOccurrence(occ)}
-                                        checked={occ.completed}
+                                        checked={occ.completed_at}
                                         style={{ marginLeft: "auto" }}
                                     />
                                 </View>

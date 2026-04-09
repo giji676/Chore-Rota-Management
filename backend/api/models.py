@@ -159,7 +159,7 @@ class ChoreSchedule(SoftDeleteModel):
 
     def __str__(self):
         return (f"{self.chore.name} starting at {self.start_date} "
-            f"every {self.repeat_interval} {self.repeat_unit} until {self.end_date}")
+            f"every {self.repeat_interval} {self.repeat_unit}")
 
 class ChoreOccurrence(SoftDeleteModel):
     schedule = models.ForeignKey(
