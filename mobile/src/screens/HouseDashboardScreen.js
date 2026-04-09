@@ -33,14 +33,13 @@ Notifications.setNotificationHandler({
     }),
 });
 
-// TODO: Fix house so it gets passed in, and update all references to use id (fetchOccurrences)
-
 export default function HouseDashboardScreen({ navigation, route }) {
     const { user } = useAuth();
     const { showActionSheetWithOptions } = useActionSheet();
     const insets = useSafeAreaInsets();
 
     const [house, setHouse] = useState(route.params.house);
+    const [occurrences, setOccurrences] = useState();
     const [displayDayKey, setDisplayDayKey] = useState(new Date().toISOString().split("T")[0]);
 
     const [choreFilter, setChoreFilter] = useState("all"); 
@@ -158,15 +157,15 @@ export default function HouseDashboardScreen({ navigation, route }) {
     };
 
     const filteredOccurrences = useMemo(() => {
-        if (!house?.occurrences) return [];
+        if (!occurrences) return [];
 
         if (choreFilter === "all") {
-            return house.occurrences;
+            return occurrences;
         }
 
-        return house.occurrences.filter(
+        return occurrences.filter(
             occ => occ.assigned_user.id === user.id
-        ); }, [house, choreFilter]);
+        ); }, [occurrences, choreFilter]);
 
     const occurrencesByDate = useMemo(() => {
         const map = {};
@@ -214,11 +213,10 @@ export default function HouseDashboardScreen({ navigation, route }) {
         const to_date = `${yyyy}-${mm}-${end_dd}`;
 
         const res = await api.get(
-            `chore/occurrences/37/?from=${from_date}&to=${to_date}`
+            `chore/occurrences/${house.id}/?from=${from_date}&to=${to_date}`
         );
-        // jsonLog(res.data);
 
-        setHouse({ occurrences: res.data });
+        setOccurrences(res.data);
         setUpdate(prev => !prev);
     };
 
@@ -228,7 +226,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
 
     const handleCheckOccurrence = async (occ) => {
         try {
-            const res = await api.patch(`chore/occurrence/${37}/update/`, {
+            const res = await api.patch(`chore/occurrence/${house.id}/update/`, {
                 id: occ.id,
                 is_temp: occ.is_temp,
                 schedule: occ.schedule,
