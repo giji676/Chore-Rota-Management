@@ -6,7 +6,6 @@ import {
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { useActionSheet } from "@expo/react-native-action-sheet";
 
 import DayPicker from "../components/modals/DayPicker";
 import TimePicker from "../components/modals/TimePicker";
@@ -20,8 +19,9 @@ import AppText from "../components/AppText";
 import AppTextInput from "../components/AppTextInput";
 import AppButton from "../components/AppButton";
 
+// TODO: Cancel/done on Day/Time Pickers do nothing, value always gets set
+
 export default function EditChoreScreen({ route, navigation }) {
-    const { showActionSheetWithOptions } = useActionSheet();
     const { house, occurrence} = route.params; // occurrence will be undefined for create
     const chore = occurrence?.chore || null;
 
@@ -40,46 +40,59 @@ export default function EditChoreScreen({ route, navigation }) {
         fontFamily: typography.body.fontFamily,
     };
 
-    const repeatDeltaPresets = {
-        "Don't repeat": {},
-        "Every day": { days: 1 },
-        "Every week": { days: 7 },
-        "Every 2 weeks": { days: 14 },
-        "Every month": { months: 1 },
+    const repeatPresets = {
+        "Don't repeat": { unit: null, interval: null },
+        "Every day": { unit: "day", interval: 1 },
+        "Every week": { unit: "week", interval: 1 },
+        "Every 2 weeks": { unit: "week", interval: 2 },
+        "Every month": { unit: "month", interval: 1 },
         Custom: "custom",
     };
 
     const [choreName, setChoreName] = useState(chore?.name || "");
     const [choreDescription, setChoreDescription] = useState(chore?.description || "");
     const [choreColor, setChoreColor] = useState(chore?.color || presetColors[0]);
-    const [repeatDelta, setRepeatDelta] = useState(occurrence?.repeat_delta || { days: 7 });
+    const [repeatUnit, setRepeatUnit] = useState(occurrence?.repeat_unit || "day");
+    const [repeatInterval, setRepeatInterval] = useState(occurrence?.repeat_interval || 1);
     const [selectedDate, setSelectedDate] = useState(
         occurrence ? new Date(occurrence.due_date) : new Date());
-    const [selectedMember, setSelectedMember] = useState(occurrence?.assignee || house.members[0]);
+    const [selectedMember, setSelectedMember] = useState(occurrence?.assigened_user || house.members[0]);
 
     const [repeatDeltaLabel, setRepeatDeltaLabel] = useState();
     const [customNum, setCustomNum] = useState("1");
     const [customUnit, setCustomUnit] = useState("day");
     const [pickerMode, setPickerMode] = useState(null);
     const [activeFeature, setActiveFeature] = useState(null); 
-    const [showCustomPicker, setShowCustomPicker] = useState(false);
 
+    // TODO: frontend required field validation
+    // TODO: Error display popup
     const handleSave = async () => {
         const data = {
-            house_id: house.id,
-            chore_name: choreName,
-            chore_description: choreDescription,
-            chore_color: choreColor,
-            assignee_id: selectedMember.id,
-            repeat_delta: repeatDelta,
-            start_date: selectedDate.toISOString(),
+            name: choreName,
+            description: choreDescription,
+            color: choreColor,
+            schedule: {
+                start_date: selectedDate.toISOString(),
+                repeat_unit: repeatUnit,
+                repeat_interval: repeatInterval,
+                assignment: {
+                    rule_type: "fixed",
+                    rotation_offset: 0,
+                    rotation_members: [{
+                        user: selectedMember.user.id,
+                        position: 0
+                        }
+                    ]
+                }
+            }
         };
+
         try {
-            const res = await api.post("chores/schedule/create/", data);
+            // TODO: Success popup window
+            await api.post(`chore/create/${house.id}/`, data);
             navigation.pop();
         } catch (err) {
             apiLogError(err);
-        } finally {
         }
     };
 
@@ -95,74 +108,39 @@ export default function EditChoreScreen({ route, navigation }) {
     }, [navigation, handleSave]);
 
     useEffect(() => {
-        const label = findRepeatPresetKey(repeatDelta, repeatDeltaPresets);
+        const label = findRepeatPresetKey(
+            { unit: repeatUnit, interval: repeatInterval },
+            repeatPresets
+        );
+
         setRepeatDeltaLabel(label);
 
         if (label === "Custom") {
-            deriveCustomFromRepeatDelta(repeatDelta);
+            setCustomNum(String(repeatInterval || 1));
+            setCustomUnit(repeatUnit || "day");
         }
-    }, [repeatDelta]);
+    }, [repeatUnit, repeatInterval]);
 
     const findRepeatPresetKey = (value, presets) => {
         for (const [label, preset] of Object.entries(presets)) {
             if (preset === "custom") continue;
-            if (deepEqual(preset, value)) return label;
+            if (
+                preset.unit === value.unit &&
+                preset.interval === value.interval
+            ) return label;
         }
         return "Custom";
-    }
-
-    const deepEqual = (a, b) => {
-        const aKeys = Object.keys(a);
-        const bKeys = Object.keys(b);
-        if (aKeys.length !== bKeys.length) return false;
-
-        return aKeys.every(
-            key => b.hasOwnProperty(key) && a[key] === b[key]
-        );
-    }
-
-    const deriveCustomFromRepeatDelta = (delta) => {
-        if (!delta || Object.keys(delta).length === 0) {
-            setCustomNum("1");
-            setCustomUnit("day");
-            return;
-        }
-
-        if (delta.days != null) {
-            const days = delta.days;
-
-            if (days % 7 === 0) {
-                setCustomUnit("week");
-                setCustomNum(String(days / 7));
-            } else {
-                setCustomUnit("day");
-                setCustomNum(String(days));
-            }
-            return;
-        }
-
-        if (delta.months != null) {
-            setCustomUnit("month");
-            setCustomNum(String(delta.months));
-            return;
-        }
-    }
-
-    const getRepeatValue = (num = customNum, unit = customUnit) => {
-        const n = parseInt(num, 10);
-        if (!n || n <= 0) return {};
-        if (unit === "day") return { days: n };
-        if (unit === "week") return { days: 7 * n };
-        if (unit === "month") return { months: n };
-        return {};
     };
 
     const onChangePicker = (label) => {
         setRepeatDeltaLabel(label);
-        if (label === "Custom") {
-        } else {
-            setRepeatDelta(repeatDeltaPresets[label]);
-        }
+
+        const preset = repeatPresets[label];
+
+        if (preset === "custom") return;
+
+        setRepeatUnit(preset.unit);
+        setRepeatInterval(preset.interval);
     };
 
     const getIconName = (feature) => {
@@ -185,9 +163,9 @@ export default function EditChoreScreen({ route, navigation }) {
         hour: "2-digit",
         minute: "2-digit",
     }).toUpperCase();
-    const selectedRepeatDeltaText = 
-        repeatDeltaLabel === "Custom" 
-            ? `Every ${customNum} ${customUnit}${customNum > 1 ? "s" : ""}` 
+    const selectedRepeatDeltaText =
+        repeatDeltaLabel === "Custom"
+            ? `Every ${repeatInterval} ${repeatUnit}${repeatInterval > 1 ? "s" : ""}`
             : repeatDeltaLabel;
 
     return (
@@ -239,7 +217,7 @@ export default function EditChoreScreen({ route, navigation }) {
                         {presetColors.map((color) => (
                             <TouchableOpacity
                                 key={color}
-                                onPress={() => { setChoreColor(color); setShowCustomPicker(false); }}
+                                onPress={() => setChoreColor(color)}
                                 style={{
                                     backgroundColor: color,
                                     width: 40,
@@ -264,7 +242,7 @@ export default function EditChoreScreen({ route, navigation }) {
                         itemStyle={pickerCommonStyle}
                     >
                         {house.members.map((member) => (
-                            <Picker.Item key={member.id} label={member.name} value={member} />
+                            <Picker.Item key={member.user.id} label={member.user.name} value={member} />
                         ))}
                     </Picker>
                 </View>
@@ -295,7 +273,7 @@ export default function EditChoreScreen({ route, navigation }) {
                             style={pickerCommonStyle}        // Android container & text
                             itemStyle={pickerCommonStyle}    // iOS text
                         >
-                            {Object.keys(repeatDeltaPresets).map((label) => (
+                            {Object.keys(repeatPresets).map((label) => (
                                 <Picker.Item key={label} label={label} value={label} />
                             ))}
                         </Picker>
@@ -308,14 +286,15 @@ export default function EditChoreScreen({ route, navigation }) {
                                     value={customNum}
                                     onChangeText={(text) => {
                                         setCustomNum(text);
-                                        setRepeatDelta(getRepeatValue(text, customUnit));
+                                        const n = parseInt(text, 10);
+                                        if (n > 0) setRepeatInterval(n);
                                     }}
                                 />
                                 <Picker
                                     selectedValue={customUnit}
                                     onValueChange={(unit) => {
                                         setCustomUnit(unit);
-                                        setRepeatDelta(getRepeatValue(customNum, unit));
+                                        setRepeatUnit(unit);
                                     }}
                                     style={styles.unitPicker}
                                 >

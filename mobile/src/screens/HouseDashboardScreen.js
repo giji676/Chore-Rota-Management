@@ -323,29 +323,6 @@ export default function HouseDashboardScreen({ navigation, route }) {
         setExpandedOccId(prev => (prev === occId ? null : occId));
     };
 
-    const handleTest = async () => {
-        const data = { 
-            "name": "chore_name",
-            "description": "chore_description",
-            "color": "#aabbcc",
-            "schedule": {
-                "start_date": "2026-03-30T12:30",
-                "repeat_unit": "day",
-                "repeat_interval": 1,
-                "assignment": {
-                    "rule_type": "fixed",
-                    "rotation_offset": 0,
-                    "rotation_members": [{
-                        "user": 32,
-                        "position": 0
-                    }]
-                }
-            }
-        }
-        const res = await api.post("chore/create/37/", data);
-        console.log(res.data);
-    };
-
     return (
         <View 
             {...panResponder.panHandlers}
@@ -472,8 +449,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
             <View style={[styles.createBtnView, { marginBottom: insets.bottom }]}>
                 <Pressable 
                     style={styles.createBtn}
-                    // onPress={() => navigation.navigate("EditChore", { house })}
-                    onPress={handleTest}
+                    onPress={() => navigation.navigate("EditChore", { house })}
                 >
                     <FontAwesome5
                         name="plus"
