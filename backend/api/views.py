@@ -5,9 +5,43 @@ from rest_framework import status
 from rest_framework.generics import ListAPIView
 from django.shortcuts import get_object_or_404
 
-from .models import House
+from .models import House, ChoreOccurrence
 from .serializers import *
 from .services import HouseService, ChoreService, OccurrenceService
+
+class OccurrenceUpdateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, house_id):
+        house = get_object_or_404(House.objects, id=house_id)
+        data = request.data
+        occ_id = data.get("id")
+        is_temp = data.get("is_temp", False)
+        completed = data.pop("completed", None)
+        if not is_temp and occ_id:
+            occurrence = ChoreOccurrence.objects.get(id=occ_id)
+        else:
+            schedule_id = data.get("schedule")
+            schedule = get_object_or_404(ChoreSchedule.objects, id=schedule_id)
+            assigned_user_id = data.get("assigned_user")
+            assigned_user = get_object_or_404(User, id=assigned_user_id)
+
+            occurrence = ChoreOccurrence.objects.create(
+                schedule=schedule,
+                due_date=data["due_date"],
+                original_due_date=data.get("original_due_date", data["due_date"]),
+                assigned_user=assigned_user,
+            )
+
+        if completed is not None:
+            occurrence.set_completed(bool(completed))
+
+        serializer = OccurrenceSerializer(occurrence, data=data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 class GetOccurrencesView(APIView):
     permission_classes = [IsAuthenticated]
@@ -18,7 +52,7 @@ class GetOccurrencesView(APIView):
         to_date = request.GET.get("to")
         service = OccurrenceService()
         occurrences = service.get_occurrences(house=house, from_date=from_date, to_date=to_date)
-        occurrence_serializer = OccurrenceReaderSerializer(occurrences, many=True)
+        occurrence_serializer = OccurrenceSerializer(occurrences, many=True)
         return Response(occurrence_serializer.data, status=status.HTTP_200_OK)
 
 class CreateChoreView(APIView):

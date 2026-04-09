@@ -6,19 +6,21 @@ from accounts.serializers import UserSerializer
 
 User = get_user_model()
 
-class OccurrenceUserReaderSerualizer(serializers.ModelSerializer):
+class OccurrenceUserReaderSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ["id", "name", "avatar_image"]
 
-class OccurrenceReaderSerializer(serializers.ModelSerializer):
+class OccurrenceSerializer(serializers.ModelSerializer):
     chore = serializers.SerializerMethodField()
-    assigned_user = OccurrenceUserReaderSerualizer(read_only=True)
+    assigned_user = OccurrenceUserReaderSerializer(read_only=True)
+    is_temp = serializers.SerializerMethodField()
 
     class Meta:
         model = ChoreOccurrence
         fields = [
             "id",
+            "is_temp",
             "schedule",
             "chore",
             "original_due_date",
@@ -29,34 +31,24 @@ class OccurrenceReaderSerializer(serializers.ModelSerializer):
             "notification_sent_at",
             "version",
         ]
+        read_only_fields = ["id"]
 
     def get_chore(self, obj):
         return ChoreSerializer(obj.schedule.chore).data
 
+    def get_is_temp(self, instance):
+        return instance.is_temp
+
     def to_representation(self, instance):
-        """
-        Overrides inherited fn.
-        If id is not present (incase of in memory generated/not seved to db)
-        objects, with temp_id.
-        """
         data = super().to_representation(instance)
         data["id"] = instance.id or getattr(instance, "temp_id", None)
         return data
 
-class OccurrenceSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ChoreOccurrence
-        fields = [
-            "id",
-            "schedule",
-            "original_due_date",
-            "due_date",
-            "assigned_user",
-            "completed_at",
-            "skipped_at",
-            "notification_sent_at",
-            "version",
-        ]
+    def update(self, instance, validated_data):
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance
 
 class ChoreSerializer(serializers.ModelSerializer):
     class Meta:

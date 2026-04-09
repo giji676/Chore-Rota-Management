@@ -33,6 +33,8 @@ Notifications.setNotificationHandler({
     }),
 });
 
+// TODO: Fix house so it gets passed in, and update all references to use id (fetchOccurrences)
+
 export default function HouseDashboardScreen({ navigation, route }) {
     const { user } = useAuth();
     const { showActionSheetWithOptions } = useActionSheet();
@@ -107,15 +109,6 @@ export default function HouseDashboardScreen({ navigation, route }) {
         } catch (err) {
             setError("Failed to fetch house");
         }
-    };
-
-    const handleCheckOccurrence = async (occ) => {
-        // TODO: change to use completed_at?
-        // await api.patch(`occurrences/${occ.id}/update/`, {
-        //     "occurrence_version": occ.version,
-        //     completed: !occ.completed 
-        // });
-        fetchHouse();
     };
 
     const handleDeleteOccurrence = async (occ) => {
@@ -232,6 +225,22 @@ export default function HouseDashboardScreen({ navigation, route }) {
     useEffect(() => {
         fetchOccurrences(currentMonth);
     }, [currentMonth]);
+
+    const handleCheckOccurrence = async (occ) => {
+        try {
+            const res = await api.patch(`chore/occurrence/${37}/update/`, {
+                id: occ.id,
+                is_temp: occ.is_temp,
+                schedule: occ.schedule,
+                assigned_user: occ.assigned_user.id,
+                due_date: occ.due_date,
+                completed: !occ.completed_at,
+            });
+            fetchOccurrences(currentMonth);
+        } catch (err) {
+            console.log(err.response?.data);
+        }
+    };
 
     useEffect(() => {
         const today = new Date();

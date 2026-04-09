@@ -179,6 +179,8 @@ class ChoreOccurrence(SoftDeleteModel):
     skipped_at = models.DateTimeField(null=True, blank=True)
     notification_sent_at = models.DateTimeField(null=True, blank=True)
 
+    _temp_id = None 
+
     class Meta:
         indexes = [
             models.Index(fields=["schedule", "original_due_date"]),
@@ -192,9 +194,29 @@ class ChoreOccurrence(SoftDeleteModel):
             )
         ]
 
-    def mark_completed(self):
-        self.completed_at = timezone.now()
-        self.save(update_fields=["completed_at"])
+    def set_completed(self, completed: bool):
+        if completed:
+            if not self.completed_at:
+                self.completed_at = timezone.now()
+                self.save(update_fields=["completed_at"])
+        else:
+            if self.completed_at is not None:
+                self.completed_at = None
+                self.save(update_fields=["completed_at"])
+
+    @property
+    def temp_id(self):
+        if self.id:
+            return None
+        return self._temp_id
+
+    @temp_id.setter
+    def temp_id(self, value):
+        self._temp_id = value
+
+    @property
+    def is_temp(self):
+        return self.id is None
 
     def __str__(self):
         return (f"{self.schedule.chore.name} "

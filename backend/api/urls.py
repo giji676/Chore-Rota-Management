@@ -13,4 +13,5 @@ urlpatterns = [
     path("chore/create/<int:house_id>/", views.CreateChoreView.as_view(), name="chore-create"),
 
     path("chore/occurrences/<int:house_id>/", views.GetOccurrencesView.as_view(), name="chore-occurrences"),
+    path("chore/occurrence/<int:house_id>/update/", views.OccurrenceUpdateView.as_view(), name="occurrence-update"),
 ]
