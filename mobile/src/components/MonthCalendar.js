@@ -392,5 +392,6 @@ const styles = StyleSheet.create({
         color: "#fff",
         borderRadius: 4,
         paddingHorizontal: 3,
+        textAlign: "center",
     },
 });
