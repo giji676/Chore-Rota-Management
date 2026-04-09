@@ -230,6 +230,7 @@ export default function MonthCalendar({
         // Update snapshot so next drag starts from this height
         startHeightRef.current = targetHeight;
     };
+
     useEffect(() => {
         onGrant((g) => {
             if (!measuredRef.current) return;
@@ -246,6 +247,36 @@ export default function MonthCalendar({
             handleRelease(-g.dy);
         });
     }, []);
+
+    const DayCell = ({ raw_date, occs, isSelected, isToday, onDayPress }) => {
+        if (!raw_date) return <View style={styles.dayCell} />;
+        const date = new Date(raw_date);
+        const key = raw_date;
+
+        return (
+            <TouchableOpacity
+                style={[styles.dayCell, isSelected && styles.dayCellSelected]}
+                onPress={() => onDayPress(key)}
+            >
+                <AppText style={[styles.dateNumber, isToday && styles.todaysCell]}>
+                    {date.getDate()}
+                </AppText>
+
+                {occs.map((occ) => (
+                    <View
+                        key={occ.id}
+                        style={[
+                            styles.choreBar,
+                            {
+                                backgroundColor: occ.chore?.color || DEFAULT_COLOR,
+                                opacity: occ.completed_at ? 0.4 : 1,
+                            },
+                        ]}
+                    />
+                ))}
+            </TouchableOpacity>
+        );
+    };
 
     return (
         <View>
@@ -288,48 +319,16 @@ export default function MonthCalendar({
                                 }
                             }}
                         >
-                            {week.map((raw_date, colIndex) => {
-                                if (!raw_date) return <View key={colIndex} style={styles.dayCell} />;
-
-                                const date = new Date(raw_date);
-                                const key = raw_date
-                                const occs = occByDate[key] || [];
-                                const isSelected = key === selectedDay;
-                                const isToday = key === new Date().toISOString().split("T")[0];
-
-                                return (
-                                    <TouchableOpacity
-                                        key={key}
-                                        style={[
-                                            styles.dayCell,
-                                            isSelected && styles.dayCellSelected,
-                                        ]}
-                                        onPress={() => onDayPress(key)}
-                                    >
-                                        <AppText
-                                            style={[
-                                                styles.dateNumber,
-                                                isToday && styles.todaysCell,
-                                            ]}
-                                        >
-                                            {date.getDate()}
-                                        </AppText>
-
-                                        {occs.map((occ) => (
-                                            <View
-                                                key={occ.id}
-                                                style={[
-                                                    styles.choreBar,
-                                                    {
-                                                        backgroundColor: occ.chore?.color || DEFAULT_COLOR,
-                                                        opacity: occ.completed_at ? 0.4 : 1,
-                                                    },
-                                                ]}
-                                            />
-                                        ))}
-                                    </TouchableOpacity>
-                                );
-                            })}
+                            {week.map((raw_date, colIndex) => (
+                                <DayCell
+                                    key={raw_date || colIndex}
+                                    raw_date={raw_date}
+                                    occs={occByDate[raw_date] || []}
+                                    isSelected={raw_date === selectedDay}
+                                    isToday={raw_date === new Date().toISOString().split("T")[0]}
+                                    onDayPress={onDayPress}
+                                />
+                            ))}
                         </View>
                     ))}
                 </Animated.View>
