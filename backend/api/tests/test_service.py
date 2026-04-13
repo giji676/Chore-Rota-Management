@@ -75,6 +75,36 @@ class TestOccurrenceService(TestCase):
             user=self.owner)
         self.service = OccurrenceService()
 
+    def test_change_due_date_and_user(self):
+        new_assignee = UserFactory()
+        occ = ChoreOccurrence.objects.create(
+            schedule=self.schedule,
+            due_date=self.schedule.start_date,
+            original_due_date=self.schedule.start_date,
+            assigned_user=self.rotation_member.user
+        )
+        new_due_date = self.schedule.start_date + dt.timedelta(days=2)
+        changes = {
+            "occurrence_id": occ.id,
+            "edit_mode": "single",
+            "changes": {
+                "due_date": new_due_date.isoformat(),
+                "assigned_user": new_assignee.id
+            }
+        }
+        serializer = OccurrenceUpdateSerializer(data=changes)
+        serializer.is_valid(raise_exception=True)
+
+        data = serializer.validated_data
+
+        updated_occ = self.service.edit_single(
+            data["occurrence_id"],
+            data["changes"]
+        )
+        self.assertEqual(updated_occ.due_date, new_due_date)
+        self.assertEqual(updated_occ.original_due_date, self.schedule.start_date)
+        self.assertEqual(updated_occ.assigned_user, new_assignee)
+
     def test_resolve_temp_occ(self):
         occ_id = f"temp_{self.schedule.id}_{self.schedule.start_date.isoformat()}"
         resolved = self.service.resolve_occurrence(occ_id)

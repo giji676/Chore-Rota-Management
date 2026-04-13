@@ -1,11 +1,13 @@
-from rest_framework.exceptions import PermissionDenied, ValidationError
-import datetime
 import math
+import datetime
 from dateutil.relativedelta import relativedelta
+
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.db import transaction
 from django.shortcuts import get_object_or_404
+
 from .models import *
 from .serializers import *
 from .helpers.generic_utils import timeit
@@ -28,7 +30,37 @@ def make_aware_safe(dt):
 
 class OccurrenceService:
     @transaction.atomic
-    def materialize_occurrence(self, _occ):
+    def edit_single(self, occ_id: str | int, changes: dict) -> ChoreOccurrence:
+        """
+        Edit a single occurrence.
+        Possible changes:
+        - due_time
+        - completed_at
+        - assigned_user
+        - skipped_at
+        """
+        occ: ChoreOccurrence = self.resolve_occurrence(occ_id)
+        occ: ChoreOccurrence = self.materialize_occurrence(occ)
+
+        due_date = changes.get("due_date")
+        if due_date is not None:
+            occ.due_date = due_date
+
+        if "completed" in changes:
+            occ.set_completed(bool(changes["completed"]))
+
+        if "skipped" in changes:
+            occ.set_skipped(bool(changes["skipped"]))
+
+        if "assigned_user" in changes:
+            user = get_object_or_404(User, id=changes["assigned_user"])
+            occ.assigned_user = user
+
+        occ.save()
+        return occ
+
+    @transaction.atomic
+    def materialize_occurrence(self, _occ: ChoreOccurrence) -> ChoreOccurrence:
         """
         Convert virtual occurrence to DB occurrence if needed.
         Always returns a persisted ChoreOccurrence.
@@ -47,7 +79,7 @@ class OccurrenceService:
 
         return occ
 
-    def resolve_occurrence(self, id):
+    def resolve_occurrence(self, id: str | int) -> ChoreOccurrence:
         """
         Returns an occurrence object.
         Either generating it in-memory or loading from database

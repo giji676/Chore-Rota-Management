@@ -30,13 +30,14 @@ class OccurrenceUpdateView(APIView):
 
         if completed is not None:
             occ = service.resolve_occurrence(occ_id)
-            occ = service.materialize_occurrence(occ)
+            occ: ChoreOccurrence = service.materialize_occurrence(occ)
             occ.set_completed(bool(completed))
+            occ.save(update_fields=["completed_at"])
+
+        elif mode == "single":
+            occ: ChoreOccurrence = service.edit_single(occ_id, changes)
 
         """
-        elif mode == "single":
-            occ = service.edit_single(occ_id, changes)
-
         elif mode == "future":
             occ = service.edit_future(occ_id, changes)
 

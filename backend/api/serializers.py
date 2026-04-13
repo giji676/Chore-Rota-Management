@@ -6,6 +6,38 @@ from accounts.serializers import UserSerializer
 
 User = get_user_model()
 
+class OccurrenceChangesSerializer(serializers.Serializer):
+    due_date = serializers.DateTimeField(required=False)
+    assigned_user = serializers.IntegerField(required=False)
+    completed = serializers.BooleanField(required=False)
+    skipped = serializers.BooleanField(required=False)
+
+    def validate(self, data):
+        # prevent conflicting states
+        if data.get("completed") and data.get("skipped"):
+            raise serializers.ValidationError(
+                "Occurrence cannot be both completed and skipped."
+            )
+        return data
+
+class OccurrenceUpdateSerializer(serializers.Serializer):
+    occurrence_id = serializers.CharField()
+    edit_mode = serializers.ChoiceField(
+        choices=["single", "future"],
+        required=False
+    )
+    changes = OccurrenceChangesSerializer(required=False)
+    completed = serializers.BooleanField(required=False)
+
+    def validate(self, data):
+        # if edit_mode exists, changes must exist
+        if data.get("edit_mode") and "changes" not in data:
+            raise serializers.ValidationError(
+                "'changes' is required when using edit_mode."
+            )
+
+        return data
+
 class OccurrenceUserReaderSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
