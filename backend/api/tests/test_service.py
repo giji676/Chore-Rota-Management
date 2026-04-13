@@ -75,6 +75,28 @@ class TestOccurrenceService(TestCase):
             user=self.owner)
         self.service = OccurrenceService()
 
+    def test_change_future(self):
+        occ_id = f"temp_{self.schedule.id}_{self.schedule.start_date.isoformat()}"
+        change_data = {
+            "schedule": {
+                "repeat_interval": 9,
+                "start_date": (self.schedule.start_date + dt.timedelta(days=2)).isoformat(),
+                "end_date": (self.schedule.start_date + dt.timedelta(days=10)).isoformat(),
+            },
+            "chore": {
+                "name": "Updated Chore Name",
+                "description": "Updated description",
+                "color": "#00ff00"
+            }
+        }
+        schedule: ChoreSchedule = self.service.edit_future(occ_id, change_data)
+        self.assertEqual(schedule.repeat_interval, 9)
+        self.assertEqual(schedule.start_date, self.schedule.start_date + dt.timedelta(days=2))
+        self.assertEqual(schedule.end_date, self.schedule.start_date + dt.timedelta(days=10))
+        self.assertEqual(schedule.chore.name, "Updated Chore Name")
+        self.assertEqual(schedule.chore.description, "Updated description")
+        self.assertEqual(schedule.chore.color, "#00ff00")
+
     def test_change_due_date_and_user(self):
         new_assignee = UserFactory()
         occ = ChoreOccurrence.objects.create(
@@ -84,7 +106,7 @@ class TestOccurrenceService(TestCase):
             assigned_user=self.rotation_member.user
         )
         new_due_date = self.schedule.start_date + dt.timedelta(days=2)
-        changes = {
+        change_data = {
             "occurrence_id": occ.id,
             "edit_mode": "single",
             "changes": {
@@ -92,7 +114,7 @@ class TestOccurrenceService(TestCase):
                 "assigned_user": new_assignee.id
             }
         }
-        serializer = OccurrenceUpdateSerializer(data=changes)
+        serializer = OccurrenceUpdateSerializer(data=change_data)
         serializer.is_valid(raise_exception=True)
 
         data = serializer.validated_data

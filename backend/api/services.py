@@ -30,6 +30,60 @@ def make_aware_safe(dt):
 
 class OccurrenceService:
     @transaction.atomic
+    def edit_future(self, occ_id: str | int, changes: dict) -> ChoreSchedule:
+        occ = self.resolve_occurrence(occ_id)
+        occ = self.materialize_occurrence(occ)
+        occ: ChoreOccurrence
+
+        old_schedule: ChoreSchedule = occ.schedule
+        split_date = occ.original_due_date
+
+        old_schedule.end_date = split_date
+        old_schedule.save(update_fields=["end_date"])
+
+        chore_changes = changes.get("chore", {})
+        new_chore = Chore.objects.create(
+            house=old_schedule.chore.house,
+            name=chore_changes.get("name", old_schedule.chore.name),
+            description=chore_changes.get("description", old_schedule.chore.description),
+            color=chore_changes.get("color", old_schedule.chore.color),
+        )
+
+        schedule_changes = changes.get("schedule", {})
+        serializer = ScheduleUpdateSerializer(data=schedule_changes)
+        serializer.is_valid(raise_exception=True)
+        schedule_data = serializer.validated_data
+        new_schedule = ChoreSchedule.objects.create(
+            chore=new_chore,
+            start_date=schedule_data.get("start_date", split_date),
+            repeat_unit=schedule_data.get("repeat_unit", old_schedule.repeat_unit),
+            repeat_interval=schedule_data.get("repeat_interval", old_schedule.repeat_interval),
+            end_date=schedule_data.get("end_date", None)
+        )
+
+        old_rule: MemberAssignmentRule = old_schedule.assignment_rule
+        new_rule = MemberAssignmentRule.objects.create(
+            schedule=new_schedule,
+            rule_type=old_rule.rule_type,
+            rotation_offset=old_rule.rotation_offset,
+        )
+        for rm in old_rule.rotation_members.all():
+            RotationMember.objects.create(
+                assignment_rule=new_rule,
+                user=rm.user,
+                position=rm.position,
+            )
+
+        assignment_changes = changes.get("assignment", {})
+        if assignment_changes:
+            new_rule.rule_type = assignment_changes.get("rule_type", new_rule.rule_type)
+            new_rule.rotation_offset = assignment_changes.get(
+                "rotation_offset", new_rule.rotation_offset
+            )
+            new_rule.save()
+        return new_schedule
+
+    @transaction.atomic
     def edit_single(self, occ_id: str | int, changes: dict) -> ChoreOccurrence:
         """
         Edit a single occurrence.
@@ -39,8 +93,9 @@ class OccurrenceService:
         - assigned_user
         - skipped_at
         """
-        occ: ChoreOccurrence = self.resolve_occurrence(occ_id)
-        occ: ChoreOccurrence = self.materialize_occurrence(occ)
+        occ = self.resolve_occurrence(occ_id)
+        occ = self.materialize_occurrence(occ)
+        occ: ChoreOccurrence
 
         due_date = changes.get("due_date")
         if due_date is not None:

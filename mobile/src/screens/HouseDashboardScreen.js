@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { 
     Pressable,
     Alert,
@@ -8,6 +8,7 @@ import {
     LayoutAnimation,
 } from 'react-native';
 import * as Notifications from 'expo-notifications';
+import { useFocusEffect } from "@react-navigation/native";
 import { registerForPushNotificationsAsync, configureAndroidChannel } from '../utils/notifications';
 import { useActionSheet } from "@expo/react-native-action-sheet";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -198,7 +199,9 @@ export default function HouseDashboardScreen({ navigation, route }) {
     // TODO: Fetch from prev month to next month?
     // and on month change fetch the nest/previous
     // so buffer of 1 month is kept locally
-    const fetchOccurrences = async (date) => {
+    const fetchOccurrences = async () => {
+        const date = currentMonth;
+
         const yyyy = date.getFullYear();
         const mm = (date.getMonth() + 1).toString().padStart(2, "0");
 
@@ -220,9 +223,11 @@ export default function HouseDashboardScreen({ navigation, route }) {
         setUpdate(prev => !prev);
     };
 
-    useEffect(() => {
-        fetchOccurrences(currentMonth);
-    }, [currentMonth]);
+    useFocusEffect(
+        useCallback(() => {
+            fetchOccurrences();
+        }, [currentMonth])
+    );
 
     const handleCheckOccurrence = async (occ) => {
         try {
@@ -230,7 +235,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
                 occurrence_id: occ.id,
                 completed: !occ.completed_at,
             });
-            fetchOccurrences(currentMonth);
+            fetchOccurrences();
         } catch (err) {
             console.log(err.response?.data);
         }
@@ -267,7 +272,10 @@ export default function HouseDashboardScreen({ navigation, route }) {
             title: occ.chore.name,
         }, buttonIndex => {
                 if (buttonIndex === 0) {
-                    navigation.navigate("EditChore", { house, occurrence: occ });
+                    navigation.navigate("EditChore", {
+                        house,
+                        occurrence: occ
+                    });
                 } else if (buttonIndex === 1) {
                     navigation.navigate("EditChore", {
                         house,
@@ -451,7 +459,10 @@ export default function HouseDashboardScreen({ navigation, route }) {
             <View style={[styles.createBtnView, { marginBottom: insets.bottom }]}>
                 <Pressable 
                     style={styles.createBtn}
-                    onPress={() => navigation.navigate("EditChore", { house })}
+                    onPress={() => navigation.navigate("EditChore", {
+                        house,
+                        editMode: "create"
+                    })}
                 >
                     <FontAwesome5
                         name="plus"

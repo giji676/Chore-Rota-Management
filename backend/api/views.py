@@ -28,18 +28,18 @@ class OccurrenceUpdateView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        occ: ChoreOccurrence
         if completed is not None:
             occ = service.resolve_occurrence(occ_id)
-            occ: ChoreOccurrence = service.materialize_occurrence(occ)
+            occ = service.materialize_occurrence(occ)
             occ.set_completed(bool(completed))
             occ.save(update_fields=["completed_at"])
 
         elif mode == "single":
-            occ: ChoreOccurrence = service.edit_single(occ_id, changes)
+            occ = service.edit_single(occ_id, changes)
 
-        """
         elif mode == "future":
-            occ = service.edit_future(occ_id, changes)
+            schedule = service.edit_future(occ_id, changes)
 
             # NOTE:
             # this returns schedule, not occurrence
@@ -53,7 +53,6 @@ class OccurrenceUpdateView(APIView):
                 {"error": "Invalid request"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        """
 
         serialized = OccurrenceSerializer(occ)
         return Response(
