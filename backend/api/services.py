@@ -171,7 +171,8 @@ class OccurrenceService:
         """
         saved = self._get_saved_occurrences(house, from_date, to_date)
         generated = self._generate_occurrences(house, saved, from_date, to_date)
-        return saved + generated
+        active_saved = [occ for occ in saved if occ.skipped_at is None]
+        return active_saved + generated
 
     def _get_saved_occurrences(self, house, from_date, to_date):
         """ Get a list of already saved occurrences for a house within a date range """

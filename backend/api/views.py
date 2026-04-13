@@ -21,6 +21,7 @@ class OccurrenceUpdateView(APIView):
         mode = request.data.get("edit_mode")
         changes = request.data.get("changes", {})
         completed = request.data.get("completed")
+        skipped = request.data.get("skipped")
 
         if not occ_id:
             return Response(
@@ -34,6 +35,12 @@ class OccurrenceUpdateView(APIView):
             occ = service.materialize_occurrence(occ)
             occ.set_completed(bool(completed))
             occ.save(update_fields=["completed_at"])
+
+        elif skipped is not None:
+            occ = service.resolve_occurrence(occ_id)
+            occ = service.materialize_occurrence(occ)
+            occ.set_skipped(bool(skipped))
+            occ.save(update_fields=["skipped_at"])
 
         elif mode == "single":
             occ = service.edit_single(occ_id, changes)

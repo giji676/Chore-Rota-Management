@@ -126,7 +126,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
                             "generate_occurrences": true
                         };
                         try {
-                            const res = await api.delete(`occurrences/${occ.id}/delete/`, {data: data});
+                            handleSkipOccurrence(occ, "single");
                             Alert.alert("Chore deleted successfully");
                         } catch (err) {
                             Alert.alert("Error", err.response?.data?.detail);
@@ -144,7 +144,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
                             "generate_occurrences": false
                         };
                         try {
-                            const res = await api.delete(`occurrences/${occ.id}/delete/`, {data: data});
+                            handleSkipOccurrence(occ, "future");
                             Alert.alert("All chores deleted successfully");
                         } catch (err) {
                             Alert.alert("Error", err.response?.data?.detail);
@@ -228,6 +228,32 @@ export default function HouseDashboardScreen({ navigation, route }) {
             fetchOccurrences();
         }, [currentMonth])
     );
+
+    const handleSkipOccurrence = async (occ, mode) => {
+        let data;
+        try {
+            if (mode === "single") {
+                data = {
+                    occurrence_id: occ.id,
+                    skipped: true
+                };
+            } else if (mode === "future") {
+                data = {
+                    occurrence_id: occ.id,
+                    editMode: "future",
+                    changes: {
+                        schedule: {
+                            end_date: occ.due_date
+                        }
+                    }
+                };
+            }
+            const res = await api.patch(`chore/occurrence/${house.id}/update/`, data);
+            fetchOccurrences();
+        } catch (err) {
+            console.log(err.response?.data);
+        }
+    };
 
     const handleCheckOccurrence = async (occ) => {
         try {
