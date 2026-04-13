@@ -220,7 +220,7 @@ class ChoreOccurrence(SoftDeleteModel):
 
     def __str__(self):
         return (f"{self.schedule.chore.name} "
-                f"on {self.due_date}")
+                f"due at {self.due_date}")
 
 class MemberAssignmentRule(SoftDeleteModel):
     schedule = models.OneToOneField(

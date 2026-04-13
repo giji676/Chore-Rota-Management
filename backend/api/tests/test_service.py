@@ -5,9 +5,11 @@ from rest_framework.test import APITestCase, APIClient
 
 from django.test import TestCase
 from django.contrib.auth import get_user_model
+from django.http import Http404
 
 from api.services import OccurrenceService
 from api.models import *
+from api.serializers import *
 
 User = get_user_model()
 
@@ -73,7 +75,52 @@ class TestOccurrenceService(TestCase):
             user=self.owner)
         self.service = OccurrenceService()
 
-    def test_occurrences_with_saved(self):
+    def test_resolve_temp_occ(self):
+        occ_id = f"temp_{self.schedule.id}_{self.schedule.start_date.isoformat()}"
+        resolved = self.service.resolve_occurrence(occ_id)
+        self.assertTrue(resolved.is_temp)
+        self.assertIsInstance(resolved.temp_id, str)
+        self.assertTrue(resolved.temp_id.startswith("temp_"))
+        self.assertIsInstance(resolved, ChoreOccurrence)
+
+    def test_resolve_db_occ(self):
+        occ = ChoreOccurrence.objects.create(
+            schedule=self.schedule,
+            due_date=self.schedule.start_date,
+            original_due_date=self.schedule.start_date,
+            assigned_user=self.rotation_member.user
+        )
+        resolved = self.service.resolve_occurrence(occ.id)
+        self.assertFalse(resolved.is_temp)
+        self.assertEqual(resolved.id, occ.id)
+        self.assertIsNone(resolved.temp_id)
+        self.assertTrue(isinstance(resolved, ChoreOccurrence))
+
+    def test_resolve_none_occ(self):
+        with self.assertRaises(ValueError):
+            self.service.resolve_occurrence(None)
+
+    def test_resolve_nonexistent_db_occ(self):
+        with self.assertRaises(Http404):
+            self.service.resolve_occurrence(999999)
+
+    def test_materialize_temp_occ(self):
+        occ = self.service.resolve_occurrence(
+            f"temp_{self.schedule.id}_{self.schedule.start_date.isoformat()}"
+        )
+        db_occ = self.service.materialize_occurrence(occ)
+        self.assertFalse(db_occ.is_temp)
+        self.assertIsNotNone(db_occ.id)
+
+    def test_materialize_idempotent(self):
+        occ = self.service.resolve_occurrence(
+            f"temp_{self.schedule.id}_{self.schedule.start_date.isoformat()}"
+        )
+        occ1 = self.service.materialize_occurrence(occ)
+        occ2 = self.service.materialize_occurrence(occ)
+        self.assertEqual(occ1.id, occ2.id)
+
+    def test_get_occs_with_saved(self):
         ChoreOccurrence.objects.create(
                 schedule=self.schedule,
                 due_date=self.schedule.start_date + dt.timedelta(days=5),
@@ -94,7 +141,7 @@ class TestOccurrenceService(TestCase):
             self.assertFalse(occ.due_date < from_date_raw)
             self.assertFalse(occ.due_date > to_date_raw)
 
-    def test_occurrences_with_end_date(self):
+    def test_get_occs_with_end_date(self):
         self.schedule.end_date = self.schedule.start_date + dt.timedelta(days=5)
         self.schedule.save()
         range_length = 9
