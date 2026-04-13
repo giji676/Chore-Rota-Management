@@ -227,11 +227,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
     const handleCheckOccurrence = async (occ) => {
         try {
             const res = await api.patch(`chore/occurrence/${house.id}/update/`, {
-                id: occ.id,
-                is_temp: occ.is_temp,
-                schedule: occ.schedule,
-                assigned_user: occ.assigned_user.id,
-                due_date: occ.due_date,
+                occurrence_id: occ.id,
                 completed: !occ.completed_at,
             });
             fetchOccurrences(currentMonth);

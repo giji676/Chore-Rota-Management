@@ -183,7 +183,7 @@ class OccurrenceService:
                 to_representation funciton. Which sets the id to temp_id
                 if id not present
                 """
-                occurrence.temp_id = f"temp_{schedule.id}-{due_date.isoformat()}"
+                occurrence.temp_id = f"temp_{schedule.id}_{due_date.isoformat()}"
                 occurrences.append(occurrence)
         return occurrences
 
