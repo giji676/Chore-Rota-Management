@@ -58,7 +58,7 @@ export default function MainStack() {
                             headerRight: () => <ProfileButton />,
                         }} />
                         <Stack.Screen name="EditHouse" component={EditHouseScreen} />
-                        <Stack.Screen name="EditChore" component={EditChoreScreen} />
+                        <Stack.Screen name="EditChore" component={EditChoreScreen} initialParams={{ editMode: "single" }}/>
                         <Stack.Screen name="EditProfile" component={EditProfileScreen} />
                         <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
                         <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} options={{

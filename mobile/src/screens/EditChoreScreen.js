@@ -22,7 +22,9 @@ import AppButton from "../components/AppButton";
 // TODO: Cancel/done on Day/Time Pickers do nothing, value always gets set
 
 export default function EditChoreScreen({ route, navigation }) {
-    const { house, occurrence} = route.params; // occurrence will be undefined for create
+    // editMode(s): single | future
+    const { house, occurrence, editMode } = route.params; // occurrence will be undefined for create
+    const isEdit = !!occurrence;
     const chore = occurrence?.chore || null;
 
     const presetColors = [
@@ -56,7 +58,7 @@ export default function EditChoreScreen({ route, navigation }) {
     const [repeatInterval, setRepeatInterval] = useState(occurrence?.repeat_interval || 1);
     const [selectedDate, setSelectedDate] = useState(
         occurrence ? new Date(occurrence.due_date) : new Date());
-    const [selectedMember, setSelectedMember] = useState(occurrence?.assigened_user || house.members[0]);
+    const [selectedMember, setSelectedMember] = useState(occurrence?.assigned_user || house.members[0]);
 
     const [repeatDeltaLabel, setRepeatDeltaLabel] = useState();
     const [customNum, setCustomNum] = useState("1");
@@ -64,9 +66,7 @@ export default function EditChoreScreen({ route, navigation }) {
     const [pickerMode, setPickerMode] = useState(null);
     const [activeFeature, setActiveFeature] = useState(null); 
 
-    // TODO: frontend required field validation
-    // TODO: Error display popup
-    const handleSave = async () => {
+    const handleCreate = async () => {
         const data = {
             name: choreName,
             description: choreDescription,
@@ -93,6 +93,63 @@ export default function EditChoreScreen({ route, navigation }) {
             navigation.pop();
         } catch (err) {
             apiLogError(err);
+        }
+    };
+
+    const handleEdit = async () => {
+        let data;
+        if (editMode === "single") {
+            data = {
+                edit_mode: "single",
+                changes: {
+                    due_date: selectedDate.toISOString(),
+                    assigned_user: selectedMember.user.id,
+                    is_temp: occurrence.is_temp
+                }
+            };
+        } else if (editMode === "future") {
+            data = {
+                edit_mode: "future",
+                changes: {
+                    chore: {
+                        name: choreName,
+                        description: choreDescription,
+                        color: choreColor,
+                    },
+                    schedule: {
+                        start_date: selectedDate.toISOString(),
+                        repeat_unit: repeatUnit,
+                        repeat_interval: repeatInterval,
+                        assignment: {
+                            rule_type: "fixed",
+                            rotation_offset: 0,
+                            rotation_members: [{
+                                user: selectedMember.user.id,
+                                position: 0
+                                }
+                            ]
+                        }
+                    }
+                }
+            };
+        }
+
+        try {
+            // TODO: Success popup window
+            await api.post(`chore/update/${house.id}/${occurrence.id}`, data);
+            navigation.pop();
+        } catch (err) {
+            apiLogError(err);
+        }
+    };
+
+    // TODO: frontend required field validation
+    // TODO: Error display popup
+    const handleSave = async () => {
+        if (!isEdit) {
+            handleCreate();
+        } else {
+            handleEdit();
         }
     };
 
@@ -172,20 +229,22 @@ export default function EditChoreScreen({ route, navigation }) {
         <View style={styles.container}>
             <AppText style={styles.title}>{chore ? "Edit Chore" : "Create Chore"}</AppText>
             <AppTextInput
-                style={styles.input}
+                style={[styles.input, editMode === "single" && {opacity: 0.5}]}
                 placeholder="Chore Name"
                 placeholderTextColor="gray"
                 value={choreName}
                 onChangeText={setChoreName}
+                editable={editMode !== "single"}
             />
             <AppTextInput
-                style={[styles.input, styles.multiline]}
+                style={[styles.input, styles.multiline, editMode === "single" && {opacity: 0.5}]}
                 placeholder="Description"
                 placeholderTextColor="gray"
                 value={choreDescription}
                 onChangeText={setChoreDescription}
                 multiline
                 textAlignVertical="top"
+                editable={editMode !== "single"}
             />
             <View style={styles.displayDateTimeContainer}>
                 <View style={styles.displayDateTime}>
@@ -197,18 +256,22 @@ export default function EditChoreScreen({ route, navigation }) {
 
                         {selectedDateDisplayText}
                     </AppText>
-                    <AppText style={{
-                        textAlign: "center",
-                        color: colors.primary,
-                    }}>
-                        -
-                    </AppText>
-                    <AppText style={{
-                        textAlign: "center",
-                        color: colors.primary,
-                    }}>
-                        {selectedRepeatDeltaText}
-                    </AppText>
+                    {editMode !== "single" && (
+                        <>
+                            <AppText style={{
+                                textAlign: "center",
+                                color: colors.primary,
+                            }}>
+                                -
+                            </AppText>
+                            <AppText style={{
+                                textAlign: "center",
+                                color: colors.primary,
+                            }}>
+                                {selectedRepeatDeltaText}
+                            </AppText>
+                        </>
+                    )}
                 </View>
             </View>
             {activeFeature === "palette" && (
@@ -265,46 +328,48 @@ export default function EditChoreScreen({ route, navigation }) {
                             />
                         </View>
                     )}
-                    <View>
-                        {/* Fix styling on picker and custom unit View */}
-                        <Picker
-                            selectedValue={repeatDeltaLabel}
-                            onValueChange={onChangePicker}
-                            style={pickerCommonStyle}        // Android container & text
-                            itemStyle={pickerCommonStyle}    // iOS text
-                        >
-                            {Object.keys(repeatPresets).map((label) => (
-                                <Picker.Item key={label} label={label} value={label} />
-                            ))}
-                        </Picker>
-                        {repeatDeltaLabel === "Custom" && (
-                            <View style={styles.customContainer}>
-                                <AppText style={{ color: colors.textPrimary }}>Every</AppText>
-                                <AppTextInput
-                                    style={styles.inputCustomNum}
-                                    keyboardType="numeric"
-                                    value={customNum}
-                                    onChangeText={(text) => {
-                                        setCustomNum(text);
-                                        const n = parseInt(text, 10);
-                                        if (n > 0) setRepeatInterval(n);
-                                    }}
-                                />
-                                <Picker
-                                    selectedValue={customUnit}
-                                    onValueChange={(unit) => {
-                                        setCustomUnit(unit);
-                                        setRepeatUnit(unit);
-                                    }}
-                                    style={styles.unitPicker}
-                                >
-                                    <Picker.Item label="day" value="day" />
-                                    <Picker.Item label="week" value="week" />
-                                    <Picker.Item label="month" value="month" />
-                                </Picker>
-                            </View>
-                        )}
-                    </View>
+                    {editMode !== "single" && (
+                        <View>
+                            {/* Fix styling on picker and custom unit View */}
+                            <Picker
+                                selectedValue={repeatDeltaLabel}
+                                onValueChange={onChangePicker}
+                                style={pickerCommonStyle}        // Android container & text
+                                itemStyle={pickerCommonStyle}    // iOS text
+                            >
+                                {Object.keys(repeatPresets).map((label) => (
+                                    <Picker.Item key={label} label={label} value={label} />
+                                ))}
+                            </Picker>
+                            {repeatDeltaLabel === "Custom" && (
+                                <View style={styles.customContainer}>
+                                    <AppText style={{ color: colors.textPrimary }}>Every</AppText>
+                                    <AppTextInput
+                                        style={styles.inputCustomNum}
+                                        keyboardType="numeric"
+                                        value={customNum}
+                                        onChangeText={(text) => {
+                                            setCustomNum(text);
+                                            const n = parseInt(text, 10);
+                                            if (n > 0) setRepeatInterval(n);
+                                        }}
+                                    />
+                                    <Picker
+                                        selectedValue={customUnit}
+                                        onValueChange={(unit) => {
+                                            setCustomUnit(unit);
+                                            setRepeatUnit(unit);
+                                        }}
+                                        style={styles.unitPicker}
+                                    >
+                                        <Picker.Item label="day" value="day" />
+                                        <Picker.Item label="week" value="week" />
+                                        <Picker.Item label="month" value="month" />
+                                    </Picker>
+                                </View>
+                            )}
+                        </View>
+                    )}
                 </View>
             )}
             {pickerMode === "date" && (
@@ -335,9 +400,11 @@ export default function EditChoreScreen({ route, navigation }) {
                 <TouchableOpacity onPress={() => setActiveFeature(prev => prev === "user" ? null : "user")}>
                     <MaterialCommunityIcons name={getIconName("user")} size={30} color={colors.textPrimary} />
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => setActiveFeature(prev => prev === "palette" ? null : "palette")}>
-                    <MaterialCommunityIcons name={getIconName("palette")} size={30} color={colors.textPrimary}/>
-                </TouchableOpacity>
+                {editMode !== "single" && (
+                    <TouchableOpacity onPress={() => setActiveFeature(prev => prev === "palette" ? null : "palette")}>
+                        <MaterialCommunityIcons name={getIconName("palette")} size={30} color={colors.textPrimary}/>
+                    </TouchableOpacity>
+                )}
             </View>
             <View style={styles.divider}/>
         </View>
@@ -419,6 +486,6 @@ const styles = StyleSheet.create({
     },
     featureBar: {
         flexDirection: "row",
-        justifyContent: "space-between",
+        justifyContent: "space-around",
     },
 });

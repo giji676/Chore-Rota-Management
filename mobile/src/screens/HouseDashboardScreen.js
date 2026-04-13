@@ -260,9 +260,9 @@ export default function HouseDashboardScreen({ navigation, route }) {
     }, [currentMonth]);
 
     const handleOccurrenceLongPress = (occ) => {
-        const options = ["Edit Chore", "Delete", "Cancel"];
-        const cancelButtonIndex = 2;
-        const destructiveButtonIndex = 1;
+        const options = ["Edit Only This Chore", "Edit All Future Chores", "Delete", "Cancel"];
+        const destructiveButtonIndex = 2;
+        const cancelButtonIndex = 3;
 
         showActionSheetWithOptions({
             options,
@@ -270,9 +270,15 @@ export default function HouseDashboardScreen({ navigation, route }) {
             destructiveButtonIndex,
             title: occ.chore.name,
         }, buttonIndex => {
-                if (buttonIndex === 0){
+                if (buttonIndex === 0) {
                     navigation.navigate("EditChore", { house, occurrence: occ });
-                } else if( buttonIndex=== 1){
+                } else if (buttonIndex === 1) {
+                    navigation.navigate("EditChore", {
+                        house,
+                        occurrence: occ,
+                        editMode: "future"
+                    });
+                } else if (buttonIndex === 2) {
                     handleDeleteOccurrence(occ);
                 }
             });
