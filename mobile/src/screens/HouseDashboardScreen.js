@@ -227,11 +227,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
     const handleCheckOccurrence = async (occ) => {
         try {
             const res = await api.patch(`chore/occurrence/${house.id}/update/`, {
-                id: occ.id,
-                is_temp: occ.is_temp,
-                schedule: occ.schedule,
-                assigned_user: occ.assigned_user.id,
-                due_date: occ.due_date,
+                occurrence_id: occ.id,
                 completed: !occ.completed_at,
             });
             fetchOccurrences(currentMonth);
@@ -260,9 +256,9 @@ export default function HouseDashboardScreen({ navigation, route }) {
     }, [currentMonth]);
 
     const handleOccurrenceLongPress = (occ) => {
-        const options = ["Edit Chore", "Delete", "Cancel"];
-        const cancelButtonIndex = 2;
-        const destructiveButtonIndex = 1;
+        const options = ["Edit Only This Chore", "Edit All Future Chores", "Delete", "Cancel"];
+        const destructiveButtonIndex = 2;
+        const cancelButtonIndex = 3;
 
         showActionSheetWithOptions({
             options,
@@ -270,9 +266,15 @@ export default function HouseDashboardScreen({ navigation, route }) {
             destructiveButtonIndex,
             title: occ.chore.name,
         }, buttonIndex => {
-                if (buttonIndex === 0){
+                if (buttonIndex === 0) {
                     navigation.navigate("EditChore", { house, occurrence: occ });
-                } else if( buttonIndex=== 1){
+                } else if (buttonIndex === 1) {
+                    navigation.navigate("EditChore", {
+                        house,
+                        occurrence: occ,
+                        editMode: "future"
+                    });
+                } else if (buttonIndex === 2) {
                     handleDeleteOccurrence(occ);
                 }
             });

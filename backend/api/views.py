@@ -13,35 +13,52 @@ class OccurrenceUpdateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def patch(self, request, house_id):
-        house = get_object_or_404(House.objects, id=house_id)
-        data = request.data
-        occ_id = data.get("id")
-        is_temp = data.get("is_temp", False)
-        completed = data.pop("completed", None)
-        if not is_temp and occ_id:
-            occurrence = ChoreOccurrence.objects.get(id=occ_id)
-        else:
-            schedule_id = data.get("schedule")
-            schedule = get_object_or_404(ChoreSchedule.objects, id=schedule_id)
-            assigned_user_id = data.get("assigned_user")
-            assigned_user = get_object_or_404(User, id=assigned_user_id)
+        get_object_or_404(House, id=house_id)
 
-            occurrence = ChoreOccurrence.objects.create(
-                schedule=schedule,
-                due_date=data["due_date"],
-                original_due_date=data.get("original_due_date", data["due_date"]),
-                assigned_user=assigned_user,
+        service = OccurrenceService()
+
+        occ_id = request.data.get("occurrence_id")
+        mode = request.data.get("edit_mode")
+        changes = request.data.get("changes", {})
+        completed = request.data.get("completed")
+
+        if not occ_id:
+            return Response(
+                {"error": "occurrence_id required"},
+                status=status.HTTP_400_BAD_REQUEST
             )
 
         if completed is not None:
-            occurrence.set_completed(bool(completed))
+            occ = service.resolve_occurrence(occ_id)
+            occ = service.materialize_occurrence(occ)
+            occ.set_completed(bool(completed))
 
-        serializer = OccurrenceSerializer(occurrence, data=data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
+        """
+        elif mode == "single":
+            occ = service.edit_single(occ_id, changes)
 
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        elif mode == "future":
+            occ = service.edit_future(occ_id, changes)
 
+            # NOTE:
+            # this returns schedule, not occurrence
+            return Response(
+                {"detail": "Future occurrences updated"},
+                status=status.HTTP_200_OK
+            )
+
+        else:
+            return Response(
+                {"error": "Invalid request"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        """
+
+        serialized = OccurrenceSerializer(occ)
+        return Response(
+            serialized.data,
+            status=status.HTTP_200_OK
+        )
 
 class GetOccurrencesView(APIView):
     permission_classes = [IsAuthenticated]

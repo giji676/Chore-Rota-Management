@@ -2,11 +2,15 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 import datetime
 import math
 from dateutil.relativedelta import relativedelta
+from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.db import transaction
+from django.shortcuts import get_object_or_404
 from .models import *
 from .serializers import *
 from .helpers.generic_utils import timeit
+
+User = get_user_model()
 
 # TODO: Check for conflicts!!
 # TODO: Check if deleted_at__isnull is necessary for .filter
@@ -23,6 +27,56 @@ def make_aware_safe(dt):
 
 
 class OccurrenceService:
+    @transaction.atomic
+    def materialize_occurrence(self, _occ):
+        """
+        Convert virtual occurrence to DB occurrence if needed.
+        Always returns a persisted ChoreOccurrence.
+        """
+        if not _occ.is_temp:
+            return _occ
+
+        occ, created = ChoreOccurrence.objects.get_or_create(
+            schedule=_occ.schedule,
+            original_due_date=_occ.original_due_date,
+            defaults={
+                "due_date": _occ.due_date,
+                "assigned_user": _occ.assigned_user,
+            }
+        )
+
+        return occ
+
+    def resolve_occurrence(self, id):
+        """
+        Returns an occurrence object.
+        Either generating it in-memory or loading from database
+        """
+        if id is None:
+            raise ValueError("occurrence_id cannot be None")
+
+        if isinstance(id, str) and id.startswith("temp_"):
+            _, schedule_id, due_date_str = id.split("_", 2)
+
+            due_date = datetime.datetime.fromisoformat(due_date_str)
+            schedule = get_object_or_404(ChoreSchedule, id=schedule_id)
+            occ = ChoreOccurrence(
+                schedule=schedule,
+                due_date=due_date,
+                original_due_date=due_date,
+                assigned_user=self._get_assigned_member(schedule),
+            )
+            occ.temp_id = id
+            return occ
+        return get_object_or_404(ChoreOccurrence, id=id)
+
+    def _get_assigned_member(self, schedule):
+        """
+        Get the assigned member based on rotation rule for schedule members
+        """
+        # TODO:Do the actual member offset/rotation calculation
+        return RotationMember.objects.filter(assignment_rule__schedule=schedule).first().user
+
     def get_occurrences(self, house, from_date, to_date):
         """
         Get any already generated/saved occurences,
@@ -129,7 +183,7 @@ class OccurrenceService:
                 to_representation funciton. Which sets the id to temp_id
                 if id not present
                 """
-                occurrence.temp_id = f"{schedule.id}-{due_date.isoformat()}"
+                occurrence.temp_id = f"temp_{schedule.id}_{due_date.isoformat()}"
                 occurrences.append(occurrence)
         return occurrences
 
