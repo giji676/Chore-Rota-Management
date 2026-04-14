@@ -194,20 +194,18 @@ export default function HouseDashboardScreen({ navigation, route }) {
     const fetchOccurrences = async () => {
         const date = currentMonth;
 
-        const yyyy = date.getFullYear();
-        const mm = (date.getMonth() + 1).toString().padStart(2, "0");
+        const from = new Date(date.getFullYear(), date.getMonth(), 1);
+        const to = new Date(date.getFullYear(), date.getMonth() + 1, 1);
 
-        const start_dd = "01";
-        const end_dd = new Date(
-            date.getFullYear(),
-            date.getMonth() + 2,
-            1
-        ).getDate().toString().padStart(2, "0");
+        const format = (d) => {
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, "0");
+            const dd = String(d.getDate()).padStart(2, "0");
+            return `${yyyy}-${mm}-${dd}`;
+        };
 
-        const end_mm = (date.getMonth() + 2).toString().padStart(2, "0");
-
-        const from_date = `${yyyy}-${mm}-${start_dd}`;
-        const to_date = `${yyyy}-${end_mm}-${end_dd}`;
+        const from_date = format(from);
+        const to_date = format(to);
 
         const res = await api.get(
             `chore/occurrences/${house.id}/?from=${from_date}&to=${to_date}`
