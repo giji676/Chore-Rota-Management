@@ -121,12 +121,8 @@ export default function HouseDashboardScreen({ navigation, route }) {
                     text: "Delete Only This",
                     style: "destructive",
                     onPress: async () => {
-                        const data = {
-                            "occurrence_version": occ.version,
-                            "generate_occurrences": true
-                        };
                         try {
-                            handleSkipOccurrence(occ, "single");
+                            handleRequestDeleteOccurrence(occ, "single");
                             Alert.alert("Chore deleted successfully");
                         } catch (err) {
                             Alert.alert("Error", err.response?.data?.detail);
@@ -139,12 +135,8 @@ export default function HouseDashboardScreen({ navigation, route }) {
                     text: "Delete All Futures",
                     style: "destructive",
                     onPress: async () => {
-                        const data = {
-                            "occurrence_version": occ.version,
-                            "generate_occurrences": false
-                        };
                         try {
-                            handleSkipOccurrence(occ, "future");
+                            handleRequestDeleteOccurrence(occ, "future");
                             Alert.alert("All chores deleted successfully");
                         } catch (err) {
                             Alert.alert("Error", err.response?.data?.detail);
@@ -208,12 +200,14 @@ export default function HouseDashboardScreen({ navigation, route }) {
         const start_dd = "01";
         const end_dd = new Date(
             date.getFullYear(),
-            date.getMonth() + 1,
-            0
+            date.getMonth() + 2,
+            1
         ).getDate().toString().padStart(2, "0");
 
+        const end_mm = (date.getMonth() + 2).toString().padStart(2, "0");
+
         const from_date = `${yyyy}-${mm}-${start_dd}`;
-        const to_date = `${yyyy}-${mm}-${end_dd}`;
+        const to_date = `${yyyy}-${end_mm}-${end_dd}`;
 
         const res = await api.get(
             `chore/occurrences/${house.id}/?from=${from_date}&to=${to_date}`
@@ -229,26 +223,21 @@ export default function HouseDashboardScreen({ navigation, route }) {
         }, [currentMonth])
     );
 
-    const handleSkipOccurrence = async (occ, mode) => {
+    const handleRequestDeleteOccurrence = async (occ, mode) => {
         let data;
         try {
             if (mode === "single") {
                 data = {
                     occurrence_id: occ.id,
-                    skipped: true
+                    edit_mode: "single"
                 };
             } else if (mode === "future") {
                 data = {
                     occurrence_id: occ.id,
-                    editMode: "future",
-                    changes: {
-                        schedule: {
-                            end_date: occ.due_date
-                        }
-                    }
+                    edit_mode: "future"
                 };
             }
-            const res = await api.patch(`chore/occurrence/${house.id}/update/`, data);
+            const res = await api.patch(`chore/occurrence/${house.id}/delete/`, data);
             fetchOccurrences();
         } catch (err) {
             console.log(err.response?.data);

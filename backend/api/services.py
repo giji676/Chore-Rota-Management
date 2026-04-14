@@ -6,6 +6,7 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.db import transaction
+from django.db.models import F, Q
 from django.shortcuts import get_object_or_404
 
 from .models import *
@@ -31,6 +32,12 @@ def make_aware_safe(dt):
 class OccurrenceService:
     @transaction.atomic
     def edit_future(self, occ_id: str | int, changes: dict) -> ChoreSchedule:
+        """
+        Stop the current schedule at the occurrence's original due date (sets end_date),
+        Create a new chore, a new schedule, and new user assignemtns
+        with the provided changes,
+        starting from the occurrence's original due date.
+        """
         occ = self.resolve_occurrence(occ_id)
         occ = self.materialize_occurrence(occ)
         occ: ChoreOccurrence
@@ -178,10 +185,15 @@ class OccurrenceService:
         """ Get a list of already saved occurrences for a house within a date range """
         from_date = datetime.date.fromisoformat(from_date)
         to_date = datetime.date.fromisoformat(to_date)
-        return list(ChoreOccurrence.objects.filter(
-            schedule__chore__house=house,
-            due_date__date__range=(from_date, to_date),
-        ))
+        return list(
+            ChoreOccurrence.objects.filter(
+                schedule__chore__house=house,
+                due_date__date__range=(from_date, to_date),
+            ).filter(
+                Q(schedule__end_date__isnull=True) |
+                Q(due_date__lt=F("schedule__end_date"))
+            )
+        )
 
     # @timeit
     def _generate_occurrences(self, house, saved, from_date, to_date):
@@ -200,7 +212,7 @@ class OccurrenceService:
             ChoreSchedule.objects
             .filter(
                 chore__house=house,
-                start_date__lte=to_date
+                start_date__lt=to_date
             )
             .select_related("chore")
             .prefetch_related("assignment_rule__rotation_members")
@@ -236,8 +248,8 @@ class OccurrenceService:
                 else:
                     due_date = start_date + datetime.timedelta(days=step_days * offset)
 
-                if due_date > to_date: break
-                if end_date and due_date > end_date: break
+                if due_date >= to_date: break
+                if end_date and due_date >= end_date: break
                 if due_date < from_date:
                     offset += 1
                     continue
