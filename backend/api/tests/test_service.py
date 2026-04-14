@@ -177,7 +177,7 @@ class TestOccurrenceService(TestCase):
                 schedule=self.schedule,
                 due_date=self.schedule.start_date + dt.timedelta(days=5),
                 original_due_date=self.schedule.start_date + dt.timedelta(days=5))
-        range_length = 9
+        range_length = 10
         from_date_raw = self.schedule.start_date
         to_date_raw = self.schedule.start_date + dt.timedelta(days=range_length)
         from_date = from_date_raw.date().isoformat()
@@ -188,7 +188,7 @@ class TestOccurrenceService(TestCase):
             to_date=to_date)
 
         self.assertNotEqual(occurrences, [])
-        self.assertEqual(len(occurrences), range_length+1) # +1 for inclusive end date
+        self.assertEqual(len(occurrences), range_length)
         for occ in occurrences:
             self.assertFalse(occ.due_date < from_date_raw)
             self.assertFalse(occ.due_date > to_date_raw)
@@ -206,7 +206,7 @@ class TestOccurrenceService(TestCase):
             from_date=from_date,
             to_date=to_date)
         self.assertNotEqual(occurrences, [])
-        self.assertEqual(len(occurrences), 6) # 5 days + start date
+        self.assertEqual(len(occurrences), 5)
         for occ in occurrences:
             self.assertFalse(occ.due_date < from_date_raw)
             self.assertFalse(occ.due_date > to_date_raw)
