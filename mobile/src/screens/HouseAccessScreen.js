@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useCallback } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import { 
     View,
     TouchableOpacity,
@@ -25,8 +26,6 @@ import AppText from "../components/AppText";
 import AppTextInput from "../components/AppTextInput";
 import AppButton from "../components/AppButton";
 import BottomSheet from "../components/BottomSheet";
-
-// TODO: House list not updating after coming back from edit screen
 
 export default function HouseAccessScreen({ navigation }) {
     const { showActionSheetWithOptions } = useActionSheet();
@@ -70,9 +69,11 @@ export default function HouseAccessScreen({ navigation }) {
         );
     };
 
-    useEffect(() => {
-        fetchUserHouses();
-    }, []);
+    useFocusEffect(
+        useCallback(() => {
+            fetchUserHouses();
+        }, [])
+    );
 
     const fetchUserHouses = async () => {
         try {
