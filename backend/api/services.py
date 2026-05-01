@@ -1,11 +1,14 @@
-from rest_framework.exceptions import PermissionDenied, ValidationError
-import datetime
 import math
+import datetime
 from dateutil.relativedelta import relativedelta
+
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.db import transaction
+from django.db.models import F, Q
 from django.shortcuts import get_object_or_404
+
 from .models import *
 from .serializers import *
 from .helpers.generic_utils import timeit
@@ -28,7 +31,98 @@ def make_aware_safe(dt):
 
 class OccurrenceService:
     @transaction.atomic
-    def materialize_occurrence(self, _occ):
+    def edit_future(self, occ_id: str | int, changes: dict) -> ChoreSchedule:
+        """
+        Stop the current schedule at the occurrence's original due date (sets end_date),
+        Create a new chore, a new schedule, and new user assignemtns
+        with the provided changes,
+        starting from the occurrence's original due date.
+        """
+        occ = self.resolve_occurrence(occ_id)
+        occ = self.materialize_occurrence(occ)
+        occ: ChoreOccurrence
+
+        old_schedule: ChoreSchedule = occ.schedule
+        split_date = occ.original_due_date
+
+        old_schedule.end_date = split_date
+        old_schedule.save(update_fields=["end_date"])
+
+        chore_changes = changes.get("chore", {})
+        new_chore = Chore.objects.create(
+            house=old_schedule.chore.house,
+            name=chore_changes.get("name", old_schedule.chore.name),
+            description=chore_changes.get("description", old_schedule.chore.description),
+            color=chore_changes.get("color", old_schedule.chore.color),
+        )
+
+        schedule_changes = changes.get("schedule", {})
+        serializer = ScheduleUpdateSerializer(data=schedule_changes)
+        serializer.is_valid(raise_exception=True)
+        schedule_data = serializer.validated_data
+        new_schedule = ChoreSchedule.objects.create(
+            chore=new_chore,
+            start_date=schedule_data.get("start_date", split_date),
+            repeat_unit=schedule_data.get("repeat_unit", old_schedule.repeat_unit),
+            repeat_interval=schedule_data.get("repeat_interval", old_schedule.repeat_interval),
+            end_date=schedule_data.get("end_date", None)
+        )
+
+        old_rule: MemberAssignmentRule = old_schedule.assignment_rule
+        new_rule = MemberAssignmentRule.objects.create(
+            schedule=new_schedule,
+            rule_type=old_rule.rule_type,
+            rotation_offset=old_rule.rotation_offset,
+        )
+        for rm in old_rule.rotation_members.all():
+            RotationMember.objects.create(
+                assignment_rule=new_rule,
+                user=rm.user,
+                position=rm.position,
+            )
+
+        assignment_changes = changes.get("assignment", {})
+        if assignment_changes:
+            new_rule.rule_type = assignment_changes.get("rule_type", new_rule.rule_type)
+            new_rule.rotation_offset = assignment_changes.get(
+                "rotation_offset", new_rule.rotation_offset
+            )
+            new_rule.save()
+        return new_schedule
+
+    @transaction.atomic
+    def edit_single(self, occ_id: str | int, changes: dict) -> ChoreOccurrence:
+        """
+        Edit a single occurrence.
+        Possible changes:
+        - due_time
+        - completed_at
+        - assigned_user
+        - skipped_at
+        """
+        occ = self.resolve_occurrence(occ_id)
+        occ = self.materialize_occurrence(occ)
+        occ: ChoreOccurrence
+
+        due_date = changes.get("due_date")
+        if due_date is not None:
+            occ.due_date = due_date
+
+        if "completed" in changes:
+            occ.set_completed(bool(changes["completed"]))
+
+        if "skipped" in changes:
+            occ.set_skipped(bool(changes["skipped"]))
+
+        if "assigned_user" in changes:
+            user = get_object_or_404(User, id=changes["assigned_user"])
+            occ.assigned_user = user
+
+        occ.save()
+        return occ
+
+    @transaction.atomic
+    def materialize_occurrence(self, _occ: ChoreOccurrence) -> ChoreOccurrence:
         """
         Convert virtual occurrence to DB occurrence if needed.
         Always returns a persisted ChoreOccurrence.
@@ -47,7 +141,7 @@ class OccurrenceService:
 
         return occ
 
-    def resolve_occurrence(self, id):
+    def resolve_occurrence(self, id: str | int) -> ChoreOccurrence:
         """
         Returns an occurrence object.
         Either generating it in-memory or loading from database
@@ -84,16 +178,22 @@ class OccurrenceService:
         """
         saved = self._get_saved_occurrences(house, from_date, to_date)
         generated = self._generate_occurrences(house, saved, from_date, to_date)
-        return saved + generated
+        active_saved = [occ for occ in saved if occ.skipped_at is None]
+        return active_saved + generated
 
     def _get_saved_occurrences(self, house, from_date, to_date):
         """ Get a list of already saved occurrences for a house within a date range """
         from_date = datetime.date.fromisoformat(from_date)
         to_date = datetime.date.fromisoformat(to_date)
-        return list(ChoreOccurrence.objects.filter(
-            schedule__chore__house=house,
-            due_date__date__range=(from_date, to_date),
-        ))
+        return list(
+            ChoreOccurrence.objects.filter(
+                schedule__chore__house=house,
+                due_date__date__range=(from_date, to_date),
+            ).filter(
+                Q(schedule__end_date__isnull=True) |
+                Q(due_date__lt=F("schedule__end_date"))
+            )
+        )
 
     # @timeit
     def _generate_occurrences(self, house, saved, from_date, to_date):
@@ -112,7 +212,7 @@ class OccurrenceService:
             ChoreSchedule.objects
             .filter(
                 chore__house=house,
-                start_date__lte=to_date
+                start_date__lt=to_date
             )
             .select_related("chore")
             .prefetch_related("assignment_rule__rotation_members")
@@ -148,8 +248,8 @@ class OccurrenceService:
                 else:
                     due_date = start_date + datetime.timedelta(days=step_days * offset)
 
-                if due_date > to_date: break
-                if end_date and due_date > end_date: break
+                if due_date >= to_date: break
+                if end_date and due_date >= end_date: break
                 if due_date < from_date:
                     offset += 1
                     continue

@@ -193,16 +193,11 @@ class ChoreOccurrence(SoftDeleteModel):
                 name="unique_occurrence_override"
             )
         ]
-
     def set_completed(self, completed: bool):
-        if completed:
-            if not self.completed_at:
-                self.completed_at = timezone.now()
-                self.save(update_fields=["completed_at"])
-        else:
-            if self.completed_at is not None:
-                self.completed_at = None
-                self.save(update_fields=["completed_at"])
+        self.completed_at = timezone.now() if completed else None
+
+    def set_skipped(self, skipped: bool):
+        self.skipped_at = timezone.now() if skipped else None
 
     @property
     def temp_id(self):

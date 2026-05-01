@@ -9,6 +9,40 @@ from .models import House, ChoreOccurrence
 from .serializers import *
 from .services import HouseService, ChoreService, OccurrenceService
 
+class OccurrenceDeleteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, house_id):
+        get_object_or_404(House, id=house_id)
+
+        service = OccurrenceService()
+
+        occ_id = request.data.get("occurrence_id")
+        mode = request.data.get("edit_mode")
+
+        if not occ_id:
+            return Response(
+                {"error": "occurrence_id required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        occ = service.resolve_occurrence(occ_id)
+        occ = service.materialize_occurrence(occ)
+
+        if mode == "single":
+            occ.set_skipped(True)
+            occ.save(update_fields=["skipped_at"])
+
+        elif mode == "future":
+            schedule: ChoreSchedule = occ.schedule
+            schedule.end_date = occ.original_due_date
+            schedule.save(update_fields=["end_date"])
+
+        return Response(
+            {"detail": "Occurrence(s) deleted"},
+            status=status.HTTP_200_OK
+        )
+
 class OccurrenceUpdateView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -21,6 +55,7 @@ class OccurrenceUpdateView(APIView):
         mode = request.data.get("edit_mode")
         changes = request.data.get("changes", {})
         completed = request.data.get("completed")
+        skipped = request.data.get("skipped")
 
         if not occ_id:
             return Response(
@@ -28,17 +63,25 @@ class OccurrenceUpdateView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        occ: ChoreOccurrence
         if completed is not None:
             occ = service.resolve_occurrence(occ_id)
             occ = service.materialize_occurrence(occ)
             occ.set_completed(bool(completed))
+            occ.save(update_fields=["completed_at"])
 
-        """
+        elif skipped is not None:
+            occ = service.resolve_occurrence(occ_id)
+            occ = service.materialize_occurrence(occ)
+            occ.set_skipped(bool(skipped))
+            occ.save(update_fields=["skipped_at"])
+
         elif mode == "single":
             occ = service.edit_single(occ_id, changes)
 
         elif mode == "future":
-            occ = service.edit_future(occ_id, changes)
+            print(occ_id, changes)
+            schedule = service.edit_future(occ_id, changes)
 
             # NOTE:
             # this returns schedule, not occurrence
@@ -52,7 +95,6 @@ class OccurrenceUpdateView(APIView):
                 {"error": "Invalid request"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        """
 
         serialized = OccurrenceSerializer(occ)
         return Response(

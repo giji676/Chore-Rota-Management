@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { 
     Pressable,
     Alert,
@@ -8,6 +8,7 @@ import {
     LayoutAnimation,
 } from 'react-native';
 import * as Notifications from 'expo-notifications';
+import { useFocusEffect } from "@react-navigation/native";
 import { registerForPushNotificationsAsync, configureAndroidChannel } from '../utils/notifications';
 import { useActionSheet } from "@expo/react-native-action-sheet";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -120,12 +121,8 @@ export default function HouseDashboardScreen({ navigation, route }) {
                     text: "Delete Only This",
                     style: "destructive",
                     onPress: async () => {
-                        const data = {
-                            "occurrence_version": occ.version,
-                            "generate_occurrences": true
-                        };
                         try {
-                            const res = await api.delete(`occurrences/${occ.id}/delete/`, {data: data});
+                            handleRequestDeleteOccurrence(occ, "single");
                             Alert.alert("Chore deleted successfully");
                         } catch (err) {
                             Alert.alert("Error", err.response?.data?.detail);
@@ -138,12 +135,8 @@ export default function HouseDashboardScreen({ navigation, route }) {
                     text: "Delete All Futures",
                     style: "destructive",
                     onPress: async () => {
-                        const data = {
-                            "occurrence_version": occ.version,
-                            "generate_occurrences": false
-                        };
                         try {
-                            const res = await api.delete(`occurrences/${occ.id}/delete/`, {data: data});
+                            handleRequestDeleteOccurrence(occ, "future");
                             Alert.alert("All chores deleted successfully");
                         } catch (err) {
                             Alert.alert("Error", err.response?.data?.detail);
@@ -198,19 +191,21 @@ export default function HouseDashboardScreen({ navigation, route }) {
     // TODO: Fetch from prev month to next month?
     // and on month change fetch the nest/previous
     // so buffer of 1 month is kept locally
-    const fetchOccurrences = async (date) => {
-        const yyyy = date.getFullYear();
-        const mm = (date.getMonth() + 1).toString().padStart(2, "0");
+    const fetchOccurrences = async () => {
+        const date = currentMonth;
 
-        const start_dd = "01";
-        const end_dd = new Date(
-            date.getFullYear(),
-            date.getMonth() + 1,
-            0
-        ).getDate().toString().padStart(2, "0");
+        const from = new Date(date.getFullYear(), date.getMonth(), 1);
+        const to = new Date(date.getFullYear(), date.getMonth() + 1, 1);
 
-        const from_date = `${yyyy}-${mm}-${start_dd}`;
-        const to_date = `${yyyy}-${mm}-${end_dd}`;
+        const format = (d) => {
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, "0");
+            const dd = String(d.getDate()).padStart(2, "0");
+            return `${yyyy}-${mm}-${dd}`;
+        };
+
+        const from_date = format(from);
+        const to_date = format(to);
 
         const res = await api.get(
             `chore/occurrences/${house.id}/?from=${from_date}&to=${to_date}`
@@ -220,9 +215,32 @@ export default function HouseDashboardScreen({ navigation, route }) {
         setUpdate(prev => !prev);
     };
 
-    useEffect(() => {
-        fetchOccurrences(currentMonth);
-    }, [currentMonth]);
+    useFocusEffect(
+        useCallback(() => {
+            fetchOccurrences();
+        }, [currentMonth])
+    );
+
+    const handleRequestDeleteOccurrence = async (occ, mode) => {
+        let data;
+        try {
+            if (mode === "single") {
+                data = {
+                    occurrence_id: occ.id,
+                    edit_mode: "single"
+                };
+            } else if (mode === "future") {
+                data = {
+                    occurrence_id: occ.id,
+                    edit_mode: "future"
+                };
+            }
+            const res = await api.patch(`chore/occurrence/${house.id}/delete/`, data);
+            fetchOccurrences();
+        } catch (err) {
+            console.log(err.response?.data);
+        }
+    };
 
     const handleCheckOccurrence = async (occ) => {
         try {
@@ -230,7 +248,7 @@ export default function HouseDashboardScreen({ navigation, route }) {
                 occurrence_id: occ.id,
                 completed: !occ.completed_at,
             });
-            fetchOccurrences(currentMonth);
+            fetchOccurrences();
         } catch (err) {
             console.log(err.response?.data);
         }
@@ -267,7 +285,10 @@ export default function HouseDashboardScreen({ navigation, route }) {
             title: occ.chore.name,
         }, buttonIndex => {
                 if (buttonIndex === 0) {
-                    navigation.navigate("EditChore", { house, occurrence: occ });
+                    navigation.navigate("EditChore", {
+                        house,
+                        occurrence: occ
+                    });
                 } else if (buttonIndex === 1) {
                     navigation.navigate("EditChore", {
                         house,
@@ -451,7 +472,10 @@ export default function HouseDashboardScreen({ navigation, route }) {
             <View style={[styles.createBtnView, { marginBottom: insets.bottom }]}>
                 <Pressable 
                     style={styles.createBtn}
-                    onPress={() => navigation.navigate("EditChore", { house })}
+                    onPress={() => navigation.navigate("EditChore", {
+                        house,
+                        editMode: "create"
+                    })}
                 >
                     <FontAwesome5
                         name="plus"

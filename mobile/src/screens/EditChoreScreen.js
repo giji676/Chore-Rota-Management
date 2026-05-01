@@ -22,7 +22,7 @@ import AppButton from "../components/AppButton";
 // TODO: Cancel/done on Day/Time Pickers do nothing, value always gets set
 
 export default function EditChoreScreen({ route, navigation }) {
-    // editMode(s): single | future
+    // editMode(s): single | future | create
     const { house, occurrence, editMode } = route.params; // occurrence will be undefined for create
     const isEdit = !!occurrence;
     const chore = occurrence?.chore || null;
@@ -100,21 +100,22 @@ export default function EditChoreScreen({ route, navigation }) {
         let data;
         if (editMode === "single") {
             data = {
+                occurrence_id: occurrence.id,
                 edit_mode: "single",
                 changes: {
                     due_date: selectedDate.toISOString(),
-                    assigned_user: selectedMember.user.id,
-                    is_temp: occurrence.is_temp
+                    assigned_user: selectedMember.id,
                 }
             };
         } else if (editMode === "future") {
             data = {
+                occurrence_id: occurrence.id,
                 edit_mode: "future",
                 changes: {
                     chore: {
                         name: choreName,
                         description: choreDescription,
-                        color: choreColor,
+                        color: choreColor
                     },
                     schedule: {
                         start_date: selectedDate.toISOString(),
@@ -124,10 +125,9 @@ export default function EditChoreScreen({ route, navigation }) {
                             rule_type: "fixed",
                             rotation_offset: 0,
                             rotation_members: [{
-                                user: selectedMember.user.id,
+                                user: selectedMember.id,
                                 position: 0
-                                }
-                            ]
+                            }]
                         }
                     }
                 }
@@ -136,7 +136,7 @@ export default function EditChoreScreen({ route, navigation }) {
 
         try {
             // TODO: Success popup window
-            await api.post(`chore/update/${house.id}/${occurrence.id}`, data);
+            await api.patch(`chore/occurrence/${house.id}/update/`, data);
             navigation.pop();
         } catch (err) {
             apiLogError(err);

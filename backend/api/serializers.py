@@ -6,6 +6,81 @@ from accounts.serializers import UserSerializer
 
 User = get_user_model()
 
+class ScheduleUpdateSerializer(serializers.Serializer):
+    start_date = serializers.DateTimeField(required=False)
+    repeat_unit = serializers.ChoiceField(
+        choices=[
+            ("day", "Day"),
+            ("week", "Week"),
+            ("month", "Month"),
+            ("year", "Year"),
+        ], required=False)
+    repeat_interval = serializers.IntegerField(required=False)
+    constraints = serializers.JSONField(required=False)
+    end_date = serializers.DateTimeField(required=False)
+
+    def validate_repeat_interval(self, value):
+        if value < 1:
+            raise serializers.ValidationError("Must be >= 1")
+        return value
+
+    def validate_constraints(self, value):
+        if not isinstance(value, dict):
+            raise serializers.ValidationError("Must be an object")
+
+        weekdays = value.get("weekdays")
+        if weekdays:
+            if not isinstance(weekdays, list):
+                raise serializers.ValidationError("weekdays must be a list")
+
+            if not all(isinstance(d, int) and 0 <= d <= 6 for d in weekdays):
+                raise serializers.ValidationError("weekdays must be integers 0–6")
+
+        return value
+
+    def validate(self, data):
+        start = data.get("start_date")
+        end = data.get("end_date")
+
+        if end and start and end < start:
+            raise serializers.ValidationError(
+                "end_date must be after start_date"
+            )
+
+        return data
+
+class OccurrenceChangesSerializer(serializers.Serializer):
+    due_date = serializers.DateTimeField(required=False)
+    assigned_user = serializers.IntegerField(required=False)
+    completed = serializers.BooleanField(required=False)
+    skipped = serializers.BooleanField(required=False)
+
+    def validate(self, data):
+        # prevent conflicting states
+        if data.get("completed") and data.get("skipped"):
+            raise serializers.ValidationError(
+                "Occurrence cannot be both completed and skipped."
+            )
+        return data
+
+class OccurrenceUpdateSerializer(serializers.Serializer):
+    occurrence_id = serializers.CharField()
+    edit_mode = serializers.ChoiceField(
+        choices=["single", "future"],
+        required=False
+    )
+    changes = OccurrenceChangesSerializer(required=False)
+    completed = serializers.BooleanField(required=False)
+
+    def validate(self, data):
+        # if edit_mode exists, changes must exist
+        if data.get("edit_mode") and "changes" not in data:
+            raise serializers.ValidationError(
+                "'changes' is required when using edit_mode."
+            )
+
+        return data
+
 class OccurrenceUserReaderSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
