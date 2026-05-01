@@ -126,8 +126,20 @@ export default function EditProfileScreen({ navigation }) {
 
                 <View style={{ flex: 1 }} />
 
-                <AppButton title="Log Out" onPress={logout} variant="secondary" />
-                <AppButton title="Delete Account" onPress={() => console.log("Delete account")} variant="secondary" textStyle={{ color: colors.error }} />
+                <View style={{ gap: spacing.md }}>
+                    <AppButton
+                        title="Log out"
+                        onPress={logout}
+                        variant="secondary"
+                    />
+
+                    <AppButton
+                        title="Delete Account"
+                        onPress={() => console.log("Delete account")}
+                        variant="secondary"
+                        textStyle={{ color: colors.error }}
+                    />
+                </View>
             </View>
         </ScrollView>
     );

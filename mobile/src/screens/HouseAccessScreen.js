@@ -277,36 +277,38 @@ export default function HouseAccessScreen({ navigation }) {
                             <AppText style={{ textAlign: "center", marginBottom: spacing.lg }}>No houses yet</AppText>
                         )}
 
-                <AppText style={styles.title}>Join or Create a House</AppText>
+                <View style={{ gap: spacing.lg }}>
+                    <AppText style={styles.title}>Join or Create a House</AppText>
 
-                <AppTextInput
-                    placeholder="Enter join code"
-                    placeholderTextColor={colors.textSecondary}
-                    value={joinCode}
-                    onChangeText={setJoinCode}
-                    style={styles.input}
-                />
-                <AppTextInput
-                    placeholder="Enter password"
-                    placeholderTextColor={colors.textSecondary}
-                    value={password}
-                    onChangeText={setPassword}
-                    style={styles.input}
-                    secureTextEntry
-                />
+                    <AppTextInput
+                        placeholder="Enter join code"
+                        placeholderTextColor={colors.textSecondary}
+                        value={joinCode}
+                        onChangeText={setJoinCode}
+                        style={styles.input}
+                    />
+                    <AppTextInput
+                        placeholder="Enter password"
+                        placeholderTextColor={colors.textSecondary}
+                        value={password}
+                        onChangeText={setPassword}
+                        style={styles.input}
+                        secureTextEntry
+                    />
 
-                <AppButton
-                    title="Join House"
-                    onPress={handleJoinHouse}
-                />
+                    <AppButton
+                        title="Join House"
+                        onPress={handleJoinHouse}
+                    />
 
-                <AppText style={styles.or}>OR</AppText>
+                    <AppText style={styles.or}>OR</AppText>
 
-                <AppButton
-                    title="Create New House"
-                    onPress={handleCreateHouse}
-                    variant="secondary"
-                />
+                    <AppButton
+                        title="Create New House"
+                        onPress={handleCreateHouse}
+                        variant="secondary"
+                    />
+                </View>
 
                 {result !== "" && (
                     <View style={styles.resultBox}>
@@ -337,7 +339,6 @@ const styles = StyleSheet.create({
     },
     input: {
         borderWidth: 1,
-        marginBottom: spacing.md,
         ...typography.body,
         color: colors.textPrimary,
     },
@@ -347,7 +348,6 @@ const styles = StyleSheet.create({
     },
     or: {
         textAlign: "center",
-        marginVertical: spacing.lg,
         ...typography.body,
         color: colors.textSecondary },
     resultBox: {
